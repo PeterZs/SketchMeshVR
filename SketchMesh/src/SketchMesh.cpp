@@ -12,7 +12,8 @@
 #include <igl/barycenter.h>
 #include <cmath>
 #include <igl/triangle_triangle_adjacency.h>
-#include "main.h"
+#include "SketchMesh.h"
+#include "Stroke.h"
 
 /*** insert any libigl headers here ***/
 
@@ -43,6 +44,9 @@ ToolMode tool_mode = NAVIGATE;
 bool skip_standardcallback = false;
 int down_mouse_x = -1, down_mouse_y = -1;
 
+//For selecting vertices
+std::unique_ptr<Stroke> _stroke;
+
 bool callback_key_down(Viewer& viewer, unsigned char key, int modifiers) {
 
 	if (key == '1') {
@@ -53,6 +57,7 @@ bool callback_key_down(Viewer& viewer, unsigned char key, int modifiers) {
 	if (key == 'D') { //use capital letters
 		//Draw initial curve/mesh
 		tool_mode = DRAW;
+		cout << "tes" << endl;
 	}
 	if (key == 'P') {
 		tool_mode = PULL;
@@ -74,6 +79,7 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 	down_mouse_y = viewer.current_mouse_y;
 
 	if (tool_mode == DRAW) { //Creating the first curve/mesh
+		_stroke->strokeAddSegment(down_mouse_x, down_mouse_y);
 		skip_standardcallback = true;
 	}
 	else if (tool_mode == PULL) { //Dragging an existing curve
@@ -87,6 +93,7 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 	return skip_standardcallback; //Will make sure that we use standard navigation responses if we didn't do special actions and vice versa
 }
 
+//TODO: make callback for this in viewer, like in exercise 5 of shapemod
 bool callback_load_mesh(Viewer& viewer, string filename)
 {
 	igl::readOFF(filename, V, F);
@@ -94,6 +101,10 @@ bool callback_load_mesh(Viewer& viewer, string filename)
 	viewer.data.set_mesh(V, F);
 	viewer.data.compute_normals();
 	viewer.core.align_camera_center(viewer.data.V);
+
+	//Init stroke selector
+	
+	_stroke = std::unique_ptr<Stroke>(new Stroke(V, F, viewer));
 	std::cout << filename.substr(filename.find_last_of("/") + 1) << endl;
 	return true;
 }
@@ -102,19 +113,21 @@ int main(int argc, char *argv[]) {
 	// Show the mesh
 	Viewer viewer;
 	viewer.callback_key_down = callback_key_down;
+	viewer.callback_mouse_down = callback_mouse_down;
 	//viewer.callback_load_mesh = callback_load_mesh;
 	
 
 	if (argc == 2)
 	{
 		// Read mesh
-		igl::readOFF(argv[1], V, F);
-
+		//igl::readOFF(argv[1], V, F);
+		callback_load_mesh(viewer, argv[1]);
 	}
 	else
 	{
 		// Read mesh
-		igl::readOFF("../data/plane.off", V, F);
+		//igl::readOFF("../data/plane.off", V, F);
+		callback_load_mesh(viewer, "../data/plane.off");
 	}
 	callback_key_down(viewer, '1', 0);
 
