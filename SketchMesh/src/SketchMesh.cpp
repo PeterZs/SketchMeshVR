@@ -98,7 +98,8 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 	if (!skip_standardcallback) {
 		return false;
 	}
-	if (tool_mode == DRAW && CONSOLE_MOUSE_DOWN) {
+	cout << viewer.down << "  " << endl;
+	if (tool_mode == DRAW && viewer.down) { //If we're still holding the mouse down
 		_stroke->strokeAddSegment(mouse_x, mouse_y);
 		return true;
 	}
