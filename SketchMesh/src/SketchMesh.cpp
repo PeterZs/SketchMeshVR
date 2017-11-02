@@ -57,7 +57,7 @@ bool callback_key_down(Viewer& viewer, unsigned char key, int modifiers) {
 	if (key == 'D') { //use capital letters
 		//Draw initial curve/mesh
 		tool_mode = DRAW;
-		cout << "tes" << endl;
+		_stroke->strokeReset();
 	}
 	if (key == 'P') {
 		tool_mode = PULL;
@@ -88,6 +88,10 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 	else if (tool_mode == NAVIGATE) { //Navigate through the screen
 		skip_standardcallback = false; //We do want to use the navigation functionality
 	}
+	else if(tool_mode == EXTRUDE) {
+		_stroke->strokeAddSegmentExtrusion(down_mouse_x, down_mouse_y);
+		skip_standardcallback = true;
+	}
 
 
 	return skip_standardcallback; //Will make sure that we use standard navigation responses if we didn't do special actions and vice versa
@@ -98,9 +102,11 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 	if (!skip_standardcallback) {
 		return false;
 	}
-	cout << viewer.down << "  " << endl;
 	if (tool_mode == DRAW && viewer.down) { //If we're still holding the mouse down
 		_stroke->strokeAddSegment(mouse_x, mouse_y);
+		return true;
+	} else if(tool_mode == EXTRUDE && viewer.down) {
+		_stroke->strokeAddSegmentExtrusion(mouse_x, mouse_y);
 		return true;
 	}
 	return false;
@@ -115,9 +121,6 @@ bool callback_load_mesh(Viewer& viewer, string filename)
 	viewer.data.compute_normals();
 	viewer.core.align_camera_center(viewer.data.V);
 
-	//Init stroke selector
-	
-	_stroke = std::unique_ptr<Stroke>(new Stroke(V, F, viewer));
 	std::cout << filename.substr(filename.find_last_of("/") + 1) << endl;
 	return true;
 }
@@ -129,56 +132,24 @@ int main(int argc, char *argv[]) {
 	viewer.callback_mouse_down = callback_mouse_down;
 	viewer.callback_mouse_move = callback_mouse_move;
 	//viewer.callback_load_mesh = callback_load_mesh;
-	
+
+	//Init stroke selector
+	_stroke = std::unique_ptr<Stroke>(new Stroke(V, F, viewer));
 
 	if (argc == 2)
 	{
 		// Read mesh
 		igl::readOFF(argv[1], V, F);
-		callback_load_mesh(viewer, argv[1]);
+	//	callback_load_mesh(viewer, argv[1]);
 	}
 	else
 	{
 		// Read mesh
-		igl::readOFF("../data/cube.off", V, F);
-		callback_load_mesh(viewer, "../data/cube.off");
+	//	callback_load_mesh(viewer, "../data/cube.off");
 	}
-	Eigen::Vector3d m = V.colwise().minCoeff();
-	Eigen::Vector3d M = V.colwise().maxCoeff();
-
-	// Corners of the bounding box
-	Eigen::MatrixXd V_box(8, 3);
-	V_box <<
-		m(0), m(1), m(2),
-		M(0), m(1), m(2),
-		M(0), M(1), m(2),
-		m(0), M(1), m(2),
-		m(0), m(1), M(2),
-		M(0), m(1), M(2),
-		M(0), M(1), M(2),
-		m(0), M(1), M(2);
-
-	cout << V_box.row(0) << endl;
-	// Edges of the bounding box
-	Eigen::MatrixXi E_box(12, 2);
-	E_box <<
-		0, 1,
-		1, 2,
-		2, 3,
-		3, 0,
-		4, 5,
-		5, 6,
-		6, 7,
-		7, 4,
-		0, 4,
-		1, 5,
-		2, 6,
-		7, 3;
-	viewer.data.add_stroke_points(V_box);
 
 	callback_key_down(viewer, '1', 0);
-
 	
-	viewer.core.align_camera_center(V);
+	//viewer.core.align_camera_center(V);
 	viewer.launch();
 }
