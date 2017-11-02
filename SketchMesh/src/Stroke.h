@@ -17,10 +17,9 @@ private:
 	const Eigen::MatrixXi &F;
 	igl::viewer::Viewer &viewer;
 
-	Eigen::MatrixX3d stroke3DPoints;
-	Eigen::MatrixX2d stroke2DPoints;
-	//std::vector<Eigen::Matrix<double, 1, 3>> stroke3DPoints;
-	//std::vector<std::vector<int>> stroke2DPoints;
+	Eigen::MatrixX3d stroke3DPoints; //Used for screen output
+	Eigen::MatrixX2d stroke2DPoints; //Used for early checking if point is new (in screen coordinates)
+	double dep = -1;
 };
 
 #endif

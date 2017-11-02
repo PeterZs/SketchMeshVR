@@ -93,6 +93,18 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 	return skip_standardcallback; //Will make sure that we use standard navigation responses if we didn't do special actions and vice versa
 }
 
+
+bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
+	if (!skip_standardcallback) {
+		return false;
+	}
+	if (tool_mode == DRAW && CONSOLE_MOUSE_DOWN) {
+		_stroke->strokeAddSegment(mouse_x, mouse_y);
+		return true;
+	}
+	return false;
+}
+
 //TODO: make callback for this in viewer, like in exercise 5 of shapemod
 bool callback_load_mesh(Viewer& viewer, string filename)
 {
@@ -114,24 +126,58 @@ int main(int argc, char *argv[]) {
 	Viewer viewer;
 	viewer.callback_key_down = callback_key_down;
 	viewer.callback_mouse_down = callback_mouse_down;
+	viewer.callback_mouse_move = callback_mouse_move;
 	//viewer.callback_load_mesh = callback_load_mesh;
 	
 
 	if (argc == 2)
 	{
 		// Read mesh
-		//igl::readOFF(argv[1], V, F);
+		igl::readOFF(argv[1], V, F);
 		callback_load_mesh(viewer, argv[1]);
 	}
 	else
 	{
 		// Read mesh
-		//igl::readOFF("../data/plane.off", V, F);
-		callback_load_mesh(viewer, "../data/plane.off");
+		igl::readOFF("../data/cube.off", V, F);
+		callback_load_mesh(viewer, "../data/cube.off");
 	}
+	Eigen::Vector3d m = V.colwise().minCoeff();
+	Eigen::Vector3d M = V.colwise().maxCoeff();
+
+	// Corners of the bounding box
+	Eigen::MatrixXd V_box(8, 3);
+	V_box <<
+		m(0), m(1), m(2),
+		M(0), m(1), m(2),
+		M(0), M(1), m(2),
+		m(0), M(1), m(2),
+		m(0), m(1), M(2),
+		M(0), m(1), M(2),
+		M(0), M(1), M(2),
+		m(0), M(1), M(2);
+
+	cout << V_box.row(0) << endl;
+	// Edges of the bounding box
+	Eigen::MatrixXi E_box(12, 2);
+	E_box <<
+		0, 1,
+		1, 2,
+		2, 3,
+		3, 0,
+		4, 5,
+		5, 6,
+		6, 7,
+		7, 4,
+		0, 4,
+		1, 5,
+		2, 6,
+		7, 3;
+	viewer.data.add_stroke_points(V_box);
+
 	callback_key_down(viewer, '1', 0);
 
-	viewer.data.set_mesh(V, F);
+	
 	viewer.core.align_camera_center(V);
 	viewer.launch();
 }
