@@ -79,6 +79,7 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 	down_mouse_y = viewer.current_mouse_y;
 
 	if (tool_mode == DRAW) { //Creating the first curve/mesh
+		_stroke->strokeReset();
 		_stroke->strokeAddSegment(down_mouse_x, down_mouse_y);
 		skip_standardcallback = true;
 	}
@@ -112,6 +113,14 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 	return false;
 }
 
+bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
+	if(tool_mode == DRAW) {
+		_stroke->toLoop();
+		skip_standardcallback = false;
+	}
+	return skip_standardcallback;
+}
+
 //TODO: make callback for this in viewer, like in exercise 5 of shapemod
 bool callback_load_mesh(Viewer& viewer, string filename)
 {
@@ -131,6 +140,7 @@ int main(int argc, char *argv[]) {
 	viewer.callback_key_down = callback_key_down;
 	viewer.callback_mouse_down = callback_mouse_down;
 	viewer.callback_mouse_move = callback_mouse_move;
+	viewer.callback_mouse_up = callback_mouse_up;
 	//viewer.callback_load_mesh = callback_load_mesh;
 
 	//Init stroke selector

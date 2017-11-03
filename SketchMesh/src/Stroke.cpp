@@ -113,3 +113,14 @@ void Stroke::strokeReset() {
 	stroke3DPoints.setZero();
 	dep = -1;
 }
+
+void Stroke::toLoop() {
+	if(stroke2DPoints.rows() > 2) { //Don't do anything if we have only 1 line segment
+		stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, stroke2DPoints.cols());
+		stroke2DPoints.row(stroke2DPoints.rows() - 1) << stroke2DPoints(0, 0), stroke2DPoints(0, 1);
+		stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, stroke3DPoints.cols());
+		stroke3DPoints.row(stroke3DPoints.rows() - 1) << stroke3DPoints(0, 0), stroke3DPoints(0, 1), stroke3DPoints(0,2);
+		//using set_stroke_points will remove all previous strokes, using add_stroke_points might create duplicates
+		viewer.data.set_stroke_points(stroke3DPoints);
+	}
+}
