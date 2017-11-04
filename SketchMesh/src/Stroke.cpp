@@ -1,6 +1,8 @@
 #include "Stroke.h"
 #include <igl/unproject_onto_mesh.h>
 #include <igl/unproject.h>
+#include <igl/triangle/triangulate.h>
+#include <algorithm> 
 using namespace igl;
 using namespace std;
 
@@ -14,6 +16,7 @@ Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::viewer
 	viewer(v) {
 	stroke2DPoints = Eigen::MatrixX2d::Zero(1, 2);
 	stroke3DPoints = Eigen::MatrixX3d::Zero(1, 3);
+	stroke_edges = Eigen::MatrixXi::Zero(0, 2);
 	_time1 = std::chrono::high_resolution_clock::now();
 
 }
@@ -42,7 +45,7 @@ void Stroke::strokeAddSegment(int mouse_x, int mouse_y) {
 	int faceID = -1;
 
 	pt = igl::unproject(Eigen::Vector3f(x, y, 0.0f), modelview, viewer.core.proj, viewer.core.viewport).transpose().cast<double>();
-	if (stroke2DPoints.rows() == 1 && empty2D()) {
+	if (stroke2DPoints.rows() == 1 && empty2D()) { //Add first point
 		stroke2DPoints.row(0) << x, y;
 		stroke3DPoints.row(0) << pt[0], pt[1], pt[2];
 	} else {
@@ -51,6 +54,9 @@ void Stroke::strokeAddSegment(int mouse_x, int mouse_y) {
 
 		stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, stroke3DPoints.cols());
 		stroke3DPoints.row(stroke3DPoints.rows() - 1) << pt[0], pt[1], pt[2];
+
+		stroke_edges.conservativeResize(stroke_edges.rows() + 1, stroke_edges.cols());
+		stroke_edges.row(stroke_edges.rows() - 1) << stroke2DPoints.rows() - 2, stroke2DPoints.rows() - 1;
 	}
 	//using set_stroke_points will remove all previous strokes, using add_stroke_points might create duplicates
 	viewer.data.set_stroke_points(stroke3DPoints);
@@ -90,7 +96,7 @@ void Stroke::strokeAddSegmentExtrusion(int mouse_x, int mouse_y) {
 	}
 	pt = igl::unproject(Eigen::Vector3f(x, y, 0.95*dep), modelview, viewer.core.proj, viewer.core.viewport).transpose().cast<double>();
 
-	if (stroke2DPoints.rows() == 1 && empty2D()) {
+	if (stroke2DPoints.rows() == 1 && empty2D()) { //Add first point
 		stroke2DPoints.row(0) << x, y;
 		stroke3DPoints.row(0) << pt[0], pt[1], pt[2];
 	} else {
@@ -114,6 +120,7 @@ void Stroke::strokeReset() {
 	dep = -1;
 }
 
+
 void Stroke::toLoop() {
 	if(stroke2DPoints.rows() > 2) { //Don't do anything if we have only 1 line segment
 		stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, stroke2DPoints.cols());
@@ -123,4 +130,65 @@ void Stroke::toLoop() {
 		//using set_stroke_points will remove all previous strokes, using add_stroke_points might create duplicates
 		viewer.data.set_stroke_points(stroke3DPoints);
 	}
+}
+
+void Stroke::generateMeshFromStroke() {
+	counter_clockwise(); //Ensure the stroke is counter-clockwise, handy later
+
+	Eigen::MatrixX2d original_stroke2DPoints = stroke2DPoints;
+	stroke2DPoints = resample_stroke(original_stroke2DPoints);
+
+
+	Eigen::MatrixXd V2;
+	Eigen::MatrixXi F2;
+	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0,0), "a0.005q", V2, F2);
+
+}
+
+void Stroke::counter_clockwise() {
+	double total_area = 0;
+	Eigen::Vector2d prev, next;
+	prev = (Eigen::Vector2d) stroke2DPoints.row(stroke2DPoints.rows() - 1);
+	for(int i = 0; i < stroke2DPoints.rows(); i++) {
+		next = (Eigen::Vector2d) stroke2DPoints.row(i);
+		total_area += (prev[1] + next[1]) * (next[0] - prev[0]);
+		prev = next;
+	}
+
+	if(total_area > 0) { //reverse the vector
+		stroke2DPoints.colwise().reverse();
+	}
+
+}
+
+Eigen::Matrix2d Stroke::resample_stroke(Eigen::MatrixX2d & original_stroke2DPoints) {
+	Eigen::MatrixX2d new_stroke2DPoints = Eigen::MatrixX2d::Zero(original_stroke2DPoints.rows(), 2);
+	int nr_iterations = max(5, original_stroke2DPoints.rows() / 4);
+	for(int i = 0; i < nr_iterations; i++) {
+		move_to_middle(original_stroke2DPoints, new_stroke2DPoints);
+		move_to_middle(new_stroke2DPoints, original_stroke2DPoints); //TODO: is this to save us a copy? basically performing an extra move_to_middle step
+	}
+	return new_stroke2DPoints;
+}
+
+
+void Stroke::move_to_middle(Eigen::MatrixX2d &positions, Eigen::MatrixX2d &new_positions) {
+	int n = positions.rows();
+	for(int i = 0; i < n; i++) {
+		Eigen::Vector2d prev = positions.row((i - 1) % n);
+		Eigen::Vector2d cur = positions.row(i%n);
+		Eigen::Vector2d next = positions.row((i + 1) % n);
+
+		new_positions(i, 0) = (cur[0] * 2 + prev[0] + next[0]) / 4;
+		new_positions(i, 1) = (cur[1] * 2 + prev[1] + next[1]) / 4;
+	}
+}
+
+
+double Stroke::total_stroke_length() {
+	double total_length = 0;
+	for(int i = 0; i < stroke2DPoints.rows(); i++) {
+		total_length += (stroke2DPoints.row(i) - stroke2DPoints.row((i + 1) % stroke2DPoints.rows())).norm();
+	}
+	return total_length;
 }

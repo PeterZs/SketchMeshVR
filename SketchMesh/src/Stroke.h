@@ -13,6 +13,8 @@ public:
 	void strokeAddSegmentExtrusion(int mouse_x, int mouse_y);
 	void toLoop();
 	void strokeReset();
+	void generateMeshFromStroke();
+	double total_stroke_length()
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 private:
@@ -22,7 +24,12 @@ private:
 
 	Eigen::MatrixX3d stroke3DPoints; //Used for screen output
 	Eigen::MatrixX2d stroke2DPoints; //Used for early checking if point is new (in screen coordinates)
+	Eigen::MatrixXi stroke_edges;
 	double dep = -1;
+
+	void counter_clockwise();
+	static Eigen::Matrix2d resample_stroke(Eigen::MatrixX2d & original_stroke2DPoints);
+	static void move_to_middle(Eigen::MatrixX2d &positions, Eigen::MatrixX2d &new_positions);
 };
 
 #endif
