@@ -3,6 +3,8 @@
 #include <igl/unproject.h>
 #include <igl/triangle/triangulate.h>
 #include <algorithm> 
+#include <igl/per_face_normals.h>
+#include <igl/per_vertex_normals.h>
 using namespace igl;
 using namespace std;
 
@@ -64,7 +66,6 @@ void Stroke::strokeAddSegment(int mouse_x, int mouse_y) {
 	_time1 = std::chrono::high_resolution_clock::now(); //restart the "start" timer
 }
 
-
 //For drawing extrusion strokes. Need to start on the existing mesh
 void Stroke::strokeAddSegmentExtrusion(int mouse_x, int mouse_y) {
 	//OpenGL has origin at left bottom, window(s) has origin at left top
@@ -117,11 +118,13 @@ void Stroke::strokeReset() {
 	stroke2DPoints.setZero();
 	stroke3DPoints.resize(1, 3);
 	stroke3DPoints.setZero();
+	stroke_edges.resize(0, 2);
+	stroke_edges.setZero();
 	dep = -1;
 }
 
 
-void Stroke::toLoop() {
+bool Stroke::toLoop() {
 	if(stroke2DPoints.rows() > 2) { //Don't do anything if we have only 1 line segment
 		stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, stroke2DPoints.cols());
 		stroke2DPoints.row(stroke2DPoints.rows() - 1) << stroke2DPoints(0, 0), stroke2DPoints(0, 1);
@@ -131,25 +134,78 @@ void Stroke::toLoop() {
 		stroke_edges.row(stroke_edges.rows() - 1) << stroke_edges.rows() - 1, 0; //Add an edge from the last vertex to the first
 		//using set_stroke_points will remove all previous strokes, using add_stroke_points might create duplicates
 		viewer.data.set_stroke_points(stroke3DPoints);
+		return true;
 	}
+	return false;
 }
 
-void Stroke::generateMeshFromStroke() {
+void Stroke::generate3DMeshFromStroke() {
 	counter_clockwise(); //Ensure the stroke is counter-clockwise, handy later
 
 	Eigen::MatrixX2d original_stroke2DPoints = stroke2DPoints;
 	stroke2DPoints = resample_stroke(original_stroke2DPoints);
 
-
+	Eigen::MatrixXd V2_tmp;
 	Eigen::MatrixXd V2;
 	Eigen::MatrixXi F2;
-	cout << stroke2DPoints << endl << endl;
-	cout << stroke_edges << endl;
-	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0,0), "q30", V2, F2);
+	Eigen::MatrixXi F2_back;
+	Eigen::VectorXi vertex_markers;
+	Eigen::VectorXi edge_markers;
+	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0,0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(),1,1), Eigen::MatrixXi::Constant(stroke_edges.rows(),1,1), "Qq30", V2_tmp, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
+	V2 = Eigen::MatrixXd::Zero(V2_tmp.rows(), V2_tmp.cols() + 1);
+	V2.block(0,0, V2_tmp.rows(), 2) = V2_tmp;
+
+	generate_backfaces(F2, F2_back);
+	int nr_boundary_vertices = (vertex_markers.array() == 1).count(); //check how many vertices were marked as 1 (boundary) TODO: CHECK THAT 1 IS INDEED BOUNDARY
+	int nr_boundary_edges = (edge_markers.array() == 1).count(); //check how many edges were marked as 1 (boundary)
+	
+	int original_size = V2.rows();
+	V2.conservativeResize(V2.rows() + V2.rows() - nr_boundary_vertices, V2.cols()); //Increase size, such that boundary vertices only get included one
+	unordered_map<int, int> vertex_map;
+	int count = 0;
+	for(int i = 0; i < original_size; i++) {
+		if(vertex_markers(i) != 1) { //If the vertex is NOT on the boundary, duplicate it
+			V2.row(original_size + count) << V2.row(i);
+			vertex_map.insert({i, original_size + count});
+			count++;
+		} else {
+			vertex_map.insert({i, i});
+		}
+	}
+
+	//Add backside faces, using original vertices for boundary and copied vertices for inside
+	//Duplicate all faces
+	original_size = F2_back.rows();
+	F2.conservativeResize(F2.rows()*2, F2.cols());
+	for(int i = 0; i < original_size; i++) {
+		for(int j = 0; j < 3; j++) {
+			auto got = vertex_map.find(F2_back(i, j));
+			F2(original_size + i, j) = got->second;
+		}
+	}
+
+	Eigen::MatrixXd N_Faces;
+	Eigen::MatrixXd N_Vertices;
+	igl::per_face_normals(V2, F2, N_Faces);
+	igl::per_vertex_normals(V2, F2, N_Vertices);
+
+	for(int i = 0; i < V2.rows(); i++) {
+		if(i >= vertex_markers.rows()) { //vertex can't be boundary
+			cout << N_Vertices.row(i) << endl << endl;
+			V2.row(i) = V2.row(i) + 10*N_Vertices.row(i);
+			cout << V2.row(i) << endl;
+		} else {
+			if(vertex_markers(i) == 1) { //Don't change boundary vertices
+				continue;
+			}
+			V2.row(i) = V2.row(i) + 10*N_Vertices.row(i);
+		}
+	}
+
 	viewer.data.clear();
 	viewer.data.set_mesh(V2, F2);
+	viewer.data.set_normals(N_Faces);
 	viewer.core.align_camera_center(viewer.data.V);
-
 }
 
 void Stroke::counter_clockwise() {
@@ -163,7 +219,7 @@ void Stroke::counter_clockwise() {
 	}
 
 	if(total_area > 0) { //reverse the vector
-		stroke2DPoints.colwise().reverse();
+		stroke2DPoints = stroke2DPoints.colwise().reverse().eval();
 	}
 
 }
@@ -205,4 +261,8 @@ double Stroke::total_stroke_length() {
 		total_length += (stroke2DPoints.row(i) - stroke2DPoints.row((i + 1) % stroke2DPoints.rows())).norm();
 	}
 	return total_length;
+}
+
+void Stroke::generate_backfaces(Eigen::MatrixXi &faces, Eigen::MatrixXi &back_faces) {
+	back_faces = faces.rowwise().reverse().eval();
 }

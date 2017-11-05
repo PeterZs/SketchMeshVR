@@ -11,9 +11,9 @@ public:
 	bool empty3D() const { return stroke3DPoints.isZero(); }
 	void strokeAddSegment(int mouse_x, int mouse_y);
 	void strokeAddSegmentExtrusion(int mouse_x, int mouse_y);
-	void toLoop();
+	bool toLoop();
 	void strokeReset();
-	void generateMeshFromStroke();
+	void generate3DMeshFromStroke();
 	double total_stroke_length();
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
@@ -30,6 +30,7 @@ private:
 	void counter_clockwise();
 	static Eigen::MatrixX2d resample_stroke(Eigen::MatrixX2d & original_stroke2DPoints);
 	static void move_to_middle(Eigen::MatrixX2d &positions, Eigen::MatrixX2d &new_positions);
+	static void generate_backfaces(Eigen::MatrixXi &faces, Eigen::MatrixXi &back_faces);
 };
 
 #endif

@@ -79,6 +79,7 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 	down_mouse_y = viewer.current_mouse_y;
 
 	if (tool_mode == DRAW) { //Creating the first curve/mesh
+		viewer.data.clear();
 		_stroke->strokeReset();
 		_stroke->strokeAddSegment(down_mouse_x, down_mouse_y);
 		skip_standardcallback = true;
@@ -115,8 +116,9 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 
 bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 	if(tool_mode == DRAW) {
-		_stroke->toLoop();
-		_stroke->generateMeshFromStroke();
+		if(_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
+			_stroke->generate3DMeshFromStroke();
+		}
 		skip_standardcallback = false;
 	}
 	return skip_standardcallback;
