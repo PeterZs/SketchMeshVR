@@ -14,7 +14,7 @@ public:
 	void toLoop();
 	void strokeReset();
 	void generateMeshFromStroke();
-	double total_stroke_length()
+	double total_stroke_length();
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 private:
@@ -28,7 +28,7 @@ private:
 	double dep = -1;
 
 	void counter_clockwise();
-	static Eigen::Matrix2d resample_stroke(Eigen::MatrixX2d & original_stroke2DPoints);
+	static Eigen::MatrixX2d resample_stroke(Eigen::MatrixX2d & original_stroke2DPoints);
 	static void move_to_middle(Eigen::MatrixX2d &positions, Eigen::MatrixX2d &new_positions);
 };
 

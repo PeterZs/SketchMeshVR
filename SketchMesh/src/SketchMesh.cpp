@@ -116,6 +116,7 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 	if(tool_mode == DRAW) {
 		_stroke->toLoop();
+		_stroke->generateMeshFromStroke();
 		skip_standardcallback = false;
 	}
 	return skip_standardcallback;

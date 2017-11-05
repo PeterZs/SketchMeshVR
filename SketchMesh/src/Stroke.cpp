@@ -127,6 +127,8 @@ void Stroke::toLoop() {
 		stroke2DPoints.row(stroke2DPoints.rows() - 1) << stroke2DPoints(0, 0), stroke2DPoints(0, 1);
 		stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, stroke3DPoints.cols());
 		stroke3DPoints.row(stroke3DPoints.rows() - 1) << stroke3DPoints(0, 0), stroke3DPoints(0, 1), stroke3DPoints(0,2);
+		stroke_edges.conservativeResize(stroke_edges.rows() + 1, stroke_edges.cols());
+		stroke_edges.row(stroke_edges.rows() - 1) << stroke_edges.rows() - 1, 0; //Add an edge from the last vertex to the first
 		//using set_stroke_points will remove all previous strokes, using add_stroke_points might create duplicates
 		viewer.data.set_stroke_points(stroke3DPoints);
 	}
@@ -141,7 +143,12 @@ void Stroke::generateMeshFromStroke() {
 
 	Eigen::MatrixXd V2;
 	Eigen::MatrixXi F2;
-	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0,0), "a0.005q", V2, F2);
+	cout << stroke2DPoints << endl << endl;
+	cout << stroke_edges << endl;
+	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0,0), "q30", V2, F2);
+	viewer.data.clear();
+	viewer.data.set_mesh(V2, F2);
+	viewer.core.align_camera_center(viewer.data.V);
 
 }
 
@@ -161,7 +168,7 @@ void Stroke::counter_clockwise() {
 
 }
 
-Eigen::Matrix2d Stroke::resample_stroke(Eigen::MatrixX2d & original_stroke2DPoints) {
+Eigen::MatrixX2d Stroke::resample_stroke(Eigen::MatrixX2d & original_stroke2DPoints) {
 	Eigen::MatrixX2d new_stroke2DPoints = Eigen::MatrixX2d::Zero(original_stroke2DPoints.rows(), 2);
 	int nr_iterations = max(5, original_stroke2DPoints.rows() / 4);
 	for(int i = 0; i < nr_iterations; i++) {
@@ -174,10 +181,17 @@ Eigen::Matrix2d Stroke::resample_stroke(Eigen::MatrixX2d & original_stroke2DPoin
 
 void Stroke::move_to_middle(Eigen::MatrixX2d &positions, Eigen::MatrixX2d &new_positions) {
 	int n = positions.rows();
-	for(int i = 0; i < n; i++) {
-		Eigen::Vector2d prev = positions.row((i - 1) % n);
-		Eigen::Vector2d cur = positions.row(i%n);
-		Eigen::Vector2d next = positions.row((i + 1) % n);
+	//Do seperately for i=0, because modulo gives -1
+	Eigen::Vector2d prev = positions.row(n - 1);
+	Eigen::Vector2d cur = positions.row(0);
+	Eigen::Vector2d next = positions.row(1);
+	new_positions(0, 0) = (cur[0] * 2 + prev[0] + next[0]) / 4;
+	new_positions(0, 1) = (cur[1] * 2 + prev[1] + next[1]) / 4;
+
+	for(int i = 1; i < n; i++) {
+		prev = positions.row((i - 1) % n);
+		cur = positions.row(i%n);
+		next = positions.row((i + 1) % n);
 
 		new_positions(i, 0) = (cur[0] * 2 + prev[0] + next[0]) / 4;
 		new_positions(i, 1) = (cur[1] * 2 + prev[1] + next[1]) / 4;
