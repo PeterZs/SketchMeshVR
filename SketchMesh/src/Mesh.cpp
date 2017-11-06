@@ -1,6 +1,6 @@
 #include "Mesh.h"
 
-Mesh::Mesh(const Eigen::MatrixXd & V_, const Eigen::MatrixXi & F_): V(V_), F(F_)  {
+Mesh::Mesh(Eigen::MatrixXd & V_, Eigen::MatrixXi & F_, const Eigen::VectorXi & vertex_boundary_markers_): V(V_), F(F_), vertex_boundary_markers(vertex_boundary_markers_)  {
 
 }
 

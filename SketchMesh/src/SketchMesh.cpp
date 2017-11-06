@@ -14,6 +14,7 @@
 #include <igl/triangle_triangle_adjacency.h>
 #include "SketchMesh.h"
 #include "Stroke.h"
+#include "SurfaceSmoothing.h"
 
 /*** insert any libigl headers here ***/
 
@@ -37,6 +38,9 @@ std::vector<std::vector<int> > VF, VFi, VV;
 Eigen::VectorXi cid;
 // Per-face color array, #F x3
 Eigen::MatrixXd component_colors_per_face;
+
+// Per vertex indicator of whether vertex is on boundary (on boundary if == 1)
+Eigen::VectorXi vertex_boundary_markers;
 
 //Mouse interaction
 enum ToolMode{DRAW, ADD, CUT, EXTRUDE, PULL, REMOVE, CHANGE, SMOOTH, NAVIGATE, NONE};
@@ -117,7 +121,8 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 	if(tool_mode == DRAW) {
 		if(_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
-			_stroke->generate3DMeshFromStroke();
+			_stroke->generate3DMeshFromStroke(vertex_boundary_markers);
+			SurfaceSmoothing.smooth(V, F, vertex_boundary_markers)
 		}
 		skip_standardcallback = false;
 	}

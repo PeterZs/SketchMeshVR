@@ -13,7 +13,7 @@ public:
 	void strokeAddSegmentExtrusion(int mouse_x, int mouse_y);
 	bool toLoop();
 	void strokeReset();
-	void generate3DMeshFromStroke();
+	void generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers);
 	double total_stroke_length();
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 

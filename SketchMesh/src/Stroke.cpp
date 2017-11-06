@@ -139,7 +139,7 @@ bool Stroke::toLoop() {
 	return false;
 }
 
-void Stroke::generate3DMeshFromStroke() {
+void Stroke::generate3DMeshFromStroke(Eigen::MatrixXi &vertex_boundary_markers) {
 	counter_clockwise(); //Ensure the stroke is counter-clockwise, handy later
 
 	Eigen::MatrixX2d original_stroke2DPoints = stroke2DPoints;
@@ -189,18 +189,22 @@ void Stroke::generate3DMeshFromStroke() {
 	igl::per_face_normals(V2, F2, N_Faces);
 	igl::per_vertex_normals(V2, F2, N_Vertices);
 
+	vertex_boundary_markers.resize(V2.rows());
+
 	for(int i = 0; i < V2.rows(); i++) {
 		if(i >= vertex_markers.rows()) { //vertex can't be boundary
-			cout << N_Vertices.row(i) << endl << endl;
 			V2.row(i) = V2.row(i) + 10*N_Vertices.row(i);
-			cout << V2.row(i) << endl;
+			vertex_boundary_markers[i] << 0;
 		} else {
 			if(vertex_markers(i) == 1) { //Don't change boundary vertices
+				vertex_boundary_markers[i] << 1;
 				continue;
 			}
 			V2.row(i) = V2.row(i) + 10*N_Vertices.row(i);
+			vertex_boundary_markers[i] = 0;
 		}
 	}
+
 
 	viewer.data.clear();
 	viewer.data.set_mesh(V2, F2);

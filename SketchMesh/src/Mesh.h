@@ -7,10 +7,11 @@ class Mesh {
 	//Contains (a part of) the vertices and faces that are visible on the screen. TODO: this is because what is displayed might consist of several separate "meshes" that are individually optimized
 public:
 
-	Mesh(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F);
+	Mesh(Eigen::MatrixXd &V, Eigen::MatrixXi &F, const Eigen::VectorXi &vertex_boundary_markers);
 	~Mesh();
-	const Eigen::MatrixXd &V;
-	const Eigen::MatrixXi &F;
+	Eigen::MatrixXd &V;
+	Eigen::MatrixXi &F;
+	const Eigen::VectorXi &vertex_boundary_markers;
 };
 
 #endif _MESH_
