@@ -122,7 +122,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 	if(tool_mode == DRAW) {
 		if(_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
 			_stroke->generate3DMeshFromStroke(vertex_boundary_markers);
-			SurfaceSmoothing.smooth(V, F, vertex_boundary_markers)
+			SurfaceSmoothing::smooth(V, F, vertex_boundary_markers);
 		}
 		skip_standardcallback = false;
 	}

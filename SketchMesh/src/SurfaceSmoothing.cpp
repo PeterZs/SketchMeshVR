@@ -6,12 +6,15 @@
 #include <igl/diag.h>
 #include <igl/per_vertex_normals.h>
 #include <igl/adjacency_list.h>
+#include <numeric>
 using namespace std;
 using namespace igl;
 
 int SurfaceSmoothing::prev_vertex_count = -1;
-Eigen::MatrixX3d vertex_normals;
-
+Eigen::MatrixX3d SurfaceSmoothing::vertex_normals(0,0);
+Eigen::SimplicialCholesky<Eigen::SparseMatrix<double>> solver;
+Eigen::VectorXd SurfaceSmoothing::curvatures(0,0);
+static Eigen::VectorXd xm, ym, zm;
 
 void SurfaceSmoothing::smooth(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers) {
 	if(prev_vertex_count != V.rows()) { //The mesh topology has changed, so we need to reset the precomputed matrices
@@ -73,6 +76,14 @@ void SurfaceSmoothing::set_precomputed_target_normals(Mesh &m, Eigen::MatrixX3d 
 	precomputed_target_normals[m] = target_normals;
 }
 
+Eigen::SparseMatrix<double> SurfaceSmoothing::get_precompute_matrix_for_curvatures(Mesh &m) {
+	return precompute_matrix_for_curvatures[m];
+}
+
+void SurfaceSmoothing::set_precompute_matrix_for_curvatures(Mesh &m, Eigen::SparseMatrix<double> curv) {
+	precompute_matrix_for_curvatures[m] = curv;
+}
+
 //NOTE: TODO: might need to change the sign of U (due to different standards)
 Eigen::MatrixXd SurfaceSmoothing::compute_laplacian_matrix(Mesh &m) {
 	Eigen::SparseMatrix<double> A;
@@ -80,13 +91,13 @@ Eigen::MatrixXd SurfaceSmoothing::compute_laplacian_matrix(Mesh &m) {
 	Eigen::SparseMatrix<double> A;
 	// sum each row 
 	Eigen::SparseVector<double> Asum;
-	sum(A,1,Asum);
+	sum(A, 1, Asum);
 	// Convert row sums into diagonal of sparse matrix
 	Eigen::SparseMatrix<double> Adiag;
-	diag(Asum,Adiag);
+	diag(Asum, Adiag);
 	// Build uniform laplacian
 	Eigen::SparseMatrix<double> U;
-	U = A-Adiag;
+	U = A - Adiag;
 	return (Eigen::MatrixXd) U;
 }
 
@@ -123,17 +134,145 @@ Eigen::MatrixX3d SurfaceSmoothing::compute_target_normals(Mesh &m) {
 	return normals; //TODO: NOTE THAT NORMALS AREN'T SET YET, BECAUSE WE DON'T HAVE ACCESS TO A VIEWER.DATA HERE
 }
 
-
-Eigen::VectorXd compute_target_curvatures(Mesh &m, Eigen::MatrixXd &L) {
+Eigen::VectorXd SurfaceSmoothing::compute_target_curvatures(Mesh &m, Eigen::MatrixXd &L) {
 	double CONSTRAINT_WEIGHT = 0.1; //Weight for the constrained vertices (all), smaller = smoother
 	Eigen::VectorXd laplacian_weights = Eigen::VectorXd::Constant(m.V.rows(), 1.0);
 	Eigen::VectorXd constraint_weights = Eigen::VectorXd::Constant(m.V.rows(), CONSTRAINT_WEIGHT);
+	Eigen::VectorXd current_curvature = get_curvatures(m);
 	for(int i = 0; i < m.V.rows(); i++) {
 		if(m.vertex_boundary_markers[i]) { //If the vertex is a boundary vertex
 			constraint_weights[i] = CONSTRAINT_WEIGHT * 0.00001;
 		}
-		current_curvature[i] = 
 	}
+
+	int nr_boundary_vertices = (m.vertex_boundary_markers.array() > 0).count();
+	Eigen::VectorXd b = Eigen::VectorXd::Zero(m.V.rows() + nr_boundary_vertices);
+	int count = 0;
+	for(int i = 0; i < m.V.rows(); i++) {
+		if(m.vertex_boundary_markers[i] == 1) {
+			b[m.V.rows() + count] = current_curvature(i)*constraint_weights(i)*0.98;
+			count++;
+		}
+	}
+
+
+	Eigen::SparseMatrix<double> A = get_precompute_matrix_for_curvatures(m);
+	if(A.rows() == 0 && A.cols() == 0) {
+		A = compute_matrix_for_curvatures(L, m.V.rows(), nr_boundary_vertices, m.vertex_boundary_markers, laplacian_weights, constraint_weights);
+		solver.compute(A);
+		set_precompute_matrix_for_curvatures(m, A);
+	}
+
+	if((curvatures.rows() == 0 && curvatures.cols() == 0) || curvatures.rows() != m.V.rows()){
+		curvatures = Eigen::VectorXd(m.V.rows() + nr_boundary_vertices); //TODO: might want to change this line if we constrain curvature for all vertices (also non-boundary)
+		solver.solve(b);
+	}
+	curvatures.cwiseMax(0);
+	return curvatures;
 }
 
-double SurfaceSmoothing::get_curvature
+Eigen::MatrixX3d SurfaceSmoothing::compute_vertex_laplacians(Mesh &m) {
+	vector<vector<int>> neighbors;
+	adjacency_list(m.F, neighbors);
+	Eigen::MatrixX3d laplacians(m.V.rows(),3);
+	Eigen::Vector3d vec = Eigen::Vector3d::Zero();
+	for(int i = 0; i < m.V.rows(); i++) {
+		int nr_neighbors = accumulate(neighbors[i].begin(), neighbors[i].end(), 0);
+		for(int j = 0; j < nr_neighbors; j++) {
+			vec += m.V.row[neighbors[i][j]];
+		}
+		laplacians.row(i) = m.V.row(i) - (vec * (1.0 / nr_neighbors));
+	}
+	return laplacians;
+}
+
+Eigen::VectorXd SurfaceSmoothing::get_curvatures(Mesh &m) {
+	Eigen::VectorXd curvatures(m.V.rows());
+	Eigen::MatrixX3d laplacians = compute_vertex_laplacians(m);
+	for(int i = 0; i < m.V.rows(); i++) {
+		curvatures[i] = laplacians.row(i).dot(vertex_normals.row(i)); //TODO: check that this is the correct way (not the standar definition of curvature, but what's used in java teddy)
+	}
+	return curvatures;
+}
+
+Eigen::SparseMatrix<double> SurfaceSmoothing::compute_matrix_for_curvatures(Eigen::MatrixXd &L, int n, int n_fixed, Eigen::VectorXi vertex_boundary_markers, Eigen::VectorXd &laplacian_weights, Eigen::VectorXd &constraint_weights) {
+	Eigen::SparseMatrix<double> A(n + n_fixed, n);
+
+	for(int i = 0; i < n; i++) {
+		for(int j = 0; j < n; j++) {
+			if(abs(L(i,j)* laplacian_weights[i]) > 0.000001) {
+				A.insert(i, j) = L(i, j)*laplacian_weights[i];
+			}
+
+			if(vertex_boundary_markers[i] == 1) { //Add extra constraints for boundary vertices
+				A.insert(n + i, i) = constraint_weights[i]; //TODO: RIGHT NOW THIS DONE ONLY FOR THE ORIGINAL BOUNDARY VERTICES. WHEREAS IN TEDDY THEY DO IT FOR ALL VERTICES (SINCE CONSTRAIN_CURVARTURES_AT_BOUNDARY_ONLY IS FALSE)
+			}
+		}
+	}
+	return A;
+}
+
+Eigen::MatrixX3d SurfaceSmoothing::get_target_laplacians(Mesh &m, Eigen::VectorXd target_curvatures, Eigen::MatrixX3d target_normals) {
+	Eigen::MatrixX3d target_laplacians(m.V.rows(), 3);
+	for(int i = 0; i < m.V.rows(); i++) {
+		target_laplacians[i] = vertex_normals[i] * target_curvatures[i];
+	}
+	return target_laplacians;
+}
+
+void move_vertices_to_satisfy_laplacians(Mesh &m, Eigen::MatrixXd &L, Eigen::MatrixX3d laplacians) {
+	double CONSTRAINT_WEIGHT = 10000;
+	Eigen::VectorXd laplacian_weights = Eigen::VectorXd::Constant(m.V.rows(), 1, 1);
+	Eigen::VectorXd constraint_weights = Eigen::VectorXd::Constant(m.V.rows(), 1, CONSTRAINT_WEIGHT);
+	for(int i = 0; i < m.V.rows(); i++) {
+		if(m.vertex_boundary_markers[i] == 1) {
+			laplacian_weights[i] = 0.00001;
+		}
+	}
+
+
+	Eigen::MatrixXd A = get_precompute_matrix_for_positions(m);
+	if(A.rows() == 0 && A.cols() == 0) {
+		A = compute_matrix_for_positions(L, laplacians, m, laplacian_weights, constraint_weights);
+		set_precompute_matrix_for_positions(m, A);
+	}
+
+	int nr_boundary_vertices = (m.vertex_boundary_markers.array() > 0).count();
+
+	Eigen::VectorXd Bx(laplacians.rows() + nr_boundary_vertices); //laplacians has same number of entries as vertices in the mesh
+	Eigen::VectorXd By(laplacians.rows() + nr_boundary_vertices);
+	Eigen::VectorXd Bz(laplacians.rows() + nr_boundary_vertices);
+
+	int count = 0;
+	for(int i = 0; i < laplacians.rows(); i++) {
+		Bx[i] = laplacians(i, 0) * laplacian_weights[i];
+		By[i] = laplacians(i, 1) * laplacian_weights[i];
+		Bz[i] = laplacians(i, 2) * laplacian_weights[i];
+
+		if(m.vertex_boundary_markers[i] == 1) {
+			Bx[laplacians.rows() + count] = m.V(i, 0) *constraint_weights[i];
+			By[laplacians.rows() + count] = m.V(i, 1) *constraint_weights[i];
+			Bz[laplacians.rows() + count] = m.V(i, 2) *constraint_weights[i];
+			count++;
+		}
+	}
+
+	/*if((xm.rows() == 0 && xm.cols() == 0) || (xm.rows() < m.V.rows())) {
+		xm = Eigen::VectorXd(m.V.rows() * 2);
+		ym = Eigen::VectorXd(m.V.rows() * 2);
+		zm = Eigen::VectorXd(m.V.rows() * 2);
+	}*/
+	Eigen::VectorXd Vnewx(m.V.rows()*2);
+	Eigen::VectorXd Vnewy(m.V.rows()*2);
+	Eigen::VectorXd Vnewz(m.V.rows()*2);
+
+	Vnewx = solver.solve(Bx);
+	Vnewy = solver.solve(By);
+	Vnewz = solver.solve(Bz);
+
+	for(int i = 0; i < m.V.rows(); i++) {
+		if(m.vertex_boundary_markers[i] == 0) {
+			m.V.row(i) << Vnewx[i], Vnewy[i], Vnewz[i];
+		}
+	}
+}

@@ -139,7 +139,7 @@ bool Stroke::toLoop() {
 	return false;
 }
 
-void Stroke::generate3DMeshFromStroke(Eigen::MatrixXi &vertex_boundary_markers) {
+void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers) {
 	counter_clockwise(); //Ensure the stroke is counter-clockwise, handy later
 
 	Eigen::MatrixX2d original_stroke2DPoints = stroke2DPoints;
