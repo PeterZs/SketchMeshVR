@@ -33,9 +33,10 @@ void SurfaceSmoothing::smooth(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::Vec
 	}
 	Mesh m(V, F, vertex_boundary_markers, ID);
 	ID++;
-	cout << "test " << endl;
 
 	smooth_main(m);
+	V = m.V;
+	F = m.F;
 }
 
 void SurfaceSmoothing::clear_precomputed_matrices() {
@@ -63,7 +64,7 @@ void SurfaceSmoothing::smooth_main(Mesh &m) {
 	}
 
 	Eigen::MatrixX3d target_normals = get_precomputed_target_normals(m);
-	if(target_normals.rows() == 0 && target_normals.cols() == 0) {
+	if(target_normals.rows() == 0) {
 		target_normals = compute_target_normals(m);
 		set_precomputed_target_normals(m, target_normals);
 	}
@@ -180,6 +181,7 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_curvatures(Mesh &m, Eigen::Matr
 	if(A.rows() == 0 && A.cols() == 0) {
 		A = compute_matrix_for_curvatures(L, m.V.rows(), nr_boundary_vertices, m.vertex_boundary_markers, laplacian_weights, constraint_weights);
 		solver.compute(A);
+		cout << "done" << endl;
 		set_precompute_matrix_for_curvatures(m, A);
 	}
 
@@ -197,7 +199,7 @@ Eigen::MatrixX3d SurfaceSmoothing::compute_vertex_laplacians(Mesh &m) {
 	Eigen::MatrixX3d laplacians(m.V.rows(),3);
 	Eigen::Vector3d vec = Eigen::Vector3d::Zero();
 	for(int i = 0; i < m.V.rows(); i++) {
-		int nr_neighbors = accumulate(neighbors[i].begin(), neighbors[i].end(), 0);
+		int nr_neighbors = neighbors[i].size();
 		for(int j = 0; j < nr_neighbors; j++) {
 			vec += m.V.row(neighbors[i][j]);
 		}
@@ -210,23 +212,23 @@ Eigen::VectorXd SurfaceSmoothing::get_curvatures(Mesh &m) {
 	Eigen::VectorXd curvatures(m.V.rows());
 	Eigen::MatrixX3d laplacians = compute_vertex_laplacians(m);
 	for(int i = 0; i < m.V.rows(); i++) {
-		curvatures[i] = laplacians.row(i).dot(vertex_normals.row(i)); //TODO: check that this is the correct way (not the standar definition of curvature, but what's used in java teddy)
+		curvatures[i] = laplacians.row(i).dot(vertex_normals.row(i).transpose()); //TODO: check that this is the correct way (not the standar definition of curvature, but what's used in java teddy)
 	}
 	return curvatures;
 }
 
 Eigen::SparseMatrix<double> SurfaceSmoothing::compute_matrix_for_curvatures(Eigen::MatrixXd &L, int n, int n_fixed, Eigen::VectorXi vertex_boundary_markers, Eigen::VectorXd &laplacian_weights, Eigen::VectorXd &constraint_weights) {
 	Eigen::SparseMatrix<double> A(n + n_fixed, n);
-
+	int count = 0;
 	for(int i = 0; i < n; i++) {
 		for(int j = 0; j < n; j++) {
 			if(abs(L(i,j)* laplacian_weights[i]) > 0.000001) {
 				A.insert(i, j) = L(i, j)*laplacian_weights[i];
 			}
-
-			if(vertex_boundary_markers[i] == 1) { //Add extra constraints for boundary vertices
-				A.insert(n + i, i) = constraint_weights[i]; //TODO: RIGHT NOW THIS DONE ONLY FOR THE ORIGINAL BOUNDARY VERTICES. WHEREAS IN TEDDY THEY DO IT FOR ALL VERTICES (SINCE CONSTRAIN_CURVARTURES_AT_BOUNDARY_ONLY IS FALSE)
-			}
+		}
+		if(vertex_boundary_markers[i] == 1) { //Add extra constraints for boundary vertices
+			A.insert(n + count, i) = constraint_weights[i]; //TODO: RIGHT NOW THIS DONE ONLY FOR THE ORIGINAL BOUNDARY VERTICES. WHEREAS IN TEDDY THEY DO IT FOR ALL VERTICES (SINCE CONSTRAIN_CURVARTURES_AT_BOUNDARY_ONLY IS FALSE)
+			count++;
 		}
 	}
 	return A;

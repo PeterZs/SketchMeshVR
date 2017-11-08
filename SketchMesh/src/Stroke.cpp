@@ -190,17 +190,17 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers) 
 	igl::per_vertex_normals(V2, F2, N_Vertices);
 
 	vertex_boundary_markers.resize(V2.rows());
-
+	cout << "flootje" << vertex_markers << endl;
 	for(int i = 0; i < V2.rows(); i++) {
-		if(i >= vertex_markers.rows()) { //vertex can't be boundary
-			V2.row(i) = V2.row(i) + 10*N_Vertices.row(i);
-			vertex_boundary_markers[i] << 0;
+		if(i >= vertex_markers.rows()) { //vertex can't be boundary (it's on backside)
+			V2.row(i) = V2.row(i) + 0.10*N_Vertices.row(i);
+			vertex_boundary_markers[i] = 0;
 		} else {
 			if(vertex_markers(i) == 1) { //Don't change boundary vertices
-				vertex_boundary_markers[i] << 1;
+				vertex_boundary_markers[i] = 1;
 				continue;
 			}
-			V2.row(i) = V2.row(i) + 10*N_Vertices.row(i);
+			V2.row(i) = V2.row(i) + 0.10*N_Vertices.row(i);
 			vertex_boundary_markers[i] = 0;
 		}
 	}
