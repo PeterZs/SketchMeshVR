@@ -1,5 +1,5 @@
-#ifndef _Stroke_
-#define _Stroke_
+#ifndef _Stroke_H_
+#define _Stroke_H_
 #include <igl/viewer/Viewer.h>
 
 class Stroke {
