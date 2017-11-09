@@ -207,7 +207,6 @@ Eigen::MatrixX3d SurfaceSmoothing::compute_vertex_laplacians(Mesh &m) {
 			vec += m.V.row(neighbors[i][j]);
 		}
 		laplacians.row(i) = m.V.row(i) - (vec * (1.0 / nr_neighbors)).transpose();
-		cout << "test "<< m.V.row(i) << " " << m.vertex_boundary_markers(i) <<  " " << nr_neighbors << endl;
 	}
 	return laplacians;
 }

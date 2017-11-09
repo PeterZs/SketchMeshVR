@@ -185,7 +185,8 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers) 
 	Eigen::MatrixXd N_Vertices;
 	igl::per_face_normals(V2, F2, N_Faces);
 	igl::per_vertex_normals(V2, F2, N_Vertices);
-
+	N_Vertices = -1 * N_Vertices;
+	cout << N_Vertices << endl << endl << V2 << endl;
 	vertex_boundary_markers.resize(V2.rows());
 	for(int i = 0; i < V2.rows(); i++) {
 		if(i >= vertex_markers.rows()) { //vertex can't be boundary (it's on backside)
@@ -200,8 +201,6 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers) 
 			vertex_boundary_markers[i] = 0;
 		}
 	}
-	cout << "ts" << vertex_boundary_markers << endl;
-
 
 	viewer.data.clear();
 	viewer.data.set_mesh(V2, F2);

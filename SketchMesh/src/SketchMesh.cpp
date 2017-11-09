@@ -125,7 +125,9 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			F = viewer.data.F;
 			V = viewer.data.V;
 			//cout << V << endl << vertex_boundary_markers << endl << endl;
-			SurfaceSmoothing::smooth(V, F, vertex_boundary_markers);
+			for(int i = 0; i < 8; i++) {
+				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers);
+			}
 			//cout << V << endl;
 			viewer.data.set_mesh(V, F);
 		}
