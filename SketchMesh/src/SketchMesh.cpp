@@ -124,9 +124,9 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			_stroke->generate3DMeshFromStroke(vertex_boundary_markers);
 			F = viewer.data.F;
 			V = viewer.data.V;
-			cout << V << endl << vertex_boundary_markers << endl << endl;
+			//cout << V << endl << vertex_boundary_markers << endl << endl;
 			SurfaceSmoothing::smooth(V, F, vertex_boundary_markers);
-			cout << V << endl;
+			//cout << V << endl;
 			viewer.data.set_mesh(V, F);
 		}
 		skip_standardcallback = false;

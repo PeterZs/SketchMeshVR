@@ -126,10 +126,6 @@ void Stroke::strokeReset() {
 
 bool Stroke::toLoop() {
 	if(stroke2DPoints.rows() > 2) { //Don't do anything if we have only 1 line segment
-		stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, stroke2DPoints.cols());
-		stroke2DPoints.row(stroke2DPoints.rows() - 1) << stroke2DPoints(0, 0), stroke2DPoints(0, 1);
-		stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, stroke3DPoints.cols());
-		stroke3DPoints.row(stroke3DPoints.rows() - 1) << stroke3DPoints(0, 0), stroke3DPoints(0, 1), stroke3DPoints(0,2);
 		stroke_edges.conservativeResize(stroke_edges.rows() + 1, stroke_edges.cols());
 		stroke_edges.row(stroke_edges.rows() - 1) << stroke_edges.rows() - 1, 0; //Add an edge from the last vertex to the first
 		//using set_stroke_points will remove all previous strokes, using add_stroke_points might create duplicates
@@ -155,12 +151,13 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers) 
 	V2 = Eigen::MatrixXd::Zero(V2_tmp.rows(), V2_tmp.cols() + 1);
 	V2.block(0,0, V2_tmp.rows(), 2) = V2_tmp;
 
+
 	generate_backfaces(F2, F2_back);
 	int nr_boundary_vertices = (vertex_markers.array() == 1).count(); //check how many vertices were marked as 1 (boundary) TODO: CHECK THAT 1 IS INDEED BOUNDARY
 	int nr_boundary_edges = (edge_markers.array() == 1).count(); //check how many edges were marked as 1 (boundary)
 	
 	int original_size = V2.rows();
-	V2.conservativeResize(V2.rows() + V2.rows() - nr_boundary_vertices, V2.cols()); //Increase size, such that boundary vertices only get included one
+	V2.conservativeResize(2*original_size - nr_boundary_vertices, V2.cols()); //Increase size, such that boundary vertices only get included one
 	unordered_map<int, int> vertex_map;
 	int count = 0;
 	for(int i = 0; i < original_size; i++) {
@@ -176,7 +173,7 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers) 
 	//Add backside faces, using original vertices for boundary and copied vertices for inside
 	//Duplicate all faces
 	original_size = F2_back.rows();
-	F2.conservativeResize(F2.rows()*2, F2.cols());
+	F2.conservativeResize(original_size*2, F2.cols());
 	for(int i = 0; i < original_size; i++) {
 		for(int j = 0; j < 3; j++) {
 			auto got = vertex_map.find(F2_back(i, j));
@@ -190,7 +187,6 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers) 
 	igl::per_vertex_normals(V2, F2, N_Vertices);
 
 	vertex_boundary_markers.resize(V2.rows());
-	cout << "flootje" << vertex_markers << endl;
 	for(int i = 0; i < V2.rows(); i++) {
 		if(i >= vertex_markers.rows()) { //vertex can't be boundary (it's on backside)
 			V2.row(i) = V2.row(i) + 0.10*N_Vertices.row(i);
@@ -204,6 +200,7 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers) 
 			vertex_boundary_markers[i] = 0;
 		}
 	}
+	cout << "ts" << vertex_boundary_markers << endl;
 
 
 	viewer.data.clear();
