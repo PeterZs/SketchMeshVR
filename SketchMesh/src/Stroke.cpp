@@ -199,7 +199,6 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers) 
 			vertex_boundary_markers[i] = 0;
 		}
 	}
-
 	viewer.data.clear();
 	viewer.data.set_mesh(V2, F2);
 	igl::per_face_normals(V2, F2, N_Faces);
