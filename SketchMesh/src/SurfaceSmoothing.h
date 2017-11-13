@@ -29,6 +29,7 @@ public:
 	static Eigen::SparseMatrix<double> get_precompute_matrix_for_positions(Mesh & m);
 	static void set_precompute_matrix_for_positions(Mesh & m, Eigen::SparseMatrix<double> pos);
 	static Eigen::MatrixXd compute_laplacian_matrix(Mesh & m);
+	static Eigen::VectorXd compute_initial_curvature(Mesh & m);
 	static Eigen::MatrixX3d compute_target_normals(Mesh & m);
 	static Eigen::VectorXd compute_target_LMs(Mesh & m, Eigen::MatrixXd & L);
 	static Eigen::VectorXd compute_target_edge_lengths(Mesh & m, Eigen::MatrixXd & L);

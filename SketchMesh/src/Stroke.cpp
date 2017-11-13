@@ -99,10 +99,12 @@ void Stroke::strokeAddSegmentExtrusion(int mouse_x, int mouse_y) {
 
 	if (stroke2DPoints.rows() == 1 && empty2D()) { //Add first point
 		stroke2DPoints.row(0) << x, y;
+		//stroke2DPoints.row(0) << pt[0], pt[1];
 		stroke3DPoints.row(0) << pt[0], pt[1], pt[2];
 	} else {
-		stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, stroke2DPoints.cols());
+		//stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, stroke2DPoints.cols());
 		stroke2DPoints.row(stroke2DPoints.rows() - 1) << x, y;
+		stroke2DPoints.row(stroke2DPoints.rows() - 1) << pt[0], pt[1];
 
 		stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, stroke3DPoints.cols());
 		stroke3DPoints.row(stroke3DPoints.rows() - 1) << pt[0], pt[1], pt[2];
@@ -170,6 +172,18 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers) 
 		}
 	}
 
+
+	double xMean = V2.col(0).mean();
+	double yMean = V2.col(1).mean();
+	double zMean = V2.col(2).mean();
+
+	V2.col(0) = V2.col(0).array() - xMean;
+	V2.col(1) = V2.col(1).array() - yMean;
+	V2.col(2) = V2.col(2).array() - zMean;
+
+	
+
+
 	//Add backside faces, using original vertices for boundary and copied vertices for inside
 	//Duplicate all faces
 	original_size = F2_back.rows();
@@ -180,11 +194,14 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers) 
 			F2(original_size + i, j) = got->second;
 		}
 	}
+	//V2.rowwise().normalize();
+
 
 	Eigen::MatrixXd N_Faces;
 	Eigen::MatrixXd N_Vertices;
 	igl::per_face_normals(V2, F2, N_Faces);
 	igl::per_vertex_normals(V2, F2, PER_VERTEX_NORMALS_WEIGHTING_TYPE_UNIFORM, N_Vertices); //TODO: old version uses uniform weighting, maybe area based is better?
+	
 	vertex_boundary_markers.resize(V2.rows());
 	for(int i = 0; i < V2.rows(); i++) {
 		if(i >= vertex_markers.rows()) { //vertex can't be boundary (it's on backside)
@@ -199,6 +216,18 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers) 
 			vertex_boundary_markers[i] = 0;
 		}
 	}
+
+	/*double epsilon = 0.00001;
+
+	Eigen::Vector3d m_tmp = V2.colwise().minCoeff().array();
+	double m = m_tmp.minCoeff();
+	Eigen::Vector3d M_tmp = V2.colwise().maxCoeff().array();
+	double M = M_tmp.maxCoeff();
+	V2.col(0) = 2.0 * ((V2.col(0).array() - m) / (M - m + epsilon)) - 1.0;
+	V2.col(1) = 2.0 * ((V2.col(1).array() - m) / (M - m + epsilon)) - 1.0;
+	V2.col(2) = 2.0 * ((V2.col(2).array() - m) / (M - m + epsilon)) - 1.0;
+	cout << V2 << endl;*/
+
 	viewer.data.clear();
 	viewer.data.set_mesh(V2, F2);
 	igl::per_face_normals(V2, F2, N_Faces);

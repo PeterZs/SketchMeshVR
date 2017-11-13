@@ -54,8 +54,9 @@ std::unique_ptr<Stroke> _stroke;
 bool callback_key_down(Viewer& viewer, unsigned char key, int modifiers) {
 
 	if (key == '1') {
-		//viewer.data.clear();
-		//viewer.data.set_mesh(V, F);
+		viewer.data.clear();
+		viewer.data.set_mesh(V, F);
+	//	cout << V << endl;
 	}
 
 	if (key == 'D') { //use capital letters
@@ -124,7 +125,8 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			_stroke->generate3DMeshFromStroke(vertex_boundary_markers);
 			F = viewer.data.F;
 			V = viewer.data.V;
-			for(int i = 0; i < 1; i++) {
+
+			for(int i = 0; i < 8; i++) {
 				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers);
 			}
 
@@ -169,7 +171,7 @@ int main(int argc, char *argv[]) {
 	else
 	{
 		// Read mesh
-	//	callback_load_mesh(viewer, "../data/cube.off");
+		callback_load_mesh(viewer, "../data/cube.off");
 	}
 
 	callback_key_down(viewer, '1', 0);
