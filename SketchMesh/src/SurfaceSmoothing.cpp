@@ -20,7 +20,7 @@ Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solver1;
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solver2;
 
-Eigen::VectorXd SurfaceSmoothing::curvatures(0);
+Eigen::VectorXd SurfaceSmoothing::curvatures(ptrdiff_t(0));
 static Eigen::VectorXd xm, ym, zm;
 int ID = 0;
 bool firstDone = false;
