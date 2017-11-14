@@ -8,8 +8,8 @@
 using namespace igl;
 using namespace std;
 
-std::chrono::steady_clock::time_point _time2;// = std::chrono::high_resolution_clock::now();
-std::chrono::steady_clock::time_point _time1;// = std::chrono::high_resolution_clock::now();
+std::chrono::steady_clock::time_point _time2;
+std::chrono::steady_clock::time_point _time1;
 
 
 Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::viewer::Viewer &v) :
@@ -99,10 +99,8 @@ void Stroke::strokeAddSegmentExtrusion(int mouse_x, int mouse_y) {
 
 	if (stroke2DPoints.rows() == 1 && empty2D()) { //Add first point
 		stroke2DPoints.row(0) << x, y;
-		//stroke2DPoints.row(0) << pt[0], pt[1];
 		stroke3DPoints.row(0) << pt[0], pt[1], pt[2];
 	} else {
-		//stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, stroke2DPoints.cols());
 		stroke2DPoints.row(stroke2DPoints.rows() - 1) << x, y;
 		stroke2DPoints.row(stroke2DPoints.rows() - 1) << pt[0], pt[1];
 

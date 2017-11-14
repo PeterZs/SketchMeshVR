@@ -132,9 +132,8 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			}
 
 			viewer.data.set_mesh(V, F);
-			//viewer.data.set_stroke_points(_stroke->get3DPoints());
-			int strokeSize = (vertex_boundary_markers.array() > 0).count();
 
+			int strokeSize = (vertex_boundary_markers.array() > 0).count();
 			Eigen::MatrixXd strokePoints = V.block(0, 0, strokeSize, 3);
 			Eigen::MatrixXd tmp_1 = V.block(1, 0, strokeSize - 1, 3);
 			Eigen::MatrixXd tmp_2 = V.row(0);
