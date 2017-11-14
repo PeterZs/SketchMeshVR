@@ -15,6 +15,7 @@ public:
 	void strokeReset();
 	void generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers);
 	double total_stroke_length();
+	Eigen::MatrixX3d get3DPoints();
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 private:

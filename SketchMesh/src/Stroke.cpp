@@ -254,7 +254,7 @@ void Stroke::counter_clockwise() {
 
 Eigen::MatrixX2d Stroke::resample_stroke(Eigen::MatrixX2d & original_stroke2DPoints) {
 	Eigen::MatrixX2d new_stroke2DPoints = Eigen::MatrixX2d::Zero(original_stroke2DPoints.rows(), 2);
-	int nr_iterations = max(5, original_stroke2DPoints.rows() / 4);
+	int nr_iterations = max(5.0, original_stroke2DPoints.rows() / 4.0);
 	for(int i = 0; i < nr_iterations; i++) {
 		move_to_middle(original_stroke2DPoints, new_stroke2DPoints);
 		move_to_middle(new_stroke2DPoints, original_stroke2DPoints); //TODO: is this to save us a copy? basically performing an extra move_to_middle step
@@ -293,4 +293,8 @@ double Stroke::total_stroke_length() {
 
 void Stroke::generate_backfaces(Eigen::MatrixXi &faces, Eigen::MatrixXi &back_faces) {
 	back_faces = faces.rowwise().reverse().eval();
+}
+
+Eigen::MatrixX3d Stroke::get3DPoints() {
+	return stroke3DPoints;
 }

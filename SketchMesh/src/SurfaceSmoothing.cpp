@@ -132,7 +132,6 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 	Eigen::SparseMatrix<double> A = get_precompute_matrix_for_LM_and_edges(m);
 	Eigen::SparseMatrix<double> AT = A.transpose();
 	if(A.rows() == 0 && A.cols() == 0) { //We haven't set up A for this topology yet
-		cout << " get here once" << endl;
 		A = Eigen::SparseMatrix<double>(m.V.rows()*2, m.V.rows());
 		for(int i = 0; i < m.V.rows(); i++) {
 			for(int j = 0; j < m.V.rows(); j++) {
@@ -161,22 +160,21 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 		initial_curvature = compute_initial_curvature(m);
 	}
 
-	Eigen::VectorXd current_curvatures = get_curvatures(m); //TODO1: email about this being the right curvature (for all iterations) or not
+	Eigen::VectorXd current_curvatures = get_curvatures(m); 
 	Eigen::VectorXd b = Eigen::VectorXd::Zero(m.V.rows()*2);
 	int count = 0;
 	for(int i = 0; i < m.V.rows(); i++) {
 		if(iteration == 0) {
 			if(m.vertex_boundary_markers[i] == 1) {
-				b[m.V.rows() + i] = initial_curvature[i];// / 1000;
+				b[m.V.rows() + i] = initial_curvature[i];
 				count++;
 			}
 		} else {
-			b[m.V.rows() + i] = current_curvatures[i];// / 150;
+			b[m.V.rows() + i] = current_curvatures[i];
 		}
 	}
 	Eigen::VectorXd target_LM;
 	target_LM = solver1.solve(AT*b);
-	//TODO2: TARGET_LMS SEEM TO MAKE SENSE (ALL APPROXIMATELY EQUAL SIZE)
 	return target_LM;
 }
 
@@ -248,7 +246,7 @@ Eigen::MatrixX3d SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::Matri
 			for(int j = 0; j < m.V.rows(); j++) {
 				A.insert(i, j) = L(i, j);
 			}
-			if(m.vertex_boundary_markers[i] == 1) { //Constrain only the boundary in the first iteration
+			if(m.vertex_boundary_markers[i] == 1) { //Constrain only the boundary LMs and edges
 				A.insert(m.V.rows() + count, i) = vertex_weight; //For target LM'/edge'
 				count++;
 
@@ -271,8 +269,7 @@ Eigen::MatrixX3d SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::Matri
 	Eigen::VectorXd doubleAreas;
 	igl::doublearea(m.V, m.F, doubleAreas);
 	double totalArea = doubleAreas.sum() / 2.0;
-	//cout << doubleAreas << endl;
-	//cout << m.V << endl << endl << m.F << endl;
+	
 	
 	vector<vector<int>> VF, VFi;
 	igl::vertex_triangle_adjacency(m.V.rows(), m.F, VF, VFi);
@@ -288,19 +285,10 @@ Eigen::MatrixX3d SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::Matri
 
 	int count = 0, count2 = 0;
 	for(int i = 0; i < m.V.rows(); i++) {
-		/*double vertex_area = 0.0;
-		for(int j = 0; j < VF[i].size(); j++) {
-			vertex_area += doubleAreas(VF[i][j]); //Get the area of the adjacent face
-		}
-		vertex_area /= 6.0; //Divide by 2 because of "double" area, and then by 3 because every vertex shares a face with 2 other vertices*/
 		Eigen::Vector3d delta = vertex_areas[i]/min_area * target_LMs[i] * vertex_normals.row(i);
 		bx[i] = delta(0);
 		by[i] = delta(1);
 		bz[i] = delta(2);
-	//	cout << vertex_area << endl;
-		//cout << delta << endl;
-		//cout << L.row(i) << endl;
-	//	cout << vertex_area << "  " << target_LMs[i] << " " << vertex_normals.row(i) << endl;
 
 		if(m.vertex_boundary_markers[i] == 1) {
 			bx[m.V.rows() + count2] = m.V(i, 0) * vertex_weight;
@@ -328,7 +316,7 @@ Eigen::MatrixX3d SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::Matri
 	Vnewx = solver2.solve(AT*bx);
 	Vnewy = solver2.solve(AT*by);
 	Vnewz = solver2.solve(AT*bz);
-	//TODO: check if we should do this for all vertices instead of only non-boundary ones
+
 	for(int i = 0; i < m.V.rows(); i++) {
 		if(m.vertex_boundary_markers[i] == 0) {
 			m.V.row(i) << Vnewx[i], Vnewy[i], Vnewz[i];
@@ -338,7 +326,7 @@ Eigen::MatrixX3d SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::Matri
 	newVertices.col(0) << Vnewx;
 	newVertices.col(1) << Vnewy;
 	newVertices.col(2) << Vnewz;
-
+	cout << m.V << endl << endl;
 	return newVertices;
 }
 

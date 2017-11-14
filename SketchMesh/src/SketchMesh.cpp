@@ -10,6 +10,7 @@
 #include <igl/facet_components.h>
 #include <igl/jet.h>
 #include <igl/barycenter.h>
+#include <igl/cat.h>
 #include <cmath>
 #include <igl/triangle_triangle_adjacency.h>
 #include "SketchMesh.h"
@@ -131,6 +132,15 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			}
 
 			viewer.data.set_mesh(V, F);
+			//viewer.data.set_stroke_points(_stroke->get3DPoints());
+			int strokeSize = (vertex_boundary_markers.array() > 0).count();
+
+			Eigen::MatrixXd strokePoints = V.block(0, 0, strokeSize, 3);
+			Eigen::MatrixXd tmp_1 = V.block(1, 0, strokeSize - 1, 3);
+			Eigen::MatrixXd tmp_2 = V.row(0);
+			Eigen::MatrixXd endPoints = igl::cat(1, tmp_1, tmp_2);
+			viewer.data.add_points(strokePoints, Eigen::RowVector3d(1, 0, 0));
+			viewer.data.add_edges(V.block(0, 0, strokeSize, 3), endPoints, Eigen::RowVector3d(1,0,0));
 		}
 		skip_standardcallback = false;
 	}
