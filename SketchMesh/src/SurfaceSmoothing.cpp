@@ -22,7 +22,7 @@ Eigen::SparseLU<Eigen::SparseMatrix<double>> solver2;
 
 Eigen::VectorXd SurfaceSmoothing::curvatures(ptrdiff_t(0));
 static Eigen::VectorXd xm, ym, zm;
-int ID = 0;
+int ID = -1;
 bool firstDone = false;
 int iteration = 0;
 Eigen::VectorXd initial_curvature;
@@ -37,13 +37,13 @@ std::unordered_map<int, Eigen::SparseMatrix<double>> SurfaceSmoothing::precomput
 
 void SurfaceSmoothing::smooth(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers) {
 	if(prev_vertex_count != V.rows()) { //The mesh topology has changed, so we need to reset the precomputed matrices
+        ID++;
 		clear_precomputed_matrices();
 		prev_vertex_count = V.rows();
 		iteration = 0;
 		cout << " reset" << endl;
 	}
 	Mesh m(V, F, vertex_boundary_markers, ID);
-	ID++;
 
 	smooth_main(m);
 	V = m.V;
@@ -76,8 +76,8 @@ void SurfaceSmoothing::smooth_main(Mesh &m) {
 	}
 
 	adjacency_list(m.F, neighbors);
-	igl::per_vertex_normals(m.V, m.F, vertex_normals); //TODO: might want to use PER_VERTEX_NORMALS_WEIGHTING_TYPE_UNIFORM
-
+	igl::per_vertex_normals(m.V, m.F,PER_VERTEX_NORMALS_WEIGHTING_TYPE_UNIFORM, vertex_normals); //TODO: might want to use PER_VERTEX_NORMALS_WEIGHTING_TYPE_UNIFORM
+    
 	Eigen::VectorXd target_LMs = compute_target_LMs(m, L);
 	Eigen::VectorXd target_edge_lengths = compute_target_edge_lengths(m, L);
 	compute_target_vertices(m, L, target_LMs, target_edge_lengths);
@@ -170,26 +170,27 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 		set_precompute_matrix_for_LM_and_edges(m, A);
 	}
 
+    Eigen::VectorXd current_curvatures;
 	if(iteration == 0) {
 		initial_curvature = compute_initial_curvature(m);
-	}
-
-
-	Eigen::VectorXd current_curvatures = get_curvatures(m); 
+        cout << "init" << initial_curvature << endl << endl;
+    }else{
+        current_curvatures = get_curvatures(m);
+        cout << current_curvatures << endl << endl;
+    }
+    
 	Eigen::VectorXd b = Eigen::VectorXd::Zero(m.V.rows()*2);
-	int count = 0;
 	for(int i = 0; i < m.V.rows(); i++) {
 		if(iteration == 0) {
 			if(m.vertex_boundary_markers[i] == 1) {
 				b[m.V.rows() + i] = initial_curvature[i];
-				count++;
 			}
 		} else {
 			b[m.V.rows() + i] = current_curvatures[i];
 		}
 	}
-	Eigen::VectorXd target_LM;
-	target_LM = solver1.solve(AT*b);
+    
+	Eigen::VectorXd target_LM = solver1.solve(AT*b);
 	return target_LM;
 }
 
@@ -206,7 +207,9 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_edge_lengths(Mesh &m, Eigen::Ma
 			if(m.vertex_boundary_markers[i] == 1) {
 				cum_edge_length = 0.0;
 				for(int j = 0; j < neighbors[i].size(); j++) {
-					cum_edge_length += (m.V.row(neighbors[i][j]) - m.V.row(i)).norm();
+                    if(m.vertex_boundary_markers[neighbors[i][j]]==1){
+                        cum_edge_length += (m.V.row(neighbors[i][j]) - m.V.row(i)).norm();
+                    }
 				}
 				b[m.V.rows() + i] = (double)(cum_edge_length / neighbors[i].size());
 			}
@@ -221,8 +224,7 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_edge_lengths(Mesh &m, Eigen::Ma
 		}
 	}
 
-	Eigen::VectorXd target_edge_lengths;
-	target_edge_lengths = solver1.solve(AT*b);
+	Eigen::VectorXd target_edge_lengths = solver1.solve(AT*b);
 	return target_edge_lengths;
 }
 
@@ -328,8 +330,8 @@ Eigen::MatrixX3d SurfaceSmoothing::compute_vertex_laplacians(Mesh &m) {
 	vector<vector<int>> neighbors;
 	adjacency_list(m.F, neighbors);
 	Eigen::MatrixX3d laplacians(m.V.rows(),3);
-	Eigen::Vector3d vec = Eigen::Vector3d::Zero();
-	for(int i = 0; i < m.V.rows(); i++) {
+    Eigen::Vector3d vec;
+    for(int i = 0; i < m.V.rows(); i++) {
 		vec = Eigen::Vector3d::Zero();
 		int nr_neighbors = neighbors[i].size();
 		for(int j = 0; j < nr_neighbors; j++) {
@@ -344,7 +346,8 @@ Eigen::VectorXd SurfaceSmoothing::get_curvatures(Mesh &m) {
 	Eigen::VectorXd curvatures(m.V.rows());
 	Eigen::MatrixX3d laplacians = compute_vertex_laplacians(m);
 	for(int i = 0; i < m.V.rows(); i++) {
-		curvatures[i] = laplacians.row(i).dot(vertex_normals.row(i).transpose());
+        curvatures[i] = laplacians.row(i).norm();
+		//curvatures[i] = laplacians.row(i).dot(vertex_normals.row(i).transpose());
 	}
 	return curvatures;
 }
