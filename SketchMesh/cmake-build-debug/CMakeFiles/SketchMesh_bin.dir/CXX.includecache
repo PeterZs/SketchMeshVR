@@ -1,0 +1,2980 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/src/Mesh.cpp
+Mesh.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/src/Mesh.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/src/Mesh.h
+Eigen/Core
+-
+Eigen/Geometry
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/src/SketchMesh.cpp
+stdlib.h
+-
+iostream
+-
+igl/readOFF.h
+-
+igl/viewer/Viewer.h
+-
+igl/vertex_triangle_adjacency.h
+-
+igl/adjacency_list.h
+-
+igl/per_face_normals.h
+-
+igl/per_vertex_normals.h
+-
+igl/per_corner_normals.h
+-
+igl/facet_components.h
+-
+igl/jet.h
+-
+igl/barycenter.h
+-
+igl/cat.h
+-
+cmath
+-
+igl/triangle_triangle_adjacency.h
+-
+SketchMesh.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/src/SketchMesh.h
+Stroke.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/src/Stroke.h
+SurfaceSmoothing.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/src/SurfaceSmoothing.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/src/SketchMesh.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/src/Stroke.cpp
+Stroke.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/src/Stroke.h
+igl/unproject_onto_mesh.h
+-
+igl/unproject.h
+-
+igl/triangle/triangulate.h
+-
+algorithm
+-
+igl/per_face_normals.h
+-
+igl/per_vertex_normals.h
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/src/Stroke.h
+igl/viewer/Viewer.h
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/src/SurfaceSmoothing.cpp
+iostream
+-
+algorithm
+-
+unordered_map
+-
+igl/adjacency_matrix.h
+-
+igl/sum.h
+-
+igl/diag.h
+-
+igl/per_vertex_normals.h
+-
+igl/adjacency_list.h
+-
+igl/vertex_triangle_adjacency.h
+-
+numeric
+-
+SurfaceSmoothing.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/src/SurfaceSmoothing.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/src/SurfaceSmoothing.h
+Eigen/Core
+-
+Eigen/Geometry
+-
+unordered_map
+-
+Mesh.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/src/Mesh.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Cholesky
+Core
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Core
+src/Core/util/DisableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/DisableStupidWarnings.h
+src/misc/Solve.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/misc/Solve.h
+src/Cholesky/LLT.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Cholesky/LLT.h
+src/Cholesky/LDLT.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Cholesky/LDLT.h
+src/Cholesky/LLT_MKL.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Cholesky/LLT_MKL.h
+src/Core/util/ReenableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/ReenableStupidWarnings.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Core
+src/Core/util/DisableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/DisableStupidWarnings.h
+src/Core/util/Macros.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/Macros.h
+complex
+-
+src/Core/util/MKL_support.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/MKL_support.h
+malloc.h
+-
+immintrin.h
+-
+emmintrin.h
+-
+xmmintrin.h
+-
+pmmintrin.h
+-
+tmmintrin.h
+-
+smmintrin.h
+-
+nmmintrin.h
+-
+altivec.h
+-
+arm_neon.h
+-
+omp.h
+-
+cerrno
+-
+cstddef
+-
+cstdlib
+-
+cmath
+-
+cassert
+-
+functional
+-
+iosfwd
+-
+cstring
+-
+string
+-
+limits
+-
+climits
+-
+algorithm
+-
+iostream
+-
+intrin.h
+-
+new
+-
+src/Core/util/Constants.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/Constants.h
+src/Core/util/ForwardDeclarations.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/ForwardDeclarations.h
+src/Core/util/Meta.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/Meta.h
+src/Core/util/StaticAssert.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/StaticAssert.h
+src/Core/util/XprHelper.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/XprHelper.h
+src/Core/util/Memory.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/Memory.h
+src/Core/NumTraits.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/NumTraits.h
+src/Core/MathFunctions.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/MathFunctions.h
+src/Core/GenericPacketMath.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/GenericPacketMath.h
+src/Core/arch/SSE/PacketMath.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/arch/SSE/PacketMath.h
+src/Core/arch/SSE/MathFunctions.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/arch/SSE/MathFunctions.h
+src/Core/arch/SSE/Complex.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/arch/SSE/Complex.h
+src/Core/arch/AltiVec/PacketMath.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/arch/AltiVec/PacketMath.h
+src/Core/arch/AltiVec/Complex.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/arch/AltiVec/Complex.h
+src/Core/arch/NEON/PacketMath.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/arch/NEON/PacketMath.h
+src/Core/arch/NEON/Complex.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/arch/NEON/Complex.h
+src/Core/arch/Default/Settings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/arch/Default/Settings.h
+src/Core/Functors.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Functors.h
+src/Core/DenseCoeffsBase.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/DenseCoeffsBase.h
+src/Core/DenseBase.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/DenseBase.h
+src/Core/MatrixBase.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/MatrixBase.h
+src/Core/EigenBase.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/EigenBase.h
+src/Core/Assign.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Assign.h
+src/Core/util/BlasUtil.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/BlasUtil.h
+src/Core/DenseStorage.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/DenseStorage.h
+src/Core/NestByValue.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/NestByValue.h
+src/Core/ForceAlignedAccess.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/ForceAlignedAccess.h
+src/Core/ReturnByValue.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/ReturnByValue.h
+src/Core/NoAlias.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/NoAlias.h
+src/Core/PlainObjectBase.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/PlainObjectBase.h
+src/Core/Matrix.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Matrix.h
+src/Core/Array.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Array.h
+src/Core/CwiseBinaryOp.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/CwiseBinaryOp.h
+src/Core/CwiseUnaryOp.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/CwiseUnaryOp.h
+src/Core/CwiseNullaryOp.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/CwiseNullaryOp.h
+src/Core/CwiseUnaryView.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/CwiseUnaryView.h
+src/Core/SelfCwiseBinaryOp.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/SelfCwiseBinaryOp.h
+src/Core/Dot.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Dot.h
+src/Core/StableNorm.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/StableNorm.h
+src/Core/MapBase.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/MapBase.h
+src/Core/Stride.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Stride.h
+src/Core/Map.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Map.h
+src/Core/Block.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Block.h
+src/Core/VectorBlock.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/VectorBlock.h
+src/Core/Ref.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Ref.h
+src/Core/Transpose.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Transpose.h
+src/Core/DiagonalMatrix.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/DiagonalMatrix.h
+src/Core/Diagonal.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Diagonal.h
+src/Core/DiagonalProduct.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/DiagonalProduct.h
+src/Core/PermutationMatrix.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/PermutationMatrix.h
+src/Core/Transpositions.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Transpositions.h
+src/Core/Redux.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Redux.h
+src/Core/Visitor.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Visitor.h
+src/Core/Fuzzy.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Fuzzy.h
+src/Core/IO.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/IO.h
+src/Core/Swap.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Swap.h
+src/Core/CommaInitializer.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/CommaInitializer.h
+src/Core/Flagged.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Flagged.h
+src/Core/ProductBase.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/ProductBase.h
+src/Core/GeneralProduct.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/GeneralProduct.h
+src/Core/TriangularMatrix.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/TriangularMatrix.h
+src/Core/SelfAdjointView.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/SelfAdjointView.h
+src/Core/products/GeneralBlockPanelKernel.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/GeneralBlockPanelKernel.h
+src/Core/products/Parallelizer.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/Parallelizer.h
+src/Core/products/CoeffBasedProduct.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/CoeffBasedProduct.h
+src/Core/products/GeneralMatrixVector.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/GeneralMatrixVector.h
+src/Core/products/GeneralMatrixMatrix.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/GeneralMatrixMatrix.h
+src/Core/SolveTriangular.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/SolveTriangular.h
+src/Core/products/GeneralMatrixMatrixTriangular.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/GeneralMatrixMatrixTriangular.h
+src/Core/products/SelfadjointMatrixVector.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/SelfadjointMatrixVector.h
+src/Core/products/SelfadjointMatrixMatrix.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/SelfadjointMatrixMatrix.h
+src/Core/products/SelfadjointProduct.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/SelfadjointProduct.h
+src/Core/products/SelfadjointRank2Update.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/SelfadjointRank2Update.h
+src/Core/products/TriangularMatrixVector.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/TriangularMatrixVector.h
+src/Core/products/TriangularMatrixMatrix.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/TriangularMatrixMatrix.h
+src/Core/products/TriangularSolverMatrix.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/TriangularSolverMatrix.h
+src/Core/products/TriangularSolverVector.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/TriangularSolverVector.h
+src/Core/BandMatrix.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/BandMatrix.h
+src/Core/CoreIterators.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/CoreIterators.h
+src/Core/BooleanRedux.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/BooleanRedux.h
+src/Core/Select.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Select.h
+src/Core/VectorwiseOp.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/VectorwiseOp.h
+src/Core/Random.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Random.h
+src/Core/Replicate.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Replicate.h
+src/Core/Reverse.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Reverse.h
+src/Core/ArrayBase.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/ArrayBase.h
+src/Core/ArrayWrapper.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/ArrayWrapper.h
+src/Core/products/GeneralMatrixMatrix_MKL.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/GeneralMatrixMatrix_MKL.h
+src/Core/products/GeneralMatrixVector_MKL.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/GeneralMatrixVector_MKL.h
+src/Core/products/GeneralMatrixMatrixTriangular_MKL.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/GeneralMatrixMatrixTriangular_MKL.h
+src/Core/products/SelfadjointMatrixMatrix_MKL.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/SelfadjointMatrixMatrix_MKL.h
+src/Core/products/SelfadjointMatrixVector_MKL.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/SelfadjointMatrixVector_MKL.h
+src/Core/products/TriangularMatrixMatrix_MKL.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/TriangularMatrixMatrix_MKL.h
+src/Core/products/TriangularMatrixVector_MKL.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/TriangularMatrixVector_MKL.h
+src/Core/products/TriangularSolverMatrix_MKL.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/TriangularSolverMatrix_MKL.h
+src/Core/Assign_MKL.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Assign_MKL.h
+src/Core/GlobalFunctions.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/GlobalFunctions.h
+src/Core/util/ReenableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/ReenableStupidWarnings.h
+Eigen2Support
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Eigen2Support
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Dense
+Core
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Core
+LU
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/LU
+Cholesky
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Cholesky
+QR
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/QR
+SVD
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/SVD
+Geometry
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Geometry
+Eigenvalues
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Eigenvalues
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Eigen2Support
+src/Core/util/DisableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/DisableStupidWarnings.h
+src/Eigen2Support/Macros.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Macros.h
+src/Eigen2Support/Memory.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Memory.h
+src/Eigen2Support/Meta.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Meta.h
+src/Eigen2Support/Lazy.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Lazy.h
+src/Eigen2Support/Cwise.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Cwise.h
+src/Eigen2Support/CwiseOperators.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/CwiseOperators.h
+src/Eigen2Support/TriangularSolver.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/TriangularSolver.h
+src/Eigen2Support/Block.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Block.h
+src/Eigen2Support/VectorBlock.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/VectorBlock.h
+src/Eigen2Support/Minor.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Minor.h
+src/Eigen2Support/MathFunctions.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/MathFunctions.h
+src/Core/util/ReenableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/ReenableStupidWarnings.h
+iostream
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Eigenvalues
+Core
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Core
+src/Core/util/DisableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/DisableStupidWarnings.h
+Cholesky
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Cholesky
+Jacobi
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Jacobi
+Householder
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Householder
+LU
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/LU
+Geometry
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Geometry
+src/Eigenvalues/Tridiagonalization.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/Tridiagonalization.h
+src/Eigenvalues/RealSchur.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/RealSchur.h
+src/Eigenvalues/EigenSolver.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/EigenSolver.h
+src/Eigenvalues/SelfAdjointEigenSolver.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/SelfAdjointEigenSolver.h
+src/Eigenvalues/GeneralizedSelfAdjointEigenSolver.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/GeneralizedSelfAdjointEigenSolver.h
+src/Eigenvalues/HessenbergDecomposition.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/HessenbergDecomposition.h
+src/Eigenvalues/ComplexSchur.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/ComplexSchur.h
+src/Eigenvalues/ComplexEigenSolver.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/ComplexEigenSolver.h
+src/Eigenvalues/RealQZ.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/RealQZ.h
+src/Eigenvalues/GeneralizedEigenSolver.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/GeneralizedEigenSolver.h
+src/Eigenvalues/MatrixBaseEigenvalues.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/MatrixBaseEigenvalues.h
+src/Eigenvalues/RealSchur_MKL.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/RealSchur_MKL.h
+src/Eigenvalues/ComplexSchur_MKL.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/ComplexSchur_MKL.h
+src/Eigenvalues/SelfAdjointEigenSolver_MKL.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/SelfAdjointEigenSolver_MKL.h
+src/Core/util/ReenableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/ReenableStupidWarnings.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Geometry
+Core
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Core
+src/Core/util/DisableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/DisableStupidWarnings.h
+SVD
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/SVD
+LU
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/LU
+limits
+-
+src/Geometry/OrthoMethods.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/OrthoMethods.h
+src/Geometry/EulerAngles.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/EulerAngles.h
+src/Geometry/Homogeneous.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/Homogeneous.h
+src/Geometry/RotationBase.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/RotationBase.h
+src/Geometry/Rotation2D.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/Rotation2D.h
+src/Geometry/Quaternion.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/Quaternion.h
+src/Geometry/AngleAxis.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/AngleAxis.h
+src/Geometry/Transform.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/Transform.h
+src/Geometry/Translation.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/Translation.h
+src/Geometry/Scaling.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/Scaling.h
+src/Geometry/Hyperplane.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/Hyperplane.h
+src/Geometry/ParametrizedLine.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/ParametrizedLine.h
+src/Geometry/AlignedBox.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/AlignedBox.h
+src/Geometry/Umeyama.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/Umeyama.h
+src/Geometry/arch/Geometry_SSE.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/arch/Geometry_SSE.h
+src/Eigen2Support/Geometry/All.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/All.h
+src/Core/util/ReenableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/ReenableStupidWarnings.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Householder
+Core
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Core
+src/Core/util/DisableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/DisableStupidWarnings.h
+src/Householder/Householder.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Householder/Householder.h
+src/Householder/HouseholderSequence.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Householder/HouseholderSequence.h
+src/Householder/BlockHouseholder.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Householder/BlockHouseholder.h
+src/Core/util/ReenableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/ReenableStupidWarnings.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/IterativeLinearSolvers
+SparseCore
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/SparseCore
+OrderingMethods
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/OrderingMethods
+src/Core/util/DisableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/DisableStupidWarnings.h
+src/misc/Solve.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/misc/Solve.h
+src/misc/SparseSolve.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/misc/SparseSolve.h
+src/IterativeLinearSolvers/IterativeSolverBase.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/IterativeLinearSolvers/IterativeSolverBase.h
+src/IterativeLinearSolvers/BasicPreconditioners.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/IterativeLinearSolvers/BasicPreconditioners.h
+src/IterativeLinearSolvers/ConjugateGradient.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/IterativeLinearSolvers/ConjugateGradient.h
+src/IterativeLinearSolvers/BiCGSTAB.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/IterativeLinearSolvers/BiCGSTAB.h
+src/IterativeLinearSolvers/IncompleteLUT.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/IterativeLinearSolvers/IncompleteLUT.h
+src/Core/util/ReenableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/ReenableStupidWarnings.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Jacobi
+Core
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Core
+src/Core/util/DisableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/DisableStupidWarnings.h
+src/Jacobi/Jacobi.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Jacobi/Jacobi.h
+src/Core/util/ReenableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/ReenableStupidWarnings.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/LU
+Core
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Core
+src/Core/util/DisableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/DisableStupidWarnings.h
+src/misc/Solve.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/misc/Solve.h
+src/misc/Kernel.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/misc/Kernel.h
+src/misc/Image.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/misc/Image.h
+src/LU/FullPivLU.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/LU/FullPivLU.h
+src/LU/PartialPivLU.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/LU/PartialPivLU.h
+src/LU/PartialPivLU_MKL.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/LU/PartialPivLU_MKL.h
+src/LU/Determinant.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/LU/Determinant.h
+src/LU/Inverse.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/LU/Inverse.h
+src/LU/arch/Inverse_SSE.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/LU/arch/Inverse_SSE.h
+src/Eigen2Support/LU.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/LU.h
+src/Core/util/ReenableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/ReenableStupidWarnings.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/OrderingMethods
+SparseCore
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/SparseCore
+src/Core/util/DisableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/DisableStupidWarnings.h
+src/OrderingMethods/Amd.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/OrderingMethods/Amd.h
+src/OrderingMethods/Ordering.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/OrderingMethods/Ordering.h
+src/Core/util/ReenableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/ReenableStupidWarnings.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/QR
+Core
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Core
+src/Core/util/DisableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/DisableStupidWarnings.h
+Cholesky
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Cholesky
+Jacobi
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Jacobi
+Householder
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Householder
+src/misc/Solve.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/misc/Solve.h
+src/QR/HouseholderQR.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/QR/HouseholderQR.h
+src/QR/FullPivHouseholderQR.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/QR/FullPivHouseholderQR.h
+src/QR/ColPivHouseholderQR.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/QR/ColPivHouseholderQR.h
+src/QR/HouseholderQR_MKL.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/QR/HouseholderQR_MKL.h
+src/QR/ColPivHouseholderQR_MKL.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/QR/ColPivHouseholderQR_MKL.h
+src/Eigen2Support/QR.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/QR.h
+src/Core/util/ReenableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/ReenableStupidWarnings.h
+Eigenvalues
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Eigenvalues
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/SVD
+QR
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/QR
+Householder
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Householder
+Jacobi
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Jacobi
+src/Core/util/DisableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/DisableStupidWarnings.h
+src/misc/Solve.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/misc/Solve.h
+src/SVD/JacobiSVD.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SVD/JacobiSVD.h
+src/SVD/JacobiSVD_MKL.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SVD/JacobiSVD_MKL.h
+src/SVD/UpperBidiagonalization.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SVD/UpperBidiagonalization.h
+src/Eigen2Support/SVD.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/SVD.h
+src/Core/util/ReenableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/ReenableStupidWarnings.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Sparse
+SparseCore
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/SparseCore
+OrderingMethods
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/OrderingMethods
+SparseCholesky
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/SparseCholesky
+SparseLU
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/SparseLU
+SparseQR
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/SparseQR
+IterativeLinearSolvers
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/IterativeLinearSolvers
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/SparseCholesky
+SparseCore
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/SparseCore
+OrderingMethods
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/OrderingMethods
+src/Core/util/DisableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/DisableStupidWarnings.h
+src/misc/Solve.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/misc/Solve.h
+src/misc/SparseSolve.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/misc/SparseSolve.h
+src/SparseCholesky/SimplicialCholesky.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCholesky/SimplicialCholesky.h
+src/SparseCholesky/SimplicialCholesky_impl.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCholesky/SimplicialCholesky_impl.h
+src/Core/util/ReenableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/ReenableStupidWarnings.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/SparseCore
+Core
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Core
+src/Core/util/DisableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/DisableStupidWarnings.h
+vector
+-
+map
+-
+cstdlib
+-
+cstring
+-
+algorithm
+-
+src/SparseCore/SparseUtil.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseUtil.h
+src/SparseCore/SparseMatrixBase.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseMatrixBase.h
+src/SparseCore/CompressedStorage.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/CompressedStorage.h
+src/SparseCore/AmbiVector.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/AmbiVector.h
+src/SparseCore/SparseMatrix.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseMatrix.h
+src/SparseCore/MappedSparseMatrix.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/MappedSparseMatrix.h
+src/SparseCore/SparseVector.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseVector.h
+src/SparseCore/SparseBlock.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseBlock.h
+src/SparseCore/SparseTranspose.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseTranspose.h
+src/SparseCore/SparseCwiseUnaryOp.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseCwiseUnaryOp.h
+src/SparseCore/SparseCwiseBinaryOp.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseCwiseBinaryOp.h
+src/SparseCore/SparseDot.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseDot.h
+src/SparseCore/SparsePermutation.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparsePermutation.h
+src/SparseCore/SparseRedux.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseRedux.h
+src/SparseCore/SparseFuzzy.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseFuzzy.h
+src/SparseCore/ConservativeSparseSparseProduct.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/ConservativeSparseSparseProduct.h
+src/SparseCore/SparseSparseProductWithPruning.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseSparseProductWithPruning.h
+src/SparseCore/SparseProduct.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseProduct.h
+src/SparseCore/SparseDenseProduct.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseDenseProduct.h
+src/SparseCore/SparseDiagonalProduct.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseDiagonalProduct.h
+src/SparseCore/SparseTriangularView.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseTriangularView.h
+src/SparseCore/SparseSelfAdjointView.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseSelfAdjointView.h
+src/SparseCore/TriangularSolver.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/TriangularSolver.h
+src/SparseCore/SparseView.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseView.h
+src/Core/util/ReenableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/ReenableStupidWarnings.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/SparseLU
+SparseCore
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/SparseCore
+src/misc/Solve.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/misc/Solve.h
+src/misc/SparseSolve.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/misc/SparseSolve.h
+OrderingMethods
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/OrderingMethods
+src/SparseLU/SparseLU_gemm_kernel.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_gemm_kernel.h
+src/SparseLU/SparseLU_Structs.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_Structs.h
+src/SparseLU/SparseLU_SupernodalMatrix.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_SupernodalMatrix.h
+src/SparseLU/SparseLUImpl.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLUImpl.h
+src/SparseCore/SparseColEtree.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseColEtree.h
+src/SparseLU/SparseLU_Memory.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_Memory.h
+src/SparseLU/SparseLU_heap_relax_snode.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_heap_relax_snode.h
+src/SparseLU/SparseLU_relax_snode.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_relax_snode.h
+src/SparseLU/SparseLU_pivotL.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_pivotL.h
+src/SparseLU/SparseLU_panel_dfs.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_panel_dfs.h
+src/SparseLU/SparseLU_kernel_bmod.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_kernel_bmod.h
+src/SparseLU/SparseLU_panel_bmod.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_panel_bmod.h
+src/SparseLU/SparseLU_column_dfs.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_column_dfs.h
+src/SparseLU/SparseLU_column_bmod.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_column_bmod.h
+src/SparseLU/SparseLU_copy_to_ucol.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_copy_to_ucol.h
+src/SparseLU/SparseLU_pruneL.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_pruneL.h
+src/SparseLU/SparseLU_Utils.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_Utils.h
+src/SparseLU/SparseLU.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/SparseQR
+SparseCore
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/SparseCore
+OrderingMethods
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/OrderingMethods
+src/Core/util/DisableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/DisableStupidWarnings.h
+src/misc/Solve.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/misc/Solve.h
+src/misc/SparseSolve.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/misc/SparseSolve.h
+OrderingMethods
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/OrderingMethods
+src/SparseCore/SparseColEtree.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseColEtree.h
+src/SparseQR/SparseQR.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseQR/SparseQR.h
+src/Core/util/ReenableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/ReenableStupidWarnings.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Cholesky/LDLT.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Cholesky/LLT.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Cholesky/LLT_MKL.h
+Eigen/src/Core/util/MKL_support.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Cholesky/Eigen/src/Core/util/MKL_support.h
+iostream
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Array.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/ArrayBase.h
+../plugins/CommonCwiseUnaryOps.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/plugins/CommonCwiseUnaryOps.h
+../plugins/MatrixCwiseUnaryOps.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/plugins/MatrixCwiseUnaryOps.h
+../plugins/ArrayCwiseUnaryOps.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/plugins/ArrayCwiseUnaryOps.h
+../plugins/CommonCwiseBinaryOps.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/plugins/CommonCwiseBinaryOps.h
+../plugins/MatrixCwiseBinaryOps.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/plugins/MatrixCwiseBinaryOps.h
+../plugins/ArrayCwiseBinaryOps.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/plugins/ArrayCwiseBinaryOps.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/ArrayWrapper.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Assign.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Assign_MKL.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/BandMatrix.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Block.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/BooleanRedux.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/CommaInitializer.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/CoreIterators.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/CwiseBinaryOp.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/CwiseNullaryOp.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/CwiseUnaryOp.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/CwiseUnaryView.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/DenseBase.h
+../plugins/BlockMethods.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/plugins/BlockMethods.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/DenseCoeffsBase.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/DenseStorage.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Diagonal.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/DiagonalMatrix.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/DiagonalProduct.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Dot.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/EigenBase.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Flagged.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/ForceAlignedAccess.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Functors.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Fuzzy.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/GeneralProduct.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/GenericPacketMath.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/GlobalFunctions.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/IO.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Map.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/MapBase.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/MathFunctions.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Matrix.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/MatrixBase.h
+../plugins/CommonCwiseUnaryOps.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/plugins/CommonCwiseUnaryOps.h
+../plugins/CommonCwiseBinaryOps.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/plugins/CommonCwiseBinaryOps.h
+../plugins/MatrixCwiseUnaryOps.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/plugins/MatrixCwiseUnaryOps.h
+../plugins/MatrixCwiseBinaryOps.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/plugins/MatrixCwiseBinaryOps.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/NestByValue.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/NoAlias.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/NumTraits.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/PermutationMatrix.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/PlainObjectBase.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/ProductBase.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Random.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Redux.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Ref.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Replicate.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/ReturnByValue.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Reverse.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Select.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/SelfAdjointView.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/SelfCwiseBinaryOp.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/SolveTriangular.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/StableNorm.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Stride.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Swap.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Transpose.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Transpositions.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/TriangularMatrix.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/VectorBlock.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/VectorwiseOp.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/Visitor.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/arch/AltiVec/Complex.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/arch/AltiVec/PacketMath.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/arch/Default/Settings.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/arch/NEON/Complex.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/arch/NEON/PacketMath.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/arch/SSE/Complex.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/arch/SSE/MathFunctions.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/arch/SSE/PacketMath.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/CoeffBasedProduct.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/GeneralBlockPanelKernel.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/GeneralMatrixMatrix.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/GeneralMatrixMatrixTriangular.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/GeneralMatrixMatrixTriangular_MKL.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/GeneralMatrixMatrix_MKL.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/GeneralMatrixVector.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/GeneralMatrixVector_MKL.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/Parallelizer.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/SelfadjointMatrixMatrix.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/SelfadjointMatrixMatrix_MKL.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/SelfadjointMatrixVector.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/SelfadjointMatrixVector_MKL.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/SelfadjointProduct.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/SelfadjointRank2Update.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/TriangularMatrixMatrix.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/TriangularMatrixMatrix_MKL.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/TriangularMatrixVector.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/TriangularMatrixVector_MKL.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/TriangularSolverMatrix.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/TriangularSolverMatrix_MKL.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/products/TriangularSolverVector.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/BlasUtil.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/Constants.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/DisableStupidWarnings.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/ForwardDeclarations.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/MKL_support.h
+mkl.h
+-
+mkl_lapacke.h
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/Macros.h
+cstdlib
+-
+iostream
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/Memory.h
+unistd.h
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/Meta.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/NonMPL2.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/ReenableStupidWarnings.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/StaticAssert.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/XprHelper.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Block.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Cwise.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/CwiseOperators.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/AlignedBox.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/All.h
+limits
+-
+RotationBase.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/RotationBase.h
+Rotation2D.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/Rotation2D.h
+Quaternion.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/Quaternion.h
+AngleAxis.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/AngleAxis.h
+Transform.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/Transform.h
+Translation.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/Translation.h
+Scaling.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/Scaling.h
+AlignedBox.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/AlignedBox.h
+Hyperplane.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/Hyperplane.h
+ParametrizedLine.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/ParametrizedLine.h
+RotationBase.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/RotationBase.h
+Rotation2D.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/Rotation2D.h
+Quaternion.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/Quaternion.h
+AngleAxis.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/AngleAxis.h
+Transform.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/Transform.h
+Translation.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/Translation.h
+Scaling.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/Scaling.h
+AlignedBox.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/AlignedBox.h
+Hyperplane.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/Hyperplane.h
+ParametrizedLine.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/ParametrizedLine.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/AngleAxis.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/Hyperplane.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/ParametrizedLine.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/Quaternion.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/Rotation2D.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/RotationBase.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/Scaling.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/Transform.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Geometry/Translation.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/LU.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Lazy.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Macros.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/MathFunctions.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Memory.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Meta.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/Minor.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/QR.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/SVD.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/TriangularSolver.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigen2Support/VectorBlock.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/./ComplexSchur.h
+./HessenbergDecomposition.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/././HessenbergDecomposition.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/./HessenbergDecomposition.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/./RealQZ.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/./RealSchur.h
+./HessenbergDecomposition.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/././HessenbergDecomposition.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/./Tridiagonalization.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/ComplexEigenSolver.h
+./ComplexSchur.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/./ComplexSchur.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/ComplexSchur.h
+./HessenbergDecomposition.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/./HessenbergDecomposition.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/ComplexSchur_MKL.h
+Eigen/src/Core/util/MKL_support.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/Eigen/src/Core/util/MKL_support.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/EigenSolver.h
+./RealSchur.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/./RealSchur.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/GeneralizedEigenSolver.h
+./RealQZ.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/./RealQZ.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/GeneralizedSelfAdjointEigenSolver.h
+./Tridiagonalization.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/./Tridiagonalization.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/HessenbergDecomposition.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/MatrixBaseEigenvalues.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/RealQZ.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/RealSchur.h
+./HessenbergDecomposition.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/./HessenbergDecomposition.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/RealSchur_MKL.h
+Eigen/src/Core/util/MKL_support.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/Eigen/src/Core/util/MKL_support.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/SelfAdjointEigenSolver.h
+./Tridiagonalization.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/./Tridiagonalization.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/SelfAdjointEigenSolver_MKL.h
+Eigen/src/Core/util/MKL_support.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/Eigen/src/Core/util/MKL_support.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Eigenvalues/Tridiagonalization.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/AlignedBox.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/AngleAxis.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/EulerAngles.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/Homogeneous.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/Hyperplane.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/OrthoMethods.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/ParametrizedLine.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/Quaternion.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/Rotation2D.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/RotationBase.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/Scaling.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/Transform.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/Translation.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/Umeyama.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Geometry/arch/Geometry_SSE.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Householder/BlockHouseholder.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Householder/Householder.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Householder/HouseholderSequence.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/IterativeLinearSolvers/BasicPreconditioners.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/IterativeLinearSolvers/BiCGSTAB.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/IterativeLinearSolvers/ConjugateGradient.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/IterativeLinearSolvers/IncompleteLUT.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/IterativeLinearSolvers/IterativeSolverBase.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Jacobi/Jacobi.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/LU/Determinant.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/LU/FullPivLU.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/LU/Inverse.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/LU/PartialPivLU.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/LU/PartialPivLU_MKL.h
+Eigen/src/Core/util/MKL_support.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/LU/Eigen/src/Core/util/MKL_support.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/LU/arch/Inverse_SSE.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/OrderingMethods/Amd.h
+../Core/util/NonMPL2.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/NonMPL2.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/OrderingMethods/Eigen_Colamd.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/OrderingMethods/Ordering.h
+Eigen_Colamd.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/OrderingMethods/Eigen_Colamd.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/QR/ColPivHouseholderQR.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/QR/ColPivHouseholderQR_MKL.h
+Eigen/src/Core/util/MKL_support.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/QR/Eigen/src/Core/util/MKL_support.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/QR/FullPivHouseholderQR.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/QR/HouseholderQR.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/QR/HouseholderQR_MKL.h
+../Core/util/MKL_support.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/MKL_support.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SVD/JacobiSVD.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SVD/JacobiSVD_MKL.h
+Eigen/src/Core/util/MKL_support.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SVD/Eigen/src/Core/util/MKL_support.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SVD/UpperBidiagonalization.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCholesky/SimplicialCholesky.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCholesky/SimplicialCholesky_impl.h
+../Core/util/NonMPL2.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/NonMPL2.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/AmbiVector.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/CompressedStorage.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/ConservativeSparseSparseProduct.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/MappedSparseMatrix.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseBlock.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseColEtree.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseCwiseBinaryOp.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseCwiseUnaryOp.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseDenseProduct.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseDiagonalProduct.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseDot.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseFuzzy.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseMatrix.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseMatrixBase.h
+../plugins/CommonCwiseUnaryOps.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/plugins/CommonCwiseUnaryOps.h
+../plugins/CommonCwiseBinaryOps.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/plugins/CommonCwiseBinaryOps.h
+../plugins/MatrixCwiseUnaryOps.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/plugins/MatrixCwiseUnaryOps.h
+../plugins/MatrixCwiseBinaryOps.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/plugins/MatrixCwiseBinaryOps.h
+../plugins/BlockMethods.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/plugins/BlockMethods.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparsePermutation.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseProduct.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseRedux.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseSelfAdjointView.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseSparseProductWithPruning.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseTranspose.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseTriangularView.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseUtil.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseVector.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/SparseView.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseCore/TriangularSolver.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLUImpl.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_Memory.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_Structs.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_SupernodalMatrix.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_Utils.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_column_bmod.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_column_dfs.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_copy_to_ucol.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_gemm_kernel.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_heap_relax_snode.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_kernel_bmod.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_panel_bmod.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_panel_dfs.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_pivotL.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_pruneL.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseLU/SparseLU_relax_snode.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/SparseQR/SparseQR.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/misc/Image.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/misc/Kernel.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/misc/Solve.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/misc/SparseSolve.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/plugins/ArrayCwiseBinaryOps.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/plugins/ArrayCwiseUnaryOps.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/plugins/BlockMethods.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/plugins/CommonCwiseBinaryOps.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/plugins/CommonCwiseUnaryOps.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/plugins/MatrixCwiseBinaryOps.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/plugins/MatrixCwiseUnaryOps.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/unsupported/Eigen/SparseExtra
+../../Eigen/Sparse
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/Sparse
+../../Eigen/src/Core/util/DisableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/DisableStupidWarnings.h
+vector
+-
+map
+-
+cstdlib
+-
+cstring
+-
+algorithm
+-
+fstream
+-
+sstream
+-
+google/dense_hash_map
+-
+../../Eigen/src/misc/Solve.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/misc/Solve.h
+../../Eigen/src/misc/SparseSolve.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/misc/SparseSolve.h
+src/SparseExtra/DynamicSparseMatrix.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/unsupported/Eigen/src/SparseExtra/DynamicSparseMatrix.h
+src/SparseExtra/BlockOfDynamicSparseMatrix.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/unsupported/Eigen/src/SparseExtra/BlockOfDynamicSparseMatrix.h
+src/SparseExtra/RandomSetter.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/unsupported/Eigen/src/SparseExtra/RandomSetter.h
+src/SparseExtra/MarketIO.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/unsupported/Eigen/src/SparseExtra/MarketIO.h
+dirent.h
+-
+src/SparseExtra/MatrixMarketIterator.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/unsupported/Eigen/src/SparseExtra/MatrixMarketIterator.h
+../../Eigen/src/Core/util/ReenableStupidWarnings.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/Eigen/src/Core/util/ReenableStupidWarnings.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/unsupported/Eigen/src/SparseExtra/BlockOfDynamicSparseMatrix.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/unsupported/Eigen/src/SparseExtra/DynamicSparseMatrix.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/unsupported/Eigen/src/SparseExtra/MarketIO.h
+iostream
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/unsupported/Eigen/src/SparseExtra/MatrixMarketIterator.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/eigen/unsupported/Eigen/src/SparseExtra/RandomSetter.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/nanogui/ext/glfw/include/GLFW/glfw3.h
+stddef.h
+-
+stdint.h
+-
+OpenGL/gl3.h
+-
+OpenGL/gl3ext.h
+-
+OpenGL/gl.h
+-
+OpenGL/glu.h
+-
+GL/glcorearb.h
+-
+GLES/gl.h
+-
+GLES/glext.h
+-
+GLES2/gl2.h
+-
+GLES2/gl2ext.h
+-
+GLES3/gl3.h
+-
+GLES2/gl2ext.h
+-
+GLES3/gl31.h
+-
+GLES2/gl2ext.h
+-
+vulkan/vulkan.h
+-
+GL/gl.h
+-
+GL/glext.h
+-
+GL/glu.h
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../external/triangle/triangle.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/EPS.cpp
+EPS.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/EPS.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/EPS.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+EPS.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/EPS.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/Hit.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/IndexComparison.h
+iostream
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/LinSpaced.h
+Eigen/Core
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/PI.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/SortableRow.h
+Eigen/Core
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/adjacency_list.cpp
+adjacency_list.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/adjacency_list.h
+verbose.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/verbose.h
+algorithm
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/adjacency_list.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Dense
+-
+Eigen/Sparse
+-
+vector
+-
+adjacency_list.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/adjacency_list.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/adjacency_matrix.cpp
+adjacency_matrix.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/adjacency_matrix.h
+verbose.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/verbose.h
+vector
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/adjacency_matrix.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Dense
+-
+Eigen/Sparse
+-
+adjacency_matrix.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/adjacency_matrix.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/axis_angle_to_quat.cpp
+axis_angle_to_quat.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/axis_angle_to_quat.h
+EPS.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/EPS.h
+cmath
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/axis_angle_to_quat.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+axis_angle_to_quat.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/axis_angle_to_quat.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/barycenter.cpp
+barycenter.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/barycenter.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/barycenter.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Dense
+-
+barycenter.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/barycenter.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/canonical_quaternions.cpp
+canonical_quaternions.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/canonical_quaternions.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/canonical_quaternions.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+canonical_quaternions.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/canonical_quaternions.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/cat.cpp
+cat.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/cat.h
+cstdio
+-
+iostream
+-
+unsupported/Eigen/SparseExtra
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/cat.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Sparse
+-
+Eigen/Dense
+-
+cat.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/cat.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/colon.cpp
+colon.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/colon.h
+LinSpaced.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/LinSpaced.h
+cstdio
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/colon.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Dense
+-
+colon.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/colon.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/colormap.cpp
+colormap.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/colormap.h
+jet.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/jet.h
+algorithm
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/colormap.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Dense
+-
+colormap.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/colormap.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/cross.cpp
+cross.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/cross.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/cross.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Core
+-
+cross.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/cross.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/deprecated.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/diag.cpp
+diag.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/diag.h
+verbose.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/verbose.h
+iostream
+-
+unsupported/Eigen/SparseExtra
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/diag.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Sparse
+-
+diag.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/diag.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/dot.cpp
+dot.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/dot.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/dot.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+dot.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/dot.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/doublearea.cpp
+doublearea.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/doublearea.h
+edge_lengths.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/edge_lengths.h
+parallel_for.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/parallel_for.h
+sort.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/sort.h
+cassert
+-
+iostream
+-
+limits
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/doublearea.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Dense
+-
+doublearea.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/doublearea.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/edge_lengths.cpp
+edge_lengths.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/edge_lengths.h
+squared_edge_lengths.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/squared_edge_lengths.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/edge_lengths.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Dense
+-
+edge_lengths.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/edge_lengths.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/facet_components.cpp
+facet_components.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/facet_components.h
+igl/triangle_triangle_adjacency.h
+-
+vector
+-
+queue
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/facet_components.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Core
+-
+vector
+-
+facet_components.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/facet_components.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/file_dialog_open.cpp
+file_dialog_open.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/file_dialog_open.h
+cstdio
+-
+cstring
+-
+windows.h
+-
+Commdlg.h
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/file_dialog_open.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+string
+-
+file_dialog_open.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/file_dialog_open.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/file_dialog_save.cpp
+file_dialog_save.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/file_dialog_save.h
+cstdio
+-
+cstring
+-
+windows.h
+-
+Commdlg.h
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/file_dialog_save.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+string
+-
+file_dialog_save.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/file_dialog_save.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/for_each.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Core
+-
+Eigen/Sparse
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/frustum.cpp
+frustum.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/frustum.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/frustum.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Dense
+-
+frustum.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/frustum.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/get_seconds.cpp
+get_seconds.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/get_seconds.h
+chrono
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/get_seconds.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+get_seconds.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/get_seconds.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/internal_angles.cpp
+internal_angles.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/internal_angles.h
+squared_edge_lengths.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/squared_edge_lengths.h
+parallel_for.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/parallel_for.h
+get_seconds.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/get_seconds.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/internal_angles.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Core
+-
+internal_angles.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/internal_angles.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/jet.cpp
+jet.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/jet.h
+colormap.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/colormap.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/jet.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Dense
+-
+jet.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/jet.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/list_to_matrix.cpp
+list_to_matrix.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/list_to_matrix.h
+cassert
+-
+cstdio
+-
+Eigen/Dense
+-
+max_size.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/max_size.h
+min_size.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/min_size.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/list_to_matrix.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+vector
+-
+Eigen/Core
+-
+list_to_matrix.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/list_to_matrix.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/look_at.cpp
+look_at.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/look_at.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/look_at.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Dense
+-
+look_at.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/look_at.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/massmatrix.cpp
+massmatrix.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/massmatrix.h
+normalize_row_sums.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/normalize_row_sums.h
+sparse.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/sparse.h
+doublearea.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/doublearea.h
+repmat.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/repmat.h
+Eigen/Geometry
+-
+iostream
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/massmatrix.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Dense
+-
+Eigen/Sparse
+-
+massmatrix.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/massmatrix.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/material_colors.h
+Eigen/Core
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/max_size.cpp
+max_size.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/max_size.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/max_size.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+vector
+-
+max_size.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/max_size.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/min_size.cpp
+min_size.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/min_size.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/min_size.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+vector
+-
+min_size.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/min_size.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/normalize_quat.cpp
+normalize_quat.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/normalize_quat.h
+EPS.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/EPS.h
+cmath
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/normalize_quat.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+normalize_quat.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/normalize_quat.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/normalize_row_sums.cpp
+normalize_row_sums.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/normalize_row_sums.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/normalize_row_sums.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Core
+-
+normalize_row_sums.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/normalize_row_sums.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/oriented_facets.cpp
+oriented_facets.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/oriented_facets.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/oriented_facets.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Dense
+-
+oriented_facets.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/oriented_facets.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/ortho.cpp
+ortho.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/ortho.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/ortho.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Dense
+-
+ortho.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/ortho.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/parallel_for.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+functional
+-
+cmath
+-
+cassert
+-
+thread
+-
+vector
+-
+algorithm
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/parula.cpp
+parula.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/parula.h
+colormap.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/colormap.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/parula.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Dense
+-
+parula.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/parula.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/per_corner_normals.cpp
+per_corner_normals.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/per_corner_normals.h
+vertex_triangle_adjacency.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/vertex_triangle_adjacency.h
+per_face_normals.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/per_face_normals.h
+PI.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/PI.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/per_corner_normals.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Core
+-
+vector
+-
+per_corner_normals.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/per_corner_normals.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/per_face_normals.cpp
+per_face_normals.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/per_face_normals.h
+Eigen/Geometry
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/per_face_normals.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Core
+-
+per_face_normals.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/per_face_normals.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/per_vertex_normals.cpp
+per_vertex_normals.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/per_vertex_normals.h
+get_seconds.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/get_seconds.h
+per_face_normals.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/per_face_normals.h
+doublearea.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/doublearea.h
+parallel_for.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/parallel_for.h
+internal_angles.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/internal_angles.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/per_vertex_normals.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Core
+-
+per_vertex_normals.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/per_vertex_normals.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/project.cpp
+project.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/project.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/project.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Dense
+-
+project.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/project.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/quat_mult.cpp
+quat_mult.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/quat_mult.h
+cassert
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/quat_mult.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+quat_mult.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/quat_mult.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/quat_to_mat.cpp
+quat_to_mat.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/quat_to_mat.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/quat_to_mat.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+quat_to_mat.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/quat_to_mat.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/ray_mesh_intersect.cpp
+ray_mesh_intersect.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/ray_mesh_intersect.h
+raytri.c
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/raytri.c
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/ray_mesh_intersect.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Hit.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/Hit.h
+Eigen/Core
+-
+vector
+-
+ray_mesh_intersect.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/ray_mesh_intersect.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/raytri.c
+math.h
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/readOBJ.cpp
+readOBJ.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/readOBJ.h
+list_to_matrix.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/list_to_matrix.h
+max_size.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/max_size.h
+min_size.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/min_size.h
+iostream
+-
+cstdio
+-
+fstream
+-
+sstream
+-
+iterator
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/readOBJ.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+deprecated.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/deprecated.h
+Eigen/Core
+-
+string
+-
+vector
+-
+cstdio
+-
+readOBJ.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/readOBJ.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/readOFF.cpp
+readOFF.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/readOFF.h
+list_to_matrix.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/list_to_matrix.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/readOFF.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Core
+-
+string
+-
+vector
+-
+cstdio
+-
+readOFF.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/readOFF.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/redux.h
+Eigen/Core
+-
+Eigen/Sparse
+-
+redux.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/redux.h
+for_each.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/for_each.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/reorder.cpp
+reorder.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/reorder.h
+SortableRow.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/SortableRow.h
+Eigen/Core
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/reorder.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+vector
+-
+stddef.h
+-
+cstdlib
+-
+reorder.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/reorder.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/repmat.cpp
+repmat.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/repmat.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/repmat.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Dense
+-
+Eigen/Sparse
+-
+repmat.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/repmat.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/serialize.h
+type_traits
+-
+iostream
+-
+fstream
+-
+cstdint
+-
+numeric
+-
+vector
+-
+set
+-
+map
+-
+memory
+-
+cstdint
+-
+list
+-
+Eigen/Dense
+-
+Eigen/Sparse
+-
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/snap_to_canonical_view_quat.cpp
+snap_to_canonical_view_quat.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/snap_to_canonical_view_quat.h
+canonical_quaternions.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/canonical_quaternions.h
+normalize_quat.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/normalize_quat.h
+cstdio
+-
+cassert
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/snap_to_canonical_view_quat.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Geometry
+-
+snap_to_canonical_view_quat.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/snap_to_canonical_view_quat.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/snap_to_fixed_up.cpp
+snap_to_fixed_up.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/snap_to_fixed_up.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/snap_to_fixed_up.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Core
+-
+Eigen/Geometry
+-
+snap_to_fixed_up.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/snap_to_fixed_up.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/sort.cpp
+sort.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/sort.h
+SortableRow.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/SortableRow.h
+reorder.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/reorder.h
+IndexComparison.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/IndexComparison.h
+colon.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/colon.h
+parallel_for.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/parallel_for.h
+cassert
+-
+algorithm
+-
+iostream
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/sort.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+vector
+-
+Eigen/Core
+-
+sort.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/sort.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/sortrows.cpp
+sortrows.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/sortrows.h
+get_seconds.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/get_seconds.h
+SortableRow.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/SortableRow.h
+sort.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/sort.h
+colon.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/colon.h
+IndexComparison.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/IndexComparison.h
+vector
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/sortrows.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+vector
+-
+Eigen/Core
+-
+sortrows.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/sortrows.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/sparse.cpp
+sparse.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/sparse.h
+iostream
+-
+vector
+-
+verbose.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/verbose.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/sparse.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Dense
+-
+Eigen/Sparse
+-
+sparse.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/sparse.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/squared_edge_lengths.cpp
+squared_edge_lengths.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/squared_edge_lengths.h
+parallel_for.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/parallel_for.h
+iostream
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/squared_edge_lengths.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Dense
+-
+squared_edge_lengths.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/squared_edge_lengths.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/sum.cpp
+sum.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/sum.h
+redux.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/redux.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/sum.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Sparse
+-
+sum.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/sum.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/trackball.cpp
+trackball.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/trackball.h
+EPS.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/EPS.h
+dot.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/dot.h
+cross.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/cross.h
+axis_angle_to_quat.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/axis_angle_to_quat.h
+quat_mult.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/quat_mult.h
+cmath
+-
+cstdlib
+-
+cassert
+-
+algorithm
+-
+iostream
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/trackball.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Core
+-
+Eigen/Geometry
+-
+trackball.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/trackball.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/triangle/triangulate.cpp
+triangulate.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/triangle/triangulate.h
+triangle.h
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/triangle/triangulate.h
+../igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+string
+-
+Eigen/Core
+-
+triangulate.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/triangle/triangulate.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/triangle_triangle_adjacency.cpp
+triangle_triangle_adjacency.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/triangle_triangle_adjacency.h
+parallel_for.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/parallel_for.h
+unique_edge_map.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unique_edge_map.h
+algorithm
+-
+iostream
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/triangle_triangle_adjacency.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Core
+-
+vector
+-
+triangle_triangle_adjacency.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/triangle_triangle_adjacency.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/two_axis_valuator_fixed_up.cpp
+two_axis_valuator_fixed_up.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/two_axis_valuator_fixed_up.h
+PI.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/PI.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/two_axis_valuator_fixed_up.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Core
+-
+Eigen/Geometry
+-
+two_axis_valuator_fixed_up.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/two_axis_valuator_fixed_up.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unique_edge_map.cpp
+unique_edge_map.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unique_edge_map.h
+oriented_facets.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/oriented_facets.h
+unique_simplices.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unique_simplices.h
+cassert
+-
+algorithm
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unique_edge_map.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Dense
+-
+vector
+-
+unique_edge_map.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unique_edge_map.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unique_rows.cpp
+unique_rows.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unique_rows.h
+sortrows.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/sortrows.h
+algorithm
+-
+iostream
+-
+map
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unique_rows.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+vector
+-
+Eigen/Core
+-
+unique_rows.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unique_rows.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unique_simplices.cpp
+unique_simplices.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unique_simplices.h
+sort.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/sort.h
+unique_rows.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unique_rows.h
+parallel_for.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/parallel_for.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unique_simplices.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Dense
+-
+unique_simplices.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unique_simplices.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unproject.cpp
+unproject.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unproject.h
+Eigen/Dense
+-
+Eigen/LU
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unproject.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Core
+-
+unproject.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unproject.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unproject_onto_mesh.cpp
+unproject_onto_mesh.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unproject_onto_mesh.h
+unproject.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unproject.h
+unproject_ray.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unproject_ray.h
+ray_mesh_intersect.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/ray_mesh_intersect.h
+vector
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unproject_onto_mesh.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Hit.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/Hit.h
+Eigen/Core
+-
+functional
+-
+unproject_onto_mesh.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unproject_onto_mesh.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unproject_ray.cpp
+unproject_ray.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unproject_ray.h
+unproject.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unproject.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unproject_ray.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Core
+-
+unproject_ray.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/unproject_ray.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/verbose.h
+cstdio
+-
+cstdarg
+-
+string
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/vertex_triangle_adjacency.cpp
+vertex_triangle_adjacency.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/vertex_triangle_adjacency.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/vertex_triangle_adjacency.h
+igl/igl_inline.h
+-
+Eigen/Dense
+-
+vector
+-
+vertex_triangle_adjacency.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/vertex_triangle_adjacency.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/OpenGL_shader.cpp
+OpenGL_shader.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/OpenGL_shader.h
+iostream
+-
+fstream
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/OpenGL_shader.h
+igl/igl_inline.h
+-
+string
+-
+Eigen/Core
+-
+windows.h
+-
+GL/glew.h
+-
+OpenGL/gl3.h
+-
+GL/gl.h
+-
+OpenGL_shader.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/OpenGL_shader.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/OpenGL_state.cpp
+OpenGL_state.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/OpenGL_state.h
+ViewerData.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/ViewerData.h
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/OpenGL_state.h
+igl/igl_inline.h
+-
+igl/viewer/OpenGL_shader.h
+-
+igl/viewer/ViewerData.h
+-
+OpenGL_state.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/OpenGL_state.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/TextRenderer.cpp
+TextRenderer.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/TextRenderer.h
+TextRenderer_fonts.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/TextRenderer_fonts.h
+igl/project.h
+-
+nanogui/opengl.h
+-
+nanovg.h
+-
+Eigen/Dense
+-
+nanovg_gl.h
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/TextRenderer.h
+Eigen/Dense
+-
+igl/igl_inline.h
+-
+map
+-
+TextRenderer.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/TextRenderer.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/TextRenderer_fonts.cpp
+stdint.h
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/TextRenderer_fonts.h
+stdint.h
+-
+TextRenderer_fonts.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/TextRenderer_fonts.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/Viewer.cpp
+Viewer.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/Viewer.h
+windows.h
+-
+chrono
+-
+thread
+-
+GL/glew.h
+-
+OpenGL/gl3.h
+-
+GL/gl.h
+-
+Eigen/LU
+-
+GLFW/glfw3.h
+-
+cmath
+-
+cstdio
+-
+sstream
+-
+iomanip
+-
+iostream
+-
+fstream
+-
+algorithm
+-
+limits
+-
+cassert
+-
+nanogui/formhelper.h
+-
+nanogui/screen.h
+-
+igl/project.h
+-
+igl/get_seconds.h
+-
+igl/readOBJ.h
+-
+igl/readOFF.h
+-
+igl/adjacency_list.h
+-
+igl/writeOBJ.h
+-
+igl/writeOFF.h
+-
+igl/massmatrix.h
+-
+igl/file_dialog_open.h
+-
+igl/file_dialog_save.h
+-
+igl/quat_mult.h
+-
+igl/axis_angle_to_quat.h
+-
+igl/trackball.h
+-
+igl/two_axis_valuator_fixed_up.h
+-
+igl/snap_to_canonical_view_quat.h
+-
+igl/unproject.h
+-
+igl/serialize.h
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/Viewer.h
+vector
+-
+string
+-
+cstdint
+-
+Eigen/Core
+-
+Eigen/Geometry
+-
+igl/igl_inline.h
+-
+OpenGL_shader.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/OpenGL_shader.h
+OpenGL_state.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/OpenGL_state.h
+ViewerCore.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/ViewerCore.h
+ViewerData.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/ViewerData.h
+ViewerPlugin.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/ViewerPlugin.h
+Viewer.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/Viewer.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/ViewerCore.cpp
+ViewerCore.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/ViewerCore.h
+igl/quat_to_mat.h
+-
+igl/snap_to_fixed_up.h
+-
+igl/look_at.h
+-
+igl/frustum.h
+-
+igl/ortho.h
+-
+igl/massmatrix.h
+-
+igl/barycenter.h
+-
+igl/PI.h
+-
+Eigen/Geometry
+-
+iostream
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/ViewerCore.h
+igl/viewer/OpenGL_state.h
+-
+igl/viewer/TextRenderer.h
+-
+igl/viewer/ViewerData.h
+-
+igl/igl_inline.h
+-
+Eigen/Geometry
+-
+Eigen/Core
+-
+igl/serialize.h
+-
+ViewerCore.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/ViewerCore.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/ViewerData.cpp
+ViewerData.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/ViewerData.h
+iostream
+-
+igl/per_face_normals.h
+-
+igl/material_colors.h
+-
+igl/parula.h
+-
+igl/per_vertex_normals.h
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/ViewerData.h
+cstdint
+-
+vector
+-
+Eigen/Core
+-
+igl/igl_inline.h
+-
+igl/serialize.h
+-
+ViewerData.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/ViewerData.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/viewer/ViewerPlugin.h
+string
+-
+igl/igl_inline.h
+-
+vector
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/writeOBJ.cpp
+writeOBJ.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/writeOBJ.h
+iostream
+-
+limits
+-
+iomanip
+-
+fstream
+-
+cstdio
+-
+cassert
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/writeOBJ.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Core
+-
+string
+-
+writeOBJ.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/writeOBJ.cpp
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/writeOFF.cpp
+writeOFF.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/writeOFF.h
+cstdio
+-
+fstream
+-
+
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/writeOFF.h
+igl_inline.h
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/igl_inline.h
+Eigen/Core
+-
+string
+-
+writeOFF.cpp
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/shared/cmake/../../include/igl/writeOFF.cpp
+

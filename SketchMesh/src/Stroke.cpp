@@ -37,14 +37,13 @@ void Stroke::strokeAddSegment(int mouse_x, int mouse_y) {
 	if (!empty2D()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if (timePast < 100000) { //Don't add another segment before x nanoseconds
+        if (timePast < 10000000) { //Don't add another segment before x nanoseconds
 			return;
 		}
 	}
 
 	Eigen::Matrix4f modelview = viewer.core.view * viewer.core.model;
 	Eigen::RowVector3d pt(0, 0, 0);
-	int faceID = -1;
 
 	pt = igl::unproject(Eigen::Vector3f(x, y, 0.0f), modelview, viewer.core.proj, viewer.core.viewport).transpose().cast<double>();
 	if (stroke2DPoints.rows() == 1 && empty2D()) { //Add first point
@@ -129,6 +128,9 @@ bool Stroke::toLoop() {
 		stroke_edges.conservativeResize(stroke_edges.rows() + 1, stroke_edges.cols());
 		stroke_edges.row(stroke_edges.rows() - 1) << stroke_edges.rows() - 1, 0; //Add an edge from the last vertex to the first
 		//using set_stroke_points will remove all previous strokes, using add_stroke_points might create duplicates
+        
+        stroke3DPoints.conservativeResize(stroke3DPoints.rows()+1, stroke3DPoints.cols());
+        stroke3DPoints.row(stroke3DPoints.rows()-1) << stroke3DPoints.row(0);
 		viewer.data.set_stroke_points(stroke3DPoints);
 		return true;
 	}
@@ -149,6 +151,11 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers) 
 	Eigen::VectorXi edge_markers;
 	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0,0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(),1,1), Eigen::MatrixXi::Constant(stroke_edges.rows(),1,1), "Qq30", V2_tmp, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
 	V2 = Eigen::MatrixXd::Zero(V2_tmp.rows(), V2_tmp.cols() + 1);
+  
+    //zero mean in x and y
+    V2_tmp.col(0) = V2_tmp.col(0).array() - V2_tmp.col(0).mean();
+    V2_tmp.col(1) = V2_tmp.col(1).array() - V2_tmp.col(1).mean();
+    
 	V2.block(0,0, V2_tmp.rows(), 2) = V2_tmp;
 
 
@@ -169,18 +176,9 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers) 
 			vertex_map.insert({i, i});
 		}
 	}
-
-
-	double xMean = V2.col(0).mean();
-	double yMean = V2.col(1).mean();
-	double zMean = V2.col(2).mean();
-
-	V2.col(0) = V2.col(0).array() - xMean;
-	V2.col(1) = V2.col(1).array() - yMean;
-	V2.col(2) = V2.col(2).array() - zMean;
-
-	
-
+    
+    V2.col(0) = V2.col(0).array() - V2.col(0).mean();
+    V2.col(1) = V2.col(1).array() - V2.col(1).mean();
 
 	//Add backside faces, using original vertices for boundary and copied vertices for inside
 	//Duplicate all faces
@@ -192,8 +190,6 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers) 
 			F2(original_size + i, j) = got->second;
 		}
 	}
-	//V2.rowwise().normalize();
-
 
 	Eigen::MatrixXd N_Faces;
 	Eigen::MatrixXd N_Vertices;
@@ -203,28 +199,17 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers) 
 	vertex_boundary_markers.resize(V2.rows());
 	for(int i = 0; i < V2.rows(); i++) {
 		if(i >= vertex_markers.rows()) { //vertex can't be boundary (it's on backside)
-			V2.row(i) = V2.row(i) + 0.10*N_Vertices.row(i);
+            V2.row(i) = V2.row(i) + 0.1*N_Vertices.row(i);
 			vertex_boundary_markers[i] = 0;
 		} else {
 			if(vertex_markers(i) == 1) { //Don't change boundary vertices
 				vertex_boundary_markers[i] = 1;
 				continue;
 			}
-			V2.row(i) = V2.row(i) + 0.10*N_Vertices.row(i);
+            V2.row(i) = V2.row(i) + 0.1*N_Vertices.row(i);
 			vertex_boundary_markers[i] = 0;
 		}
 	}
-
-	/*double epsilon = 0.00001;
-
-	Eigen::Vector3d m_tmp = V2.colwise().minCoeff().array();
-	double m = m_tmp.minCoeff();
-	Eigen::Vector3d M_tmp = V2.colwise().maxCoeff().array();
-	double M = M_tmp.maxCoeff();
-	V2.col(0) = 2.0 * ((V2.col(0).array() - m) / (M - m + epsilon)) - 1.0;
-	V2.col(1) = 2.0 * ((V2.col(1).array() - m) / (M - m + epsilon)) - 1.0;
-	V2.col(2) = 2.0 * ((V2.col(2).array() - m) / (M - m + epsilon)) - 1.0;
-	cout << V2 << endl;*/
 
 	viewer.data.clear();
 	viewer.data.set_mesh(V2, F2);

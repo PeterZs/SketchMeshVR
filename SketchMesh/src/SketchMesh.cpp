@@ -1,3 +1,8 @@
+#ifdef _WIN32
+#include <Windows.h>
+#else
+#include <unistd.h>
+#endif
 #include <stdlib.h>
 #include <iostream>
 #include <igl/readOFF.h>
@@ -49,6 +54,9 @@ ToolMode tool_mode = NAVIGATE;
 bool skip_standardcallback = false;
 int down_mouse_x = -1, down_mouse_y = -1;
 
+double vertex_weights;
+int smooth_iter = 1;
+
 //For selecting vertices
 std::unique_ptr<Stroke> _stroke;
 
@@ -57,18 +65,13 @@ bool callback_key_down(Viewer& viewer, unsigned char key, int modifiers) {
 	if (key == '1') {
 		viewer.data.clear();
 		viewer.data.set_mesh(V, F);
-	//	cout << V << endl;
-	}
-
-	if (key == 'D') { //use capital letters
+	}else if (key == 'D') { //use capital letters
 		//Draw initial curve/mesh
 		tool_mode = DRAW;
 		_stroke->strokeReset();
-	}
-	if (key == 'P') {
+	}else if (key == 'P') {
 		tool_mode = PULL;
-	}
-	if (key == 'N') {
+	}else if (key == 'N') {
 		//Use navigation
 		tool_mode = NAVIGATE;
 	}
@@ -123,16 +126,24 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 	if(tool_mode == DRAW) {
 		if(_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
-			_stroke->generate3DMeshFromStroke(vertex_boundary_markers);
+            //Give some time to show the stroke
+            #ifdef _WIN32
+                Sleep(300);
+            #else
+                usleep(300000);  /* sleep for 300 milliSeconds */
+            #endif
+            _stroke->generate3DMeshFromStroke(vertex_boundary_markers);
 			F = viewer.data.F;
 			V = viewer.data.V;
 
-			for(int i = 0; i < 3; i++) {
+			for(int i = 0; i < smooth_iter; i++) {
 				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers);
 			}
 
 			viewer.data.set_mesh(V, F);
+            viewer.data.compute_normals();
 
+            //Overlay the drawn stroke
 			int strokeSize = (vertex_boundary_markers.array() > 0).count();
 			Eigen::MatrixXd strokePoints = V.block(0, 0, strokeSize, 3);
 			Eigen::MatrixXd tmp_1 = V.block(1, 0, strokeSize - 1, 3);
@@ -142,6 +153,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			viewer.data.add_edges(V.block(0, 0, strokeSize, 3), endPoints, Eigen::RowVector3d(1,0,0));
 		}
 		skip_standardcallback = false;
+        _stroke->strokeReset(); //We need to reset the stroke after drawing it, because callback_mouse_down's reset isn't called when we push down on the nanogui menu (otherwise we would call stroke->toLoop & generate3DMesh & smooth every time we click on the menu). This won't empty the viewer.data, so the mesh and stroke remain visible till a new one is drawn.
 	}
 	return skip_standardcallback;
 }
@@ -167,6 +179,33 @@ int main(int argc, char *argv[]) {
 	viewer.callback_mouse_move = callback_mouse_move;
 	viewer.callback_mouse_up = callback_mouse_up;
 	//viewer.callback_load_mesh = callback_load_mesh;
+    
+    
+    viewer.callback_init = [&](igl::viewer::Viewer& viewer)
+    {
+        // Add new group
+        viewer.ngui->addGroup("Inflation");
+        
+        // Expose a variable directly ...
+        viewer.ngui->addVariable("Vertex Weights",SurfaceSmoothing::vertex_weight);
+        viewer.ngui->addVariable("Edge Weights",SurfaceSmoothing::edge_weight);
+
+        
+        // Expose a variable directly ...
+        viewer.ngui->addVariable("Smoothing iterations",smooth_iter);
+
+        
+        // Add a button
+        viewer.ngui->addButton("Perform 1 smoothing iteration",[&viewer](){
+            SurfaceSmoothing::smooth(V,F,vertex_boundary_markers);
+            viewer.data.set_mesh(V, F);
+            viewer.data.compute_normals();
+        });
+        
+        // call to generate menu
+        viewer.screen->performLayout();
+        return false;
+    };
 
 	//Init stroke selector
 	_stroke = std::unique_ptr<Stroke>(new Stroke(V, F, viewer));
@@ -180,7 +219,7 @@ int main(int argc, char *argv[]) {
 	else
 	{
 		// Read mesh
-		callback_load_mesh(viewer, "../data/cube.off");
+		//callback_load_mesh(viewer, "../data/cube.off");
 	}
 
 	callback_key_down(viewer, '1', 0);

@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="libigl"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="clang"/>
+		<Option virtualFolders="CMake Files\;CMake Files\..\;CMake Files\..\libigl\;CMake Files\..\libigl\external\;CMake Files\..\libigl\external\nanogui\;CMake Files\..\libigl\external\nanogui\ext\;CMake Files\..\libigl\external\nanogui\ext\glfw\;CMake Files\..\libigl\external\nanogui\ext\glfw\CMake\;CMake Files\..\libigl\external\nanogui\ext\glfw\CMake\modules\;CMake Files\..\libigl\external\nanogui\ext\glfw\src\;CMake Files\..\libigl\external\triangle\;CMake Files\..\libigl\shared\;CMake Files\..\libigl\shared\cmake\;CMake Files\cmake\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="uninstall">
+				<Option working_dir="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/Makefile&quot;  VERBOSE=1 uninstall"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="glfw_objects">
+				<Option output="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src/CMakeFiles/glfw_objects.dir/glfw_objects.objlib" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add option="-D_GLFW_USE_CONFIG_H"/>
+					<Add directory="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/include"/>
+					<Add directory="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/src"/>
+					<Add directory="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/8.0.0/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include"/>
+					<Add directory="/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src/Makefile&quot;  VERBOSE=1 glfw_objects"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="glfw_objects/fast">
+				<Option output="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src/CMakeFiles/glfw_objects.dir/glfw_objects.objlib" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add option="-D_GLFW_USE_CONFIG_H"/>
+					<Add directory="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/include"/>
+					<Add directory="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/src"/>
+					<Add directory="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/8.0.0/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include"/>
+					<Add directory="/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src/Makefile&quot;  VERBOSE=1 glfw_objects/fast"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="glfw">
+				<Option output="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src/libglfw3.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/8.0.0/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include"/>
+					<Add directory="/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src/Makefile&quot;  VERBOSE=1 glfw"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="glfw/fast">
+				<Option output="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src/libglfw3.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/8.0.0/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include"/>
+					<Add directory="/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src/Makefile&quot;  VERBOSE=1 glfw/fast"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="triangle">
+				<Option output="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/triangle/libtriangle.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/triangle"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add option="-DTRILIBRARY"/>
+					<Add option="-DANSI_DECLARATORS"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/8.0.0/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include"/>
+					<Add directory="/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/triangle/Makefile&quot;  VERBOSE=1 triangle"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/triangle/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/triangle/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/triangle/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="triangle/fast">
+				<Option output="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/triangle/libtriangle.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/triangle"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add option="-DTRILIBRARY"/>
+					<Add option="-DANSI_DECLARATORS"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/8.0.0/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include"/>
+					<Add directory="/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/triangle/Makefile&quot;  VERBOSE=1 triangle/fast"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/triangle/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/triangle/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/Users/floorverhoeven/Documents/School/ETH/Master\ Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/triangle/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/cmake-build-debug/libigl/glfw/src/glfw_config.h">
+			<Option target="glfw_objects"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/include/GLFW/glfw3.h">
+			<Option target="glfw_objects"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/include/GLFW/glfw3native.h">
+			<Option target="glfw_objects"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/src/cocoa_init.m">
+			<Option target="glfw_objects"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/src/cocoa_joystick.h">
+			<Option target="glfw_objects"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/src/cocoa_joystick.m">
+			<Option target="glfw_objects"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/src/cocoa_monitor.m">
+			<Option target="glfw_objects"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/src/cocoa_platform.h">
+			<Option target="glfw_objects"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/src/cocoa_time.c">
+			<Option target="glfw_objects"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/src/cocoa_window.m">
+			<Option target="glfw_objects"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/src/context.c">
+			<Option target="glfw_objects"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/src/init.c">
+			<Option target="glfw_objects"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/src/input.c">
+			<Option target="glfw_objects"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/src/internal.h">
+			<Option target="glfw_objects"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/src/monitor.c">
+			<Option target="glfw_objects"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/src/nsgl_context.h">
+			<Option target="glfw_objects"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/src/nsgl_context.m">
+			<Option target="glfw_objects"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/src/posix_tls.c">
+			<Option target="glfw_objects"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/src/posix_tls.h">
+			<Option target="glfw_objects"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/src/vulkan.c">
+			<Option target="glfw_objects"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/nanogui/ext/glfw/src/window.c">
+			<Option target="glfw_objects"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/triangle/triangle.c">
+			<Option target="triangle"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/libigl/external/triangle/triangle.h">
+			<Option target="triangle"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/nanogui/ext/glfw/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\..\libigl\external\nanogui\ext\glfw\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/nanogui/ext/glfw/cmake_uninstall.cmake.in">
+			<Option virtualFolder="CMake Files\..\libigl\external\nanogui\ext\glfw\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/nanogui/ext/glfw/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\..\libigl\external\nanogui\ext\glfw\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/nanogui/ext/glfw/cmake_uninstall.cmake.in">
+			<Option virtualFolder="CMake Files\..\libigl\external\nanogui\ext\glfw\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/nanogui/ext/glfw/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\..\libigl\external\nanogui\ext\glfw\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/nanogui/ext/glfw/cmake_uninstall.cmake.in">
+			<Option virtualFolder="CMake Files\..\libigl\external\nanogui\ext\glfw\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/nanogui/ext/glfw/CMake/modules/FindVulkan.cmake">
+			<Option virtualFolder="CMake Files\..\libigl\external\nanogui\ext\glfw\CMake\modules\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/nanogui/ext/glfw/CMake/modules/FindVulkan.cmake">
+			<Option virtualFolder="CMake Files\..\libigl\external\nanogui\ext\glfw\CMake\modules\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/nanogui/ext/glfw/CMake/modules/FindVulkan.cmake">
+			<Option virtualFolder="CMake Files\..\libigl\external\nanogui\ext\glfw\CMake\modules\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/nanogui/ext/glfw/src/glfw3Config.cmake.in">
+			<Option virtualFolder="CMake Files\..\libigl\external\nanogui\ext\glfw\src\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/nanogui/ext/glfw/src/glfw_config.h.in">
+			<Option virtualFolder="CMake Files\..\libigl\external\nanogui\ext\glfw\src\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/nanogui/ext/glfw/src/glfw3.pc.in">
+			<Option virtualFolder="CMake Files\..\libigl\external\nanogui\ext\glfw\src\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/nanogui/ext/glfw/src/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\..\libigl\external\nanogui\ext\glfw\src\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/nanogui/ext/glfw/src/glfw3Config.cmake.in">
+			<Option virtualFolder="CMake Files\..\libigl\external\nanogui\ext\glfw\src\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/nanogui/ext/glfw/src/glfw_config.h.in">
+			<Option virtualFolder="CMake Files\..\libigl\external\nanogui\ext\glfw\src\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/nanogui/ext/glfw/src/glfw3.pc.in">
+			<Option virtualFolder="CMake Files\..\libigl\external\nanogui\ext\glfw\src\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/nanogui/ext/glfw/src/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\..\libigl\external\nanogui\ext\glfw\src\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/nanogui/ext/glfw/src/glfw3Config.cmake.in">
+			<Option virtualFolder="CMake Files\..\libigl\external\nanogui\ext\glfw\src\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/nanogui/ext/glfw/src/glfw_config.h.in">
+			<Option virtualFolder="CMake Files\..\libigl\external\nanogui\ext\glfw\src\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/nanogui/ext/glfw/src/glfw3.pc.in">
+			<Option virtualFolder="CMake Files\..\libigl\external\nanogui\ext\glfw\src\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/nanogui/ext/glfw/src/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\..\libigl\external\nanogui\ext\glfw\src\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/triangle/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\..\libigl\external\triangle\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/triangle/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\..\libigl\external\triangle\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/external/triangle/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\..\libigl\external\triangle\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/shared/cmake/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\..\libigl\shared\cmake\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/../libigl/shared/cmake/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\..\libigl\shared\cmake\"/>
+		</Unit>
+		<Unit filename="/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/cmake/FindLIBIGL.cmake">
+			<Option virtualFolder="CMake Files\cmake\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>

@@ -10,30 +10,32 @@
 #include <numeric>
 #include "SurfaceSmoothing.h"
 
-
 using namespace std;
 using namespace igl;
 
 int SurfaceSmoothing::prev_vertex_count = -1;
 Eigen::MatrixX3d SurfaceSmoothing::vertex_normals(0,3);
-Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solver1;
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solver2;
 
 Eigen::VectorXd SurfaceSmoothing::curvatures(ptrdiff_t(0));
-static Eigen::VectorXd xm, ym, zm;
 int ID = -1;
-bool firstDone = false;
 int iteration = 0;
+double SurfaceSmoothing::vertex_weight = 10.0;
+double SurfaceSmoothing::edge_weight = 1.0;
+int no_boundary_vertices;
+int no_boundary_adjacent_vertices;
 Eigen::VectorXd initial_curvature;
 vector<vector<int>> neighbors;
 
 
 //Map to the mesh IDs
 std::unordered_map<int, Eigen::MatrixXd> SurfaceSmoothing::precomputed_L; 
-std::unordered_map<int, Eigen::MatrixX3d> SurfaceSmoothing::precomputed_target_normals;
 std::unordered_map<int, Eigen::SparseMatrix<double>> SurfaceSmoothing::precompute_matrix_for_LM_and_edges;
+std::unordered_map<int, Eigen::SparseMatrix<double>> SurfaceSmoothing::AT_for_LM_and_edges;
 std::unordered_map<int, Eigen::SparseMatrix<double>> SurfaceSmoothing::precompute_matrix_for_positions;
+std::unordered_map<int, Eigen::SparseMatrix<double>> SurfaceSmoothing::AT_for_positions;
+
 
 void SurfaceSmoothing::smooth(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers) {
 	if(prev_vertex_count != V.rows()) { //The mesh topology has changed, so we need to reset the precomputed matrices
@@ -41,18 +43,17 @@ void SurfaceSmoothing::smooth(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::Vec
 		clear_precomputed_matrices();
 		prev_vertex_count = V.rows();
 		iteration = 0;
-		cout << " reset" << endl;
 	}
-	Mesh m(V, F, vertex_boundary_markers, ID);
 
+	Mesh m(V, F, vertex_boundary_markers, ID);
 	smooth_main(m);
 	V = m.V;
 	F = m.F;
+
 	iteration++;
 }
 
 void SurfaceSmoothing::clear_precomputed_matrices() {
-	cout << "Clearing precomputed matrices" << endl;
 	precomputed_L.clear(); //NOTE: as opposed to java's Hashmap.clear, this reduces the size of the unordered_map to 0
 
 	for(auto it = precompute_matrix_for_LM_and_edges.begin(); it != precompute_matrix_for_LM_and_edges.end(); ++it) {
@@ -64,19 +65,25 @@ void SurfaceSmoothing::clear_precomputed_matrices() {
 		it->second.resize(0, 0); //Resize the referenced Eigen::MatrixXd to size 0
 	}
 	precompute_matrix_for_positions.clear(); 
-
-	precomputed_target_normals.clear();//TODO1: do we still need this?
 }
 
 void SurfaceSmoothing::smooth_main(Mesh &m) {
 	Eigen::MatrixXd L = get_precomputed_L(m);
-	if(L.rows()==0 && L.cols()==0) {
+	if(L.rows()==0 && L.cols()==0) { //Stuff that gets computed once, when we get a new mesh topology
 		L = compute_laplacian_matrix(m);
 		set_precomputed_L(m, L);
+        adjacency_list(m.F, neighbors);
+        no_boundary_vertices = (m.vertex_boundary_markers.array() > 0).count();
+        
+        no_boundary_adjacent_vertices = 0;
+        for(int i = 0; i < m.V.rows(); i++) {
+            if(m.vertex_boundary_markers[i] == 1) {
+                no_boundary_adjacent_vertices += neighbors[i].size();
+            }
+        }
 	}
 
-	adjacency_list(m.F, neighbors);
-	igl::per_vertex_normals(m.V, m.F,PER_VERTEX_NORMALS_WEIGHTING_TYPE_UNIFORM, vertex_normals); //TODO: might want to use PER_VERTEX_NORMALS_WEIGHTING_TYPE_UNIFORM
+	igl::per_vertex_normals(m.V, m.F,PER_VERTEX_NORMALS_WEIGHTING_TYPE_UNIFORM, vertex_normals);
     
 	Eigen::VectorXd target_LMs = compute_target_LMs(m, L);
 	Eigen::VectorXd target_edge_lengths = compute_target_edge_lengths(m, L);
@@ -99,12 +106,28 @@ void SurfaceSmoothing::set_precompute_matrix_for_LM_and_edges(Mesh &m, Eigen::Sp
 	precompute_matrix_for_LM_and_edges[m.ID] = LM_edge;
 }
 
+Eigen::SparseMatrix<double> SurfaceSmoothing::get_AT_for_LM_and_edges(Mesh &m) {
+    return AT_for_LM_and_edges[m.ID];
+}
+
+void SurfaceSmoothing::set_AT_for_LM_and_edges(Mesh &m, Eigen::SparseMatrix<double> AT) {
+    AT_for_LM_and_edges[m.ID] = AT;
+}
+
 Eigen::SparseMatrix<double> SurfaceSmoothing::get_precompute_matrix_for_positions(Mesh &m) {
 	return precompute_matrix_for_positions[m.ID];
 }
 
 void SurfaceSmoothing::set_precompute_matrix_for_positions(Mesh &m, Eigen::SparseMatrix<double> pos) {
 	precompute_matrix_for_positions[m.ID] = pos;
+}
+
+Eigen::SparseMatrix<double> SurfaceSmoothing::get_AT_for_positions(Mesh &m) {
+    return AT_for_positions[m.ID];
+}
+
+void SurfaceSmoothing::set_AT_for_positions(Mesh &m, Eigen::SparseMatrix<double> AT) {
+    AT_for_positions[m.ID] = AT;
 }
 
 Eigen::MatrixXd SurfaceSmoothing::compute_laplacian_matrix(Mesh &m) {
@@ -136,28 +159,21 @@ Eigen::VectorXd SurfaceSmoothing::compute_initial_curvature(Mesh &m) {
 
 Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L) {
 	Eigen::SparseMatrix<double> A = get_precompute_matrix_for_LM_and_edges(m);
-	Eigen::SparseMatrix<double> AT = A.transpose();
+    Eigen::SparseMatrix<double> AT;
 	if(A.rows() == 0 && A.cols() == 0) { //We haven't set up A for this topology yet
 		A = Eigen::SparseMatrix<double>(m.V.rows()*2, m.V.rows());
-	/*	vector<Eigen::Triplet<double>> tripletList;
-		tripletList.reserve(L.rows()*L.cols());
-		for(int i = 0; i < L.rows(); i++) {
-			for(int j = 0; j < L.cols(); j++) {
-				tripletList.push_back(Eigen::Triplet<double>(i, j, L(i, j)));
-			}
-		}
-		A.setFromTriplets(tripletList.begin(), tripletList.end());*/
 		for(int i = 0; i < m.V.rows(); i++) {
 			for(int j = 0; j < m.V.rows(); j++) {
 				A.insert(i, j) = L(i, j);
 			}
 			if(m.vertex_boundary_markers[i] == 1) { //Constrain only the boundary in the first iteration
-				A.insert(m.V.rows() + i, i) = 1; //For target LM'/edge'
+				A.insert(m.V.rows() + i, i) = 1; //For target LM'/edge length'
 			}
 		}
 		AT = A.transpose();
 		solver1.compute(AT*A);
 		set_precompute_matrix_for_LM_and_edges(m, A);
+        set_AT_for_LM_and_edges(m, AT);
 	}
 	if(iteration == 1) { //Constrain all vertices after the first iteration
 		for(int i = 0; i < m.V.rows(); i++) {
@@ -168,19 +184,18 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 		AT = A.transpose();
 		solver1.compute(AT*A);
 		set_precompute_matrix_for_LM_and_edges(m, A);
+        set_AT_for_LM_and_edges(m, AT);
 	}
 
     Eigen::VectorXd current_curvatures;
 	if(iteration == 0) {
 		initial_curvature = compute_initial_curvature(m);
-        cout << "init" << initial_curvature << endl << endl;
     }else{
         current_curvatures = get_curvatures(m);
-        cout << current_curvatures << endl << endl;
     }
     
 	Eigen::VectorXd b = Eigen::VectorXd::Zero(m.V.rows()*2);
-	for(int i = 0; i < m.V.rows(); i++) {
+    for(int i = 0; i < m.V.rows(); i++) {
 		if(iteration == 0) {
 			if(m.vertex_boundary_markers[i] == 1) {
 				b[m.V.rows() + i] = initial_curvature[i];
@@ -190,13 +205,14 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 		}
 	}
     
+    AT = get_AT_for_LM_and_edges(m);
 	Eigen::VectorXd target_LM = solver1.solve(AT*b);
 	return target_LM;
 }
 
 Eigen::VectorXd SurfaceSmoothing::compute_target_edge_lengths(Mesh &m, Eigen::MatrixXd &L) {
 	Eigen::SparseMatrix<double> A = get_precompute_matrix_for_LM_and_edges(m);
-	Eigen::SparseMatrix<double> AT = A.transpose();
+    Eigen::SparseMatrix<double> AT = get_AT_for_LM_and_edges(m);
 	//A will be set up when computing the target LMs
 
 	Eigen::VectorXd b = Eigen::VectorXd::Zero(m.V.rows() * 2);
@@ -229,19 +245,10 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_edge_lengths(Mesh &m, Eigen::Ma
 }
 
 void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eigen::VectorXd &target_LMs, Eigen::VectorXd &target_edge_lengths) {
-	double vertex_weight = 100, edge_weight = 0.001;
-
-	int no_boundary_vertices = (m.vertex_boundary_markers.array() > 0).count();
-	int no_boundary_adjacent_vertices = 0;
-
-	for(int i = 0; i < m.V.rows(); i++) {
-		if(m.vertex_boundary_markers[i] == 1) {
-			no_boundary_adjacent_vertices += neighbors[i].size();
-		}
-	}
+	//double vertex_weight = 10, edge_weight = 1; //TODO: try high edge weight, higher vertex-weight doesn't seem to do much
 
 	Eigen::SparseMatrix<double> A = get_precompute_matrix_for_positions(m);
-	Eigen::SparseMatrix<double> AT = A.transpose();
+    Eigen::SparseMatrix<double> AT = get_AT_for_positions(m);
 	if(A.rows() == 0 && A.cols() == 0) { //We haven't set up A for this topology yet
 		A = Eigen::SparseMatrix<double>(m.V.rows() + no_boundary_vertices + no_boundary_adjacent_vertices, m.V.rows());
 		int count = 0, count2 = 0;
@@ -263,6 +270,7 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 		AT = A.transpose();
 		solver2.compute(AT*A);
 		set_precompute_matrix_for_positions(m, A);
+        set_AT_for_positions(m, AT);
 	}
 
 	Eigen::VectorXd bx = Eigen::VectorXd::Zero(m.V.rows() + no_boundary_vertices + no_boundary_adjacent_vertices);
@@ -272,7 +280,7 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 	Eigen::VectorXd doubleAreas;
 	igl::doublearea(m.V, m.F, doubleAreas);	
 	
-	vector<vector<int>> VF, VFi;
+	/*vector<vector<int>> VF, VFi;
 	igl::vertex_triangle_adjacency(m.V.rows(), m.F, VF, VFi);
 	Eigen::VectorXd vertex_areas(m.V.rows());
 	double vertex_area;
@@ -287,11 +295,13 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 			min_area = vertex_areas[i];
 		}
 	}
-
+*/
 	int count = 0, count2 = 0;
 	Eigen::Vector3d delta;
 	for(int i = 0; i < m.V.rows(); i++) {
-		delta = vertex_areas[i]/min_area * target_LMs[i] * vertex_normals.row(i);
+        delta = target_LMs[i] * vertex_normals.row(i);
+
+        //delta = vertex_areas[i]/min_area * target_LMs[i] * vertex_normals.row(i);
 		bx[i] = delta(0);
 		by[i] = delta(1);
 		bz[i] = delta(2);
@@ -327,17 +337,16 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 }
 
 Eigen::MatrixX3d SurfaceSmoothing::compute_vertex_laplacians(Mesh &m) {
-	vector<vector<int>> neighbors;
-	adjacency_list(m.F, neighbors);
 	Eigen::MatrixX3d laplacians(m.V.rows(),3);
     Eigen::Vector3d vec;
+    int nr_neighbors;
     for(int i = 0; i < m.V.rows(); i++) {
 		vec = Eigen::Vector3d::Zero();
-		int nr_neighbors = neighbors[i].size();
+        nr_neighbors = neighbors[i].size();
 		for(int j = 0; j < nr_neighbors; j++) {
 			vec += m.V.row(neighbors[i][j]);
 		}
-		laplacians.row(i) = m.V.row(i) - (vec * (1.0 / nr_neighbors)).transpose();
+		laplacians.row(i) = nr_neighbors*m.V.row(i) - vec.transpose();
 	}
 	return laplacians;
 }
@@ -345,8 +354,11 @@ Eigen::MatrixX3d SurfaceSmoothing::compute_vertex_laplacians(Mesh &m) {
 Eigen::VectorXd SurfaceSmoothing::get_curvatures(Mesh &m) {
 	Eigen::VectorXd curvatures(m.V.rows());
 	Eigen::MatrixX3d laplacians = compute_vertex_laplacians(m);
+    int sign;
 	for(int i = 0; i < m.V.rows(); i++) {
-        curvatures[i] = laplacians.row(i).norm();
+        sign = (laplacians.row(i).dot(vertex_normals.row(i).transpose()) > 0) ? 1 : -1;
+        curvatures[i] = laplacians.row(i).norm()*sign;
+        //TODO: multiply with sign of dot product normal and laplacian
 		//curvatures[i] = laplacians.row(i).dot(vertex_normals.row(i).transpose());
 	}
 	return curvatures;

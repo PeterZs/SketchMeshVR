@@ -1,0 +1,3 @@
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/src/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/src/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/Users/floorverhoeven/Documents/School/ETH/Master Thesis/SketchMesh/thesis/SketchMesh/src/cmake-build-debug/CMakeFiles/src.dir
