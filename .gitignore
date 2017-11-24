@@ -4,5 +4,5 @@ build
 KWResearchWork
 Milton
 morphomesh-master
-cmake-build-debug data
+cmake-build-debug
 .idea
