@@ -21,6 +21,7 @@
 #include "SketchMesh.h"
 #include "Stroke.h"
 #include "SurfaceSmoothing.h"
+#include "CurveDeformation.h"
 
 /*** insert any libigl headers here ***/
 
@@ -56,15 +57,16 @@ int down_mouse_x = -1, down_mouse_y = -1;
 
 double vertex_weights;
 int smooth_iter = 1;
+bool mouse_is_down = false; //We need this due to mouse_down not working in the nanogui menu, whilst mouse_up does work there
 
 //For selecting vertices
-std::unique_ptr<Stroke> _stroke;
+//std::unique_ptr<Stroke> _stroke;
+Stroke* _stroke;
+int handleID = -1;
 
 bool callback_key_down(Viewer& viewer, unsigned char key, int modifiers) {
-
 	if (key == '1') {
 		viewer.data.clear();
-		viewer.data.set_mesh(V, F);
 	}else if (key == 'D') { //use capital letters
 		//Draw initial curve/mesh
 		tool_mode = DRAW;
@@ -84,6 +86,8 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 	if (button == (int)Viewer::MouseButton::Right) {
 		return false;
 	}
+	mouse_is_down = true;
+
 	down_mouse_x = viewer.current_mouse_x;
 	down_mouse_y = viewer.current_mouse_y;
 
@@ -94,6 +98,8 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 		skip_standardcallback = true;
 	}
 	else if (tool_mode == PULL) { //Dragging an existing curve
+		handleID = _stroke->selectClosestVertex(down_mouse_x, down_mouse_y);
+		CurveDeformation::startPullCurve(*_stroke, handleID);
 		skip_standardcallback = true;
 	}
 	else if (tool_mode == NAVIGATE) { //Navigate through the screen
@@ -119,18 +125,37 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 	} else if(tool_mode == EXTRUDE && viewer.down) {
 		_stroke->strokeAddSegmentExtrusion(mouse_x, mouse_y);
 		return true;
+	} else if(tool_mode == PULL && viewer.down) {
+		double x = mouse_x;
+		double y = viewer.core.viewport(3) - mouse_y;
+
+		Eigen::Matrix4f modelview = viewer.core.view * viewer.core.model;
+		Eigen::RowVector3f pt1(viewer.data.V(handleID, 0), viewer.data.V(handleID, 1), viewer.data.V(handleID, 2));
+		Eigen::RowVector3f pr;
+		igl::project(pt1, modelview, viewer.core.proj, viewer.core.viewport, pr);
+		Eigen::RowVector3d pt = igl::unproject(Eigen::Vector3f(x, y, pr[2]), modelview, viewer.core.proj, viewer.core.viewport).transpose().cast<double>();
+
+
+		CurveDeformation::pullCurve(pt, V);
+		viewer.data.set_mesh(V, F);
+		viewer.data.compute_normals();
 	}
 	return false;
 }
 
 bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
+	if(!mouse_is_down) {
+		return true;
+	}
+	mouse_is_down = false;
+
 	if(tool_mode == DRAW) {
 		if(_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
             //Give some time to show the stroke
             #ifdef _WIN32
-                Sleep(300);
+                Sleep(200);
             #else
-                usleep(300000);  /* sleep for 300 milliSeconds */
+                usleep(200000);  /* sleep for 200 milliSeconds */
             #endif
             _stroke->generate3DMeshFromStroke(vertex_boundary_markers);
 			F = viewer.data.F;
@@ -153,7 +178,6 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			viewer.data.add_edges(V.block(0, 0, strokeSize, 3), endPoints, Eigen::RowVector3d(1,0,0));
 		}
 		skip_standardcallback = false;
-        _stroke->strokeReset(); //We need to reset the stroke after drawing it, because callback_mouse_down's reset isn't called when we push down on the nanogui menu (otherwise we would call stroke->toLoop & generate3DMesh & smooth every time we click on the menu). This won't empty the viewer.data, so the mesh and stroke remain visible till a new one is drawn.
 	}
 	return skip_standardcallback;
 }
@@ -179,7 +203,6 @@ int main(int argc, char *argv[]) {
 	viewer.callback_mouse_move = callback_mouse_move;
 	viewer.callback_mouse_up = callback_mouse_up;
 	//viewer.callback_load_mesh = callback_load_mesh;
-    
     
     viewer.callback_init = [&](igl::viewer::Viewer& viewer)
     {
@@ -208,8 +231,8 @@ int main(int argc, char *argv[]) {
     };
 
 	//Init stroke selector
-	_stroke = std::unique_ptr<Stroke>(new Stroke(V, F, viewer));
-
+	//_stroke = std::unique_ptr<Stroke>(new Stroke(V, F, viewer));
+	_stroke = new Stroke(V, F, viewer);
 	if (argc == 2)
 	{
 		// Read mesh
@@ -223,7 +246,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	callback_key_down(viewer, '1', 0);
-	
+
 	//viewer.core.align_camera_center(V);
 	viewer.launch();
 }

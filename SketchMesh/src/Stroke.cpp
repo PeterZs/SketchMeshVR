@@ -8,8 +8,7 @@
 using namespace igl;
 using namespace std;
 
-std::chrono::steady_clock::time_point _time2;
-std::chrono::steady_clock::time_point _time1;
+std::chrono::steady_clock::time_point _time2, _time1;
 
 
 Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::viewer::Viewer &v) :
@@ -143,12 +142,8 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers) 
 	Eigen::MatrixX2d original_stroke2DPoints = stroke2DPoints;
 	stroke2DPoints = resample_stroke(original_stroke2DPoints);
 
-	Eigen::MatrixXd V2_tmp;
-	Eigen::MatrixXd V2;
-	Eigen::MatrixXi F2;
-	Eigen::MatrixXi F2_back;
-	Eigen::VectorXi vertex_markers;
-	Eigen::VectorXi edge_markers;
+	Eigen::MatrixXd V2_tmp, V2;
+	Eigen::MatrixXi F2, F2_back, vertex_markers, edge_markers;
 	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0,0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(),1,1), Eigen::MatrixXi::Constant(stroke_edges.rows(),1,1), "Qq30", V2_tmp, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
 	V2 = Eigen::MatrixXd::Zero(V2_tmp.rows(), V2_tmp.cols() + 1);
   
@@ -191,10 +186,9 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers) 
 		}
 	}
 
-	Eigen::MatrixXd N_Faces;
-	Eigen::MatrixXd N_Vertices;
+	Eigen::MatrixXd N_Faces, N_Vertices;
 	igl::per_face_normals(V2, F2, N_Faces);
-	igl::per_vertex_normals(V2, F2, PER_VERTEX_NORMALS_WEIGHTING_TYPE_UNIFORM, N_Vertices); //TODO: old version uses uniform weighting, maybe area based is better?
+	igl::per_vertex_normals(V2, F2, PER_VERTEX_NORMALS_WEIGHTING_TYPE_UNIFORM, N_Vertices);
 	
 	vertex_boundary_markers.resize(V2.rows());
 	for(int i = 0; i < V2.rows(); i++) {
@@ -204,6 +198,7 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers) 
 		} else {
 			if(vertex_markers(i) == 1) { //Don't change boundary vertices
 				vertex_boundary_markers[i] = 1;
+				stroke3DPoints.row(i) = V2.row(i);
 				continue;
 			}
             V2.row(i) = V2.row(i) + 0.1*N_Vertices.row(i);
@@ -245,7 +240,6 @@ Eigen::MatrixX2d Stroke::resample_stroke(Eigen::MatrixX2d & original_stroke2DPoi
 	return new_stroke2DPoints;
 }
 
-
 void Stroke::move_to_middle(Eigen::MatrixX2d &positions, Eigen::MatrixX2d &new_positions) {
 	int n = positions.rows();
 	//Do seperately for i=0, because modulo gives -1
@@ -265,7 +259,6 @@ void Stroke::move_to_middle(Eigen::MatrixX2d &positions, Eigen::MatrixX2d &new_p
 	}
 }
 
-
 double Stroke::total_stroke_length() {
 	double total_length = 0;
 	for(int i = 0; i < stroke2DPoints.rows(); i++) {
@@ -280,4 +273,25 @@ void Stroke::generate_backfaces(Eigen::MatrixXi &faces, Eigen::MatrixXi &back_fa
 
 Eigen::MatrixX3d Stroke::get3DPoints() {
 	return stroke3DPoints;
+}
+
+int Stroke::selectClosestVertex(int mouse_x, int mouse_y) {
+	double x = mouse_x;
+	double y = viewer.core.viewport(3) - mouse_y;
+
+	Eigen::Matrix4f modelview = viewer.core.view * viewer.core.model;
+	Eigen::RowVector3d pt, vert, clicked_pt(x,y,0);
+
+	double closest_dist = INFINITY, dist;
+	int closest_ID;
+	for(int i = 0; i < stroke3DPoints.rows()-1; i++) { //ignore the last stroke points because it's a duplicate of the first
+		vert = stroke3DPoints.row(i).transpose();
+		igl::project(vert, modelview, viewer.core.proj, viewer.core.viewport, pt); //project the boundary vertex and store in pt
+		dist = (pt - clicked_pt).squaredNorm();
+		if(dist < closest_dist) {
+			closest_dist = dist;
+			closest_ID = i;
+		}
+	}
+	return closest_ID;
 }

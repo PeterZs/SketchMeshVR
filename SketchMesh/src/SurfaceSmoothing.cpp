@@ -277,9 +277,8 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 	Eigen::VectorXd by = Eigen::VectorXd::Zero(m.V.rows() + no_boundary_vertices + no_boundary_adjacent_vertices);
 	Eigen::VectorXd bz = Eigen::VectorXd::Zero(m.V.rows() + no_boundary_vertices + no_boundary_adjacent_vertices);
 
-	Eigen::VectorXd doubleAreas;
-	igl::doublearea(m.V, m.F, doubleAreas);	
-	
+	//Eigen::VectorXd doubleAreas;
+//	igl::doublearea(m.V, m.F, doubleAreas);	
 	/*vector<vector<int>> VF, VFi;
 	igl::vertex_triangle_adjacency(m.V.rows(), m.F, VF, VFi);
 	Eigen::VectorXd vertex_areas(m.V.rows());

@@ -16,6 +16,7 @@ public:
 	void generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers);
 	double total_stroke_length();
 	Eigen::MatrixX3d get3DPoints();
+	int selectClosestVertex(int mouse_x, int mouse_y);
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 private:

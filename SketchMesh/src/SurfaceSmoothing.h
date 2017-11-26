@@ -23,6 +23,8 @@ public:
 
 
 	static void smooth(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers);
+
+private:
 	static void clear_precomputed_matrices();
 	static void smooth_main(Mesh &m);
 	static Eigen::MatrixXd get_precomputed_L(Mesh &m);
