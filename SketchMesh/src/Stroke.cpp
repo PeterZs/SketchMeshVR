@@ -293,5 +293,25 @@ int Stroke::selectClosestVertex(int mouse_x, int mouse_y) {
 			closest_ID = i;
 		}
 	}
+
+	closest_dist = sqrt(closest_dist);
+	double stroke_diag = compute_stroke_diag();
+	if(closest_dist > 0.15*stroke_diag) { //Don't do pulling when the user clicks too far away from any curve (treat as navigation movevement)
+		return -1;
+	}
+
 	return closest_ID;
+}
+
+double Stroke::compute_stroke_diag() {
+	Eigen::Vector3d maxBB = stroke3DPoints.colwise().maxCoeff();
+	Eigen::Vector3d minBB = stroke3DPoints.colwise().minCoeff();
+	return (maxBB - minBB).norm();
+}
+
+void Stroke::update_Positions(Eigen::MatrixXd V) {
+	for(int i = 0; i < stroke3DPoints.rows()-1; i++) {
+		stroke3DPoints.row(i) = V.row(i);
+	}
+	stroke3DPoints.row(stroke3DPoints.rows() - 1) = stroke3DPoints.row(0); //The last vertex in the stroke is the first point again (and not the first inside mesh vertex)
 }

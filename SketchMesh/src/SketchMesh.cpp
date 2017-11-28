@@ -58,6 +58,7 @@ int down_mouse_x = -1, down_mouse_y = -1;
 double vertex_weights;
 int smooth_iter = 1;
 bool mouse_is_down = false; //We need this due to mouse_down not working in the nanogui menu, whilst mouse_up does work there
+bool mouse_has_moved = false;
 
 //For selecting vertices
 //std::unique_ptr<Stroke> _stroke;
@@ -99,6 +100,9 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 	}
 	else if (tool_mode == PULL) { //Dragging an existing curve
 		handleID = _stroke->selectClosestVertex(down_mouse_x, down_mouse_y);
+		if(handleID == -1) {//User clicked too far from any of the stroke vertices
+			return false;
+		}
 		CurveDeformation::startPullCurve(*_stroke, handleID);
 		skip_standardcallback = true;
 	}
@@ -119,13 +123,14 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 	if (!skip_standardcallback) {
 		return false;
 	}
+	mouse_has_moved = true;
 	if (tool_mode == DRAW && viewer.down) { //If we're still holding the mouse down
 		_stroke->strokeAddSegment(mouse_x, mouse_y);
 		return true;
 	} else if(tool_mode == EXTRUDE && viewer.down) {
 		_stroke->strokeAddSegmentExtrusion(mouse_x, mouse_y);
 		return true;
-	} else if(tool_mode == PULL && viewer.down) {
+	} else if(tool_mode == PULL && viewer.down && handleID != -1) {
 		double x = mouse_x;
 		double y = viewer.core.viewport(3) - mouse_y;
 
@@ -135,10 +140,11 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 		igl::project(pt1, modelview, viewer.core.proj, viewer.core.viewport, pr);
 		Eigen::RowVector3d pt = igl::unproject(Eigen::Vector3f(x, y, pr[2]), modelview, viewer.core.proj, viewer.core.viewport).transpose().cast<double>();
 
-
 		CurveDeformation::pullCurve(pt, V);
+		_stroke->update_Positions(V);
 		viewer.data.set_mesh(V, F);
 		viewer.data.compute_normals();
+		return true;
 	}
 	return false;
 }
@@ -178,7 +184,16 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			viewer.data.add_edges(V.block(0, 0, strokeSize, 3), endPoints, Eigen::RowVector3d(1,0,0));
 		}
 		skip_standardcallback = false;
+	} else if(tool_mode == PULL && handleID != -1 && mouse_has_moved ) {
+		cout << handleID << endl;
+		for(int i = 0; i < smooth_iter; i++) {
+			SurfaceSmoothing::smooth(V, F, vertex_boundary_markers);
+		}
+
+		viewer.data.set_mesh(V, F);
+		viewer.data.compute_normals();
 	}
+	mouse_has_moved = false;
 	return skip_standardcallback;
 }
 

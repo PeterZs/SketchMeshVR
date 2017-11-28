@@ -23,7 +23,7 @@ private:
 	static double compute_curve_diag_length(Stroke & _stroke);
 	static bool update_ROI(double drag_size);
 	static void setup_for_update_curve(Eigen::MatrixXd& V);
-	static void setup_for_L1_position_step();
+	static void setup_for_L1_position_step(Eigen::MatrixXd& V);
 	static void update_curve(Eigen::MatrixXd & V);
 	static void solve_for_pos_and_rot(Eigen::MatrixXd& V);
 	static void update_rot();

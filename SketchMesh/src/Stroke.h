@@ -17,6 +17,8 @@ public:
 	double total_stroke_length();
 	Eigen::MatrixX3d get3DPoints();
 	int selectClosestVertex(int mouse_x, int mouse_y);
+	double compute_stroke_diag();
+	void update_Positions(Eigen::MatrixXd V);
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 private:

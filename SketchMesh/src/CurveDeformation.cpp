@@ -20,8 +20,9 @@ Eigen::SparseLU<Eigen::SparseMatrix<double>> solverL1; //Solver for final vertex
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solverPosRot; 
 Eigen::VectorXd PosRot;
 vector<Eigen::Matrix3d> Rot;
-Eigen::MatrixXd original_L0;
+Eigen::MatrixXd original_L0, original_L1;
 int CONSTRAINT_WEIGHT = 10000;
+Eigen::VectorXi is_fixed;
 
 
 void CurveDeformation::startPullCurve(Stroke& _stroke, int handle_ID) {
@@ -30,7 +31,7 @@ void CurveDeformation::startPullCurve(Stroke& _stroke, int handle_ID) {
 	CurveDeformation::moving_vertex_ID = handle_ID;
 	CurveDeformation::current_ROI_size = 0.0;
 	CurveDeformation::curve_diag_length = compute_curve_diag_length(_stroke);
-	no_vertices = _stroke.get3DPoints().rows();
+	no_vertices = _stroke.get3DPoints().rows()-1; //We should ignore the last one, which is a copy of the first one
 	no_ROI_vert = -1;
 	Rot.resize(no_vertices);
 }
@@ -42,7 +43,7 @@ void CurveDeformation::pullCurve(Eigen::RowVector3d& pos, Eigen::MatrixXd& V) {
 	drag_size /= curve_diag_length;
 	bool ROI_is_updated = false;
 	if(!current_ROI_size || (drag_size - current_ROI_size > 0.01)) { //Take the deformation and roi size as percentages
-		ROI_is_updated = update_ROI(drag_size*4);
+		ROI_is_updated = update_ROI(drag_size);
 	}
 	if(no_ROI_vert == 0 || current_ROI_size == 0) { //If we have no other "free" vertices other than the handle vertex, we simply move it to the target position
 		V.row(moving_vertex_ID) = pos;
@@ -66,8 +67,8 @@ bool CurveDeformation::update_ROI(double drag_size) {
 		return false;
 	}
 	current_max_drag_size = drag_size;
-	cout << drag_size << endl;
-	int no_ROI_vert_tmp = min(drag_size * no_vertices, ceil(((no_vertices - 1) / 2) - 1)); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side, always at least 1 vertex fixed)
+	int no_ROI_vert_tmp = min(drag_size * no_vertices+1, ceil(((no_vertices - 1) / 2) - 1)); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side, always at least 1 vertex fixed)
+
 	if(no_ROI_vert == no_ROI_vert_tmp) { //number of vertices in ROI didn't change
 		return false;
 	}
@@ -75,28 +76,35 @@ bool CurveDeformation::update_ROI(double drag_size) {
 	current_ROI_size = drag_size;
 	no_ROI_vert = no_ROI_vert_tmp;
 
-	int ROI_1 = moving_vertex_ID - no_ROI_vert;
-	int ROI_2 = (moving_vertex_ID + no_ROI_vert) % no_vertices;
+	//int ROI_1 = moving_vertex_ID - no_ROI_vert;
+	//int ROI_2 = (moving_vertex_ID + no_ROI_vert) % no_vertices;
 
-	if(moving_vertex_ID < no_ROI_vert) { //ROI_1 will wrap around, manually perform modulo because negative modulo messes up
+	int ROI_1 = (((moving_vertex_ID - no_ROI_vert) + no_vertices) % no_vertices);
+	int ROI_2 = (((moving_vertex_ID + no_ROI_vert) + no_vertices) % no_vertices);
+	/*if(moving_vertex_ID < no_ROI_vert) { //ROI_1 will wrap around, manually perform modulo because negative modulo messes up
 		ROI_1 = no_vertices - (no_ROI_vert - moving_vertex_ID);
-	}
-
+	}*/
+	cout << ROI_1 << "  " << ROI_2 << "ROI" << endl;
 	vector<int> fixed;
+	is_fixed = Eigen::VectorXi::Zero(no_vertices);
 	if(ROI_1 < ROI_2) {
-		for(int i = 0; i <= ROI_1; i++) {
+		for(int i = 0; i < ROI_1; i++) {
 			fixed.push_back(i);
+			is_fixed[i] = 1;
 		}
-		for(int i = ROI_2; i < no_vertices; i++) {
+		for(int i = ROI_2+1; i < no_vertices; i++) {
 			fixed.push_back(i);
+			is_fixed[i] = 1;
 		}
 	} else {
-		for(int i = ROI_2; i <= ROI_1; i++) {
+		for(int i = ROI_2+1; i < ROI_1; i++) {
 			fixed.push_back(i);
+			is_fixed[i] = 1;
 		}
 	}
 
 	fixed.push_back(moving_vertex_ID);
+	is_fixed[moving_vertex_ID] = 1;
 
 	fixed_indices = Eigen::VectorXi::Map(fixed.data(), fixed.size());
 
@@ -108,24 +116,24 @@ void CurveDeformation::setup_for_update_curve(Eigen::MatrixXd& V) {
 	B.resize(no_vertices*3 + no_vertices * 9 + fixed_indices.size()*3 + fixed_indices.size()*3);
 	original_L0.resize(no_vertices, 3);
 
-	original_L0.row(0) = V.row(0) - V.row(no_vertices - 1);
-	for(int i = 1; i < no_vertices; i++) {
-		original_L0.row(i) = V.row(i) - V.row(i - 1);
+	//original_L0.row(0) = V.row(0) - V.row(no_vertices - 1);
+	for(int i = 0; i < no_vertices; i++) {
+		original_L0.row(i) = V.row(i) - V.row(((i - 1) + no_vertices)%no_vertices);
 	}
 
-	setup_for_L1_position_step();
+	setup_for_L1_position_step(V);
 }
 
-void CurveDeformation::setup_for_L1_position_step() {
+void CurveDeformation::setup_for_L1_position_step(Eigen::MatrixXd& V) {
 	A_L1 = Eigen::SparseMatrix<double>(no_vertices + fixed_indices.size(), no_vertices);
+	original_L1.resize(no_vertices, 3);
 
-	A_L1.insert(0, no_vertices - 1) = -0.5;
-	A_L1.insert(0, 0) = 1;
-	A_L1.insert(0, 1) = -0.5;
-	for(int i = 1; i < no_vertices; i++) {
-		A_L1.insert(i, i - 1) = -0.5;
+	for(int i = 0; i < no_vertices; i++) {
+		A_L1.insert(i, (((i - 1)+no_vertices)%no_vertices)) = -0.5;
 		A_L1.insert(i, i) = 1;
 		A_L1.insert(i, (i + 1)%no_vertices) = -0.5;
+
+		original_L1.row(i) = V.row(i) - (0.5*V.row(((i + 1) + no_vertices) % no_vertices) + 0.5*V.row(((i - 1) + no_vertices) % no_vertices));
 	}
 
 	for(int i = 0; i < fixed_indices.size(); i++) {
@@ -253,13 +261,30 @@ Eigen::Matrix3d CurveDeformation::compute_orthonormal(Eigen::Matrix3d& rot) {
 }
 
 void CurveDeformation::final_L1_pos(Eigen::MatrixXd &V) {
-	Eigen::MatrixXd oldV = V;
-	for(int i = 0; i < no_vertices; i++){
-		V(i, 0) = PosRot(i * 3 + 0);
-		V(i, 1) = PosRot(i * 3 + 1);
-		V(i, 2) = PosRot(i * 3 + 2);
+	Eigen::VectorXd Bx(no_vertices+fixed_indices.size()), By(no_vertices + fixed_indices.size()), Bz(no_vertices + fixed_indices.size());
+	Eigen::Vector3d Rl;
+	for(int i = 0; i < no_vertices; i++) {
+		Rl = Rot[i] * original_L1.row(i).transpose();
+		Bx[i] = Rl(0);
+		By[i] = Rl(1);
+		Bz[i] = Rl(2);
 	}
+
 	for(int i = 0; i < fixed_indices.size(); i++) {
-		V.row(fixed_indices[i]) = oldV.row(fixed_indices[i]);
+		Bx[no_vertices + i] = V(fixed_indices[i], 0) *CONSTRAINT_WEIGHT;
+		By[no_vertices + i] = V(fixed_indices[i], 1) *CONSTRAINT_WEIGHT;
+		Bz[no_vertices + i] = V(fixed_indices[i], 2) *CONSTRAINT_WEIGHT;
+
 	}
+
+	Eigen::VectorXd xpos = solverL1.solve(A_L1_T*Bx);
+	Eigen::VectorXd ypos = solverL1.solve(A_L1_T*By);
+	Eigen::VectorXd zpos = solverL1.solve(A_L1_T*Bz);
+
+	for(int i = 0; i < no_vertices; i++) {
+		if(!is_fixed[i]) {
+			V.row(i) << xpos[i], ypos[i], zpos[i];
+		}
+	}
+
 }
