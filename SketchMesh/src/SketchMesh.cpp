@@ -65,6 +65,8 @@ bool mouse_has_moved = false;
 Stroke* _stroke;
 int handleID = -1;
 
+int turnNr = 0;
+
 bool callback_key_down(Viewer& viewer, unsigned char key, int modifiers) {
 	if (key == '1') {
 		viewer.data.clear();
@@ -140,10 +142,25 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 		igl::project(pt1, modelview, viewer.core.proj, viewer.core.viewport, pr);
 		Eigen::RowVector3d pt = igl::unproject(Eigen::Vector3f(x, y, pr[2]), modelview, viewer.core.proj, viewer.core.viewport).transpose().cast<double>();
 
-		CurveDeformation::pullCurve(pt, V);
+		if(turnNr == 0) { //increase the number to smooth less often
+			CurveDeformation::pullCurve(pt, V);
+			SurfaceSmoothing::smooth(V, F, vertex_boundary_markers);
+			turnNr++;
+		} else {
+			turnNr++;
+			if(turnNr == 4) {
+				turnNr = 0;
+			}
+		}
 		_stroke->update_Positions(V);
+
 		viewer.data.set_mesh(V, F);
 		viewer.data.compute_normals();
+		//Overlay the drawn stroke
+		int strokeSize = (vertex_boundary_markers.array() > 0).count();
+		Eigen::MatrixXd strokePoints = V.block(0, 0, strokeSize, 3);
+		viewer.data.set_points(strokePoints, Eigen::RowVector3d(1, 0, 0)); //Displays dots
+		viewer.data.set_stroke_points(igl::cat(1, strokePoints, (Eigen::MatrixXd) V.row(0)));
 		return true;
 	}
 	return false;
@@ -177,21 +194,24 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
             //Overlay the drawn stroke
 			int strokeSize = (vertex_boundary_markers.array() > 0).count();
 			Eigen::MatrixXd strokePoints = V.block(0, 0, strokeSize, 3);
-			Eigen::MatrixXd tmp_1 = V.block(1, 0, strokeSize - 1, 3);
-			Eigen::MatrixXd tmp_2 = V.row(0);
-			Eigen::MatrixXd endPoints = igl::cat(1, tmp_1, tmp_2);
-			viewer.data.add_points(strokePoints, Eigen::RowVector3d(1, 0, 0));
-			viewer.data.add_edges(V.block(0, 0, strokeSize, 3), endPoints, Eigen::RowVector3d(1,0,0));
+			viewer.data.set_points(strokePoints, Eigen::RowVector3d(1, 0, 0)); //Displays dots
+			viewer.data.set_stroke_points(igl::cat(1, strokePoints, (Eigen::MatrixXd) V.row(0)));
+
 		}
 		skip_standardcallback = false;
 	} else if(tool_mode == PULL && handleID != -1 && mouse_has_moved ) {
-		cout << handleID << endl;
 		for(int i = 0; i < smooth_iter; i++) {
 			SurfaceSmoothing::smooth(V, F, vertex_boundary_markers);
 		}
 
 		viewer.data.set_mesh(V, F);
 		viewer.data.compute_normals();
+
+		//Overlay the updated stroke
+		int strokeSize = (vertex_boundary_markers.array() > 0).count();
+		Eigen::MatrixXd strokePoints = V.block(0, 0, strokeSize, 3);
+		viewer.data.set_points(strokePoints, Eigen::RowVector3d(1, 0, 0));
+		viewer.data.set_stroke_points(igl::cat(1, strokePoints, (Eigen::MatrixXd) V.row(0)));
 	}
 	mouse_has_moved = false;
 	return skip_standardcallback;
@@ -217,6 +237,7 @@ int main(int argc, char *argv[]) {
 	viewer.callback_mouse_down = callback_mouse_down;
 	viewer.callback_mouse_move = callback_mouse_move;
 	viewer.callback_mouse_up = callback_mouse_up;
+	viewer.core.point_size = 15;
 	//viewer.callback_load_mesh = callback_load_mesh;
     
     viewer.callback_init = [&](igl::viewer::Viewer& viewer)

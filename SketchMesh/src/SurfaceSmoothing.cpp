@@ -245,8 +245,6 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_edge_lengths(Mesh &m, Eigen::Ma
 }
 
 void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eigen::VectorXd &target_LMs, Eigen::VectorXd &target_edge_lengths) {
-	//double vertex_weight = 10, edge_weight = 1; //TODO: try high edge weight, higher vertex-weight doesn't seem to do much
-
 	Eigen::SparseMatrix<double> A = get_precompute_matrix_for_positions(m);
     Eigen::SparseMatrix<double> AT = get_AT_for_positions(m);
 	if(A.rows() == 0 && A.cols() == 0) { //We haven't set up A for this topology yet
@@ -277,30 +275,11 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 	Eigen::VectorXd by = Eigen::VectorXd::Zero(m.V.rows() + no_boundary_vertices + no_boundary_adjacent_vertices);
 	Eigen::VectorXd bz = Eigen::VectorXd::Zero(m.V.rows() + no_boundary_vertices + no_boundary_adjacent_vertices);
 
-	//Eigen::VectorXd doubleAreas;
-//	igl::doublearea(m.V, m.F, doubleAreas);	
-	/*vector<vector<int>> VF, VFi;
-	igl::vertex_triangle_adjacency(m.V.rows(), m.F, VF, VFi);
-	Eigen::VectorXd vertex_areas(m.V.rows());
-	double vertex_area;
-	double min_area = INFINITY;
-	for(int i = 0; i < m.V.rows(); i++) {
-		vertex_area = 0.0;
-		for(int j = 0; j < VF[i].size(); j++) {
-			vertex_area += doubleAreas(VF[i][j]); //Get the area of the adjacent face
-		}
-		vertex_areas[i] = vertex_area / 6.0; //Divide by 2 because of "double" area, and then by 3 because every vertex shares a face with 2 other vertices
-		if(vertex_areas[i] < min_area) {
-			min_area = vertex_areas[i];
-		}
-	}
-*/
 	int count = 0, count2 = 0;
 	Eigen::Vector3d delta;
 	for(int i = 0; i < m.V.rows(); i++) {
         delta = target_LMs[i] * vertex_normals.row(i);
 
-        //delta = vertex_areas[i]/min_area * target_LMs[i] * vertex_normals.row(i);
 		bx[i] = delta(0);
 		by[i] = delta(1);
 		bz[i] = delta(2);

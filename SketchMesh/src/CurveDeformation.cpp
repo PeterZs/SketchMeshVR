@@ -17,7 +17,8 @@ Eigen::SparseMatrix<double> A_L1_T;
 Eigen::VectorXd B;
 Eigen::SparseMatrix<double> B_L1;
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solverL1; //Solver for final vertex positions (with L1)
-Eigen::SparseLU<Eigen::SparseMatrix<double>> solverPosRot; 
+//Eigen::SparseLU<Eigen::SparseMatrix<double>> solverPosRot; 
+Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solverPosRot;
 Eigen::VectorXd PosRot;
 vector<Eigen::Matrix3d> Rot;
 Eigen::MatrixXd original_L0, original_L1;
@@ -42,7 +43,7 @@ void CurveDeformation::pullCurve(Eigen::RowVector3d& pos, Eigen::MatrixXd& V) {
 	drag_size = move_vec.norm();
 	drag_size /= curve_diag_length;
 	bool ROI_is_updated = false;
-	if(!current_ROI_size || (drag_size - current_ROI_size > 0.01)) { //Take the deformation and roi size as percentages
+	if(!current_ROI_size || (fabs(drag_size - current_ROI_size) > 0.01)) { //Take the deformation and roi size as percentages
 		ROI_is_updated = update_ROI(drag_size);
 	}
 	if(no_ROI_vert == 0 || current_ROI_size == 0) { //If we have no other "free" vertices other than the handle vertex, we simply move it to the target position
@@ -64,10 +65,10 @@ double CurveDeformation::compute_curve_diag_length(Stroke& _stroke) {
 
 bool CurveDeformation::update_ROI(double drag_size) {
 	if(current_max_drag_size >= drag_size) {
-		return false;
+		//return false;
 	}
 	current_max_drag_size = drag_size;
-	int no_ROI_vert_tmp = min(drag_size * no_vertices+1, ceil(((no_vertices - 1) / 2) - 1)); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side, always at least 1 vertex fixed)
+	int no_ROI_vert_tmp = max(0.16*no_vertices+1, min(round(drag_size * no_vertices) + 1, ceil(((no_vertices - 1) / 2) - 1))); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side, always at least 1/6th of the number of vertices + 1 vertex fixed, to take care of thin meshes with many vertices)
 
 	if(no_ROI_vert == no_ROI_vert_tmp) { //number of vertices in ROI didn't change
 		return false;
@@ -76,15 +77,10 @@ bool CurveDeformation::update_ROI(double drag_size) {
 	current_ROI_size = drag_size;
 	no_ROI_vert = no_ROI_vert_tmp;
 
-	//int ROI_1 = moving_vertex_ID - no_ROI_vert;
-	//int ROI_2 = (moving_vertex_ID + no_ROI_vert) % no_vertices;
-
 	int ROI_1 = (((moving_vertex_ID - no_ROI_vert) + no_vertices) % no_vertices);
 	int ROI_2 = (((moving_vertex_ID + no_ROI_vert) + no_vertices) % no_vertices);
-	/*if(moving_vertex_ID < no_ROI_vert) { //ROI_1 will wrap around, manually perform modulo because negative modulo messes up
-		ROI_1 = no_vertices - (no_ROI_vert - moving_vertex_ID);
-	}*/
-	cout << ROI_1 << "  " << ROI_2 << "ROI" << endl;
+
+	//cout << drag_size << " " << no_vertices << " " << no_ROI_vert << endl;
 	vector<int> fixed;
 	is_fixed = Eigen::VectorXi::Zero(no_vertices);
 	if(ROI_1 < ROI_2) {
@@ -112,13 +108,12 @@ bool CurveDeformation::update_ROI(double drag_size) {
 }
 
 void CurveDeformation::setup_for_update_curve(Eigen::MatrixXd& V) {
-	A.resize(no_vertices*3 + no_vertices * 9 + fixed_indices.size()*3 + fixed_indices.size()*3, no_vertices*3 + no_vertices*3); //Solve for x,y,z simutaneously since we cannot reuse A anyway
+	A.resize(no_vertices*3 + no_vertices * 9 + fixed_indices.size()*3 + fixed_indices.size()*3, no_vertices*3 + no_vertices*3); //Solve for x,y,z simultaneously since we cannot reuse A anyway
 	B.resize(no_vertices*3 + no_vertices * 9 + fixed_indices.size()*3 + fixed_indices.size()*3);
 	original_L0.resize(no_vertices, 3);
 
-	//original_L0.row(0) = V.row(0) - V.row(no_vertices - 1);
 	for(int i = 0; i < no_vertices; i++) {
-		original_L0.row(i) = V.row(i) - V.row(((i - 1) + no_vertices)%no_vertices);
+		original_L0.row(i) = V.row(i) - V.row(((i - 1) + no_vertices) % no_vertices);
 	}
 
 	setup_for_L1_position_step(V);
@@ -281,7 +276,7 @@ void CurveDeformation::final_L1_pos(Eigen::MatrixXd &V) {
 	Eigen::VectorXd ypos = solverL1.solve(A_L1_T*By);
 	Eigen::VectorXd zpos = solverL1.solve(A_L1_T*Bz);
 
-	for(int i = 0; i < no_vertices; i++) {
+	for(int i = 0; i < no_vertices; i++) { //update the position of non-fixed stroke vertices
 		if(!is_fixed[i]) {
 			V.row(i) << xpos[i], ypos[i], zpos[i];
 		}
