@@ -10,6 +10,7 @@ double CurveDeformation::current_max_drag_size, CurveDeformation::current_ROI_si
 Eigen::RowVector3d CurveDeformation::start_pos;
 Eigen::VectorXi CurveDeformation::fixed_indices(0);
 int CurveDeformation::moving_vertex_ID;
+bool CurveDeformation::smooth_deform_mode;
 int no_vertices, no_ROI_vert = -1;
 Eigen::SparseMatrix<double> A;
 Eigen::SparseMatrix<double> A_L1;
@@ -17,8 +18,8 @@ Eigen::SparseMatrix<double> A_L1_T;
 Eigen::VectorXd B;
 Eigen::SparseMatrix<double> B_L1;
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solverL1; //Solver for final vertex positions (with L1)
-//Eigen::SparseLU<Eigen::SparseMatrix<double>> solverPosRot; 
-Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solverPosRot;
+Eigen::SparseLU<Eigen::SparseMatrix<double>> solverPosRot; 
+//Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solverPosRot;
 Eigen::VectorXd PosRot;
 vector<Eigen::Matrix3d> Rot;
 Eigen::MatrixXd original_L0, original_L1;
@@ -68,7 +69,12 @@ bool CurveDeformation::update_ROI(double drag_size) {
 		//return false;
 	}
 	current_max_drag_size = drag_size;
-	int no_ROI_vert_tmp = max(0.16*no_vertices+1, min(round(drag_size * no_vertices) + 1, ceil(((no_vertices - 1) / 2) - 1))); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side, always at least 1/6th of the number of vertices + 1 vertex fixed, to take care of thin meshes with many vertices)
+	int no_ROI_vert_tmp;
+	if(smooth_deform_mode) {
+		no_ROI_vert_tmp = max(0.16*no_vertices + 1, min(round(drag_size * no_vertices) + 1, ceil(((no_vertices - 1) / 2) - 1))); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side, always at least 1/6th of the number of vertices + 1 vertex fixed, to take care of thin meshes with many vertices)
+	} else {
+		no_ROI_vert_tmp = min(round(drag_size * no_vertices) + 1, ceil(((no_vertices - 1) / 2) - 1)); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side)
+	}
 
 	if(no_ROI_vert == no_ROI_vert_tmp) { //number of vertices in ROI didn't change
 		return false;

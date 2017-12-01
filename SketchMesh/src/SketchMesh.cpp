@@ -260,6 +260,9 @@ int main(int argc, char *argv[]) {
             viewer.data.set_mesh(V, F);
             viewer.data.compute_normals();
         });
+
+		viewer.ngui->addGroup("Curve deformation");
+		viewer.ngui->addVariable<bool>("Smooth deformation", CurveDeformation::smooth_deform_mode);
         
         // call to generate menu
         viewer.screen->performLayout();
