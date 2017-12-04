@@ -10,6 +10,7 @@ public:
 	bool empty2D() const { return stroke2DPoints.isZero(); }
 	bool empty3D() const { return stroke3DPoints.isZero(); }
 	void strokeAddSegment(int mouse_x, int mouse_y);
+	void strokeAddSegmentAdd(int mouse_x, int mouse_y);
 	void strokeAddSegmentExtrusion(int mouse_x, int mouse_y);
 	bool toLoop();
 	void strokeReset();
@@ -19,6 +20,7 @@ public:
 	int selectClosestVertex(int mouse_x, int mouse_y);
 	double compute_stroke_diag();
 	void update_Positions(Eigen::MatrixXd V);
+	void snap_to_vertices();
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 private:
