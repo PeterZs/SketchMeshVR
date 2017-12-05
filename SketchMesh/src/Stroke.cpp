@@ -10,8 +10,7 @@ using namespace igl;
 using namespace std;
 
 std::chrono::steady_clock::time_point _time2, _time1;
-vector<int> closest_vert_bindings;
-
+//map<int, int> map_to_vert_indices;
 
 Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::viewer::Viewer &v) :
 	V(V_),
@@ -21,7 +20,8 @@ Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::viewer
 	stroke3DPoints = Eigen::MatrixX3d::Zero(1, 3);
 	stroke_edges = Eigen::MatrixXi::Zero(0, 2);
 	_time1 = std::chrono::high_resolution_clock::now();
-
+	closest_vert_bindings.clear();
+	//map_to_vert_indices.clear();
 }
 
 Stroke::~Stroke() {}
@@ -60,6 +60,7 @@ void Stroke::strokeAddSegment(int mouse_x, int mouse_y) {
 		stroke_edges.conservativeResize(stroke_edges.rows() + 1, stroke_edges.cols());
 		stroke_edges.row(stroke_edges.rows() - 1) << stroke2DPoints.rows() - 2, stroke2DPoints.rows() - 1;
 	}
+	closest_vert_bindings.push_back(stroke3DPoints.rows() - 1);
 	//using set_stroke_points will remove all previous strokes, using add_stroke_points might create duplicates
 	viewer.data.set_stroke_points(stroke3DPoints);
 
@@ -88,7 +89,6 @@ void Stroke::strokeAddSegmentAdd(int mouse_x, int mouse_y) {
 
 	Eigen::Vector3f bc;
 	if(igl::unproject_onto_mesh(Eigen::Vector2f(x, y), modelview, viewer.core.proj, viewer.core.viewport, V, F, faceID, bc)) {
-		cout << "on mehs" << endl;
 		pt = V.row(F(faceID, 0))*bc(0) + V.row(F(faceID, 1))*bc(1) + V.row(F(faceID, 2))*bc(2);
 		double cur_dist, min_dist = INFINITY;
 		int closest_vert_idx;
@@ -99,7 +99,10 @@ void Stroke::strokeAddSegmentAdd(int mouse_x, int mouse_y) {
 				closest_vert_idx = F(faceID, i);
 			}
 		}
-		closest_vert_bindings.push_back(closest_vert_idx);
+
+		if(closest_vert_bindings.size()==0 || closest_vert_idx != closest_vert_bindings.back()) {
+			closest_vert_bindings.push_back(closest_vert_idx);
+		}
 
 		//Only add point when it's on the mesh
 		if(stroke2DPoints.rows() == 1 && empty2D()) { //Add first point
@@ -116,7 +119,9 @@ void Stroke::strokeAddSegmentAdd(int mouse_x, int mouse_y) {
 			stroke_edges.row(stroke_edges.rows() - 1) << stroke2DPoints.rows() - 2, stroke2DPoints.rows() - 1;
 		}
 		//using set_stroke_points will remove all previous strokes, using add_stroke_points might create duplicates
-		viewer.data.set_stroke_points(stroke3DPoints);
+	//	viewer.data.set_stroke_points(stroke3DPoints);
+	//	viewer.data.add_stroke_points(stroke3DPoints.row(stroke3DPoints.rows() - 1));
+		viewer.data.add_edges(stroke3DPoints.block(0, 0, stroke3DPoints.rows() - 1, 3), stroke3DPoints.block(1, 0, stroke3DPoints.rows() - 1, 3), Eigen::RowVector3d(0, 1, 0));
 	}
 
 	_time1 = std::chrono::high_resolution_clock::now(); //restart the "start" timer
@@ -190,6 +195,10 @@ bool Stroke::toLoop() {
         
         stroke3DPoints.conservativeResize(stroke3DPoints.rows()+1, stroke3DPoints.cols());
         stroke3DPoints.row(stroke3DPoints.rows()-1) << stroke3DPoints.row(0);
+		closest_vert_bindings.push_back(0);
+		for(int i = 0; i < closest_vert_bindings.size(); i++) {
+			cout << closest_vert_bindings[i] << " ";
+		}
 		viewer.data.set_stroke_points(stroke3DPoints);
 		return true;
 	}
@@ -335,16 +344,20 @@ Eigen::MatrixX3d Stroke::get3DPoints() {
 	return stroke3DPoints;
 }
 
-int Stroke::selectClosestVertex(int mouse_x, int mouse_y) {
+int Stroke::get_vertex_idx_for_point(int pt_idx) {
+	cout << pt_idx << endl;
+	return closest_vert_bindings[pt_idx];
+}
+
+int Stroke::selectClosestVertex(int mouse_x, int mouse_y, double& closest_distance) {
 	double x = mouse_x;
 	double y = viewer.core.viewport(3) - mouse_y;
 
 	Eigen::Matrix4f modelview = viewer.core.view * viewer.core.model;
 	Eigen::RowVector3d pt, vert, clicked_pt(x,y,0);
-
 	double closest_dist = INFINITY, dist;
 	int closest_ID;
-	for(int i = 0; i < stroke3DPoints.rows()-1; i++) { //ignore the last stroke points because it's a duplicate of the first
+	for(int i = 0; i < stroke3DPoints.rows(); i++) { //ignore the last stroke points because it's a duplicate of the first
 		vert = stroke3DPoints.row(i).transpose();
 		igl::project(vert, modelview, viewer.core.proj, viewer.core.viewport, pt); //project the boundary vertex and store in pt
 		dist = (pt - clicked_pt).squaredNorm();
@@ -356,10 +369,10 @@ int Stroke::selectClosestVertex(int mouse_x, int mouse_y) {
 
 	closest_dist = sqrt(closest_dist);
 	double stroke_diag = compute_stroke_diag();
-	if(closest_dist > 0.15*stroke_diag) { //Don't do pulling when the user clicks too far away from any curve (treat as navigation movevement)
+	closest_distance = closest_dist;
+	if(closest_dist > 0.15*stroke_diag) { //Don't do pulling when the user clicks too far away from any curve (treat as navigation movement)
 		return -1;
 	}
-
 	return closest_ID;
 }
 
@@ -385,18 +398,22 @@ void Stroke::snap_to_vertices() {
 	adjacency_list(F, adj_list);
 	vector<int> final_vertices;
 
-	for(int i = 0; i < closest_vert_bindings.size() - 1; i++) {
+	stroke3DPoints.resize(0, 3);
+	for(int i = 0; i < closest_vert_bindings.size()-1; i++) {
 		set<int> goal;
 		goal.insert(closest_vert_bindings[i + 1]);
 		dijkstra_compute_paths(closest_vert_bindings[i], goal, adj_list, min_dist, previous);
 		dijkstra_get_shortest_path_to(closest_vert_bindings[i + 1], previous, result_path);
-
-		for(int j = 0; j < result_path.size(); j++) {
+	
+		for(int j = result_path.size()-1; j >= 0; j--) {
 			int idx = result_path[j];
 			if(idx != prev) {
 				final_vertices.push_back(idx);
+				stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, 3);
+				stroke3DPoints.row(stroke3DPoints.rows() - 1) << V.row(final_vertices.back());
 				prev = idx;
 			}
 		}
 	}
+	
 }

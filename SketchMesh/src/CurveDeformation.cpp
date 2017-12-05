@@ -11,7 +11,7 @@ Eigen::RowVector3d CurveDeformation::start_pos;
 Eigen::VectorXi CurveDeformation::fixed_indices(0);
 int CurveDeformation::moving_vertex_ID;
 bool CurveDeformation::smooth_deform_mode;
-int no_vertices, no_ROI_vert = -1;
+int no_vertices, no_ROI_vert = -1, total_no_mesh_vertices;
 Eigen::SparseMatrix<double> A;
 Eigen::SparseMatrix<double> A_L1;
 Eigen::SparseMatrix<double> A_L1_T;
@@ -27,15 +27,17 @@ int CONSTRAINT_WEIGHT = 10000;
 Eigen::VectorXi is_fixed;
 
 
-void CurveDeformation::startPullCurve(Stroke& _stroke, int handle_ID) {
+void CurveDeformation::startPullCurve(Stroke& _stroke, int handle_ID, int no_total_vertices) {
 	CurveDeformation::current_max_drag_size = -1.0;
 	CurveDeformation::start_pos = (_stroke.get3DPoints()).row(handle_ID);
-	CurveDeformation::moving_vertex_ID = handle_ID;
+	CurveDeformation::moving_vertex_ID = _stroke.get_vertex_idx_for_point(handle_ID); //The global vertex index (in V) for the moving vertex
+	cout << "test"<< moving_vertex_ID << "  " << handle_ID;
 	CurveDeformation::current_ROI_size = 0.0;
 	CurveDeformation::curve_diag_length = compute_curve_diag_length(_stroke);
-	no_vertices = _stroke.get3DPoints().rows()-1; //We should ignore the last one, which is a copy of the first one
+	no_vertices = _stroke.get3DPoints().rows() - 1;// no_total_vertices - 1;// _stroke.get3DPoints().rows() - 1; //We should ignore the last one, which is a copy of the first one
 	no_ROI_vert = -1;
 	Rot.resize(no_vertices);
+	total_no_mesh_vertices = no_total_vertices;
 }
 
 //pos is the unprojection from the position to where the user dragged the vertex
@@ -71,9 +73,11 @@ bool CurveDeformation::update_ROI(double drag_size) {
 	current_max_drag_size = drag_size;
 	int no_ROI_vert_tmp;
 	if(smooth_deform_mode) {
-		no_ROI_vert_tmp = max(0.16*no_vertices + 1, min(round(drag_size * no_vertices) + 1, ceil(((no_vertices - 1) / 2) - 1))); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side, always at least 1/6th of the number of vertices + 1 vertex fixed, to take care of thin meshes with many vertices)
+		no_ROI_vert_tmp = max(0.16*total_no_mesh_vertices + 1, min(round(drag_size * total_no_mesh_vertices) + 1, ceil(((total_no_mesh_vertices - 1) / 2) - 1)));
+		//no_ROI_vert_tmp = max(0.16*no_vertices + 1, min(round(drag_size * no_vertices) + 1, ceil(((no_vertices - 1) / 2) - 1))); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side, always at least 1/6th of the number of vertices + 1 vertex fixed, to take care of thin meshes with many vertices)
 	} else {
-		no_ROI_vert_tmp = min(round(drag_size * no_vertices) + 1, ceil(((no_vertices - 1) / 2) - 1)); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side)
+		no_ROI_vert_tmp = min(round(drag_size * total_no_mesh_vertices) + 1, ceil(((total_no_mesh_vertices - 1) / 2) - 1));
+	//	no_ROI_vert_tmp = min(round(drag_size * no_vertices) + 1, ceil(((no_vertices - 1) / 2) - 1)); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side)
 	}
 
 	if(no_ROI_vert == no_ROI_vert_tmp) { //number of vertices in ROI didn't change
@@ -85,7 +89,7 @@ bool CurveDeformation::update_ROI(double drag_size) {
 
 	int ROI_1 = (((moving_vertex_ID - no_ROI_vert) + no_vertices) % no_vertices);
 	int ROI_2 = (((moving_vertex_ID + no_ROI_vert) + no_vertices) % no_vertices);
-
+	cout << "ROI" << moving_vertex_ID << " " << no_ROI_vert << " "<< ROI_1 << "  " << ROI_2 << endl;
 	//cout << drag_size << " " << no_vertices << " " << no_ROI_vert << endl;
 	vector<int> fixed;
 	is_fixed = Eigen::VectorXi::Zero(no_vertices);

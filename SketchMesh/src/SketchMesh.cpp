@@ -75,7 +75,6 @@ bool callback_key_down(Viewer& viewer, unsigned char key, int modifiers) {
 	}else if (key == 'D') { //use capital letters
 		//Draw initial curve/mesh
 		tool_mode = DRAW;
-		initial_stroke->strokeReset();
 	}else if (key == 'P') {
 		tool_mode = PULL;
 	}else if (key == 'N') {
@@ -104,6 +103,7 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 
 	if (tool_mode == DRAW) { //Creating the first curve/mesh
 		viewer.data.clear();
+		stroke_collection.clear();
 		initial_stroke->strokeReset();
 		initial_stroke->strokeAddSegment(down_mouse_x, down_mouse_y);
 		skip_standardcallback = true;
@@ -112,11 +112,29 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 		added_stroke->strokeAddSegmentAdd(down_mouse_x, down_mouse_y);
 		skip_standardcallback = true;
 	} else if (tool_mode == PULL) { //Dragging an existing curve
-		handleID = initial_stroke->selectClosestVertex(down_mouse_x, down_mouse_y);
+		double closest_dist = INFINITY;
+		handleID = initial_stroke->selectClosestVertex(down_mouse_x, down_mouse_y, closest_dist);
+		double current_closest = closest_dist;
+		int closest_stroke_ID = -1;
+
+		for(int i = 0; i < stroke_collection.size(); i++) {
+			int tmp_handleID = stroke_collection[i].selectClosestVertex(down_mouse_x, down_mouse_y, closest_dist);
+			if(closest_dist < current_closest && tmp_handleID != -1) {
+				current_closest = closest_dist;
+				//handleID = stroke_collection[i].get_vertex_idx_for_point(tmp_handleID);
+				handleID = tmp_handleID;
+				closest_stroke_ID = i;
+			}
+		}
+		cout << endl << closest_stroke_ID << "  "  << handleID << endl;
 		if(handleID == -1) {//User clicked too far from any of the stroke vertices
 			return false;
 		}
-		CurveDeformation::startPullCurve(*initial_stroke, handleID);
+		if(closest_stroke_ID == -1) {
+			CurveDeformation::startPullCurve(*initial_stroke, handleID, V.rows());
+		} else {
+			CurveDeformation::startPullCurve(stroke_collection[closest_stroke_ID], handleID, V.rows());
+		}
 		skip_standardcallback = true;
 	}
 	else if (tool_mode == NAVIGATE) { //Navigate through the screen
@@ -217,6 +235,12 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 		added_stroke->snap_to_vertices();
 		//TODO: remove original added_stroke from viewer (the one that isn't snapped to vertices)
 		stroke_collection.push_back(*added_stroke);
+		viewer.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0,0,1));
+		for(int i = 0; i < stroke_collection.size(); i++) {
+			viewer.data.add_points(stroke_collection[i].get3DPoints(), Eigen::RowVector3d(0, 0, 1));
+			viewer.data.add_edges(stroke_collection[i].get3DPoints().block(0, 0, stroke_collection[i].get3DPoints().rows() - 1, 3), stroke_collection[i].get3DPoints().block(1, 0, stroke_collection[i].get3DPoints().rows() - 1, 3), Eigen::RowVector3d(0, 0, 1));
+		}
+
 	}
 	else if(tool_mode == PULL && handleID != -1 && mouse_has_moved ) {
 		for(int i = 0; i < smooth_iter; i++) {

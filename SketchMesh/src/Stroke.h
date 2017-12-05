@@ -1,6 +1,7 @@
 #ifndef _Stroke_H_
 #define _Stroke_H_
 #include <igl/viewer/Viewer.h>
+#include <vector>
 
 class Stroke {
 public:
@@ -17,7 +18,8 @@ public:
 	void generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers);
 	double total_stroke_length();
 	Eigen::MatrixX3d get3DPoints();
-	int selectClosestVertex(int mouse_x, int mouse_y);
+	int get_vertex_idx_for_point(int i);
+	int selectClosestVertex(int mouse_x, int mouse_y, double& closest_distance);
 	double compute_stroke_diag();
 	void update_Positions(Eigen::MatrixXd V);
 	void snap_to_vertices();
@@ -32,6 +34,8 @@ private:
 	Eigen::MatrixX2d stroke2DPoints; //Used for early checking if point is new (in screen coordinates)
 	Eigen::MatrixXi stroke_edges;
 	double dep = -1;
+
+	std::vector<int> closest_vert_bindings;
 
 	void counter_clockwise();
 	static Eigen::MatrixX2d resample_stroke(Eigen::MatrixX2d & original_stroke2DPoints);
