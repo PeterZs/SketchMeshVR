@@ -16,8 +16,10 @@ private:
 	static double current_max_drag_size;
 	static double CurveDeformation::current_ROI_size;
 	static double CurveDeformation::drag_size;
+	static int CurveDeformation::handle_ID;
 	static Eigen::RowVector3d start_pos;
 	static Eigen::VectorXi fixed_indices;
+	static Eigen::VectorXi fixed_indices_local;
 	static int moving_vertex_ID;
 	static double curve_diag_length;
 

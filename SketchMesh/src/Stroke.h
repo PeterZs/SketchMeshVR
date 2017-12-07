@@ -19,6 +19,7 @@ public:
 	double total_stroke_length();
 	Eigen::MatrixX3d get3DPoints();
 	int get_vertex_idx_for_point(int i);
+	std::vector<int> get_closest_vert_bindings();
 	int selectClosestVertex(int mouse_x, int mouse_y, double& closest_distance);
 	double compute_stroke_diag();
 	void update_Positions(Eigen::MatrixXd V);

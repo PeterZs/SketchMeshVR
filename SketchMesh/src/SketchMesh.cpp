@@ -238,7 +238,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 		viewer.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0,0,1));
 		for(int i = 0; i < stroke_collection.size(); i++) {
 			viewer.data.add_points(stroke_collection[i].get3DPoints(), Eigen::RowVector3d(0, 0, 1));
-			viewer.data.add_edges(stroke_collection[i].get3DPoints().block(0, 0, stroke_collection[i].get3DPoints().rows() - 1, 3), stroke_collection[i].get3DPoints().block(1, 0, stroke_collection[i].get3DPoints().rows() - 1, 3), Eigen::RowVector3d(0, 0, 1));
+			viewer.data.add_edges(stroke_collection[i].get3DPoints().block(0, 0, stroke_collection[i].get3DPoints().rows() - 2, 3), stroke_collection[i].get3DPoints().block(1, 0, stroke_collection[i].get3DPoints().rows() - 2, 3), Eigen::RowVector3d(0, 0, 1));
 		}
 
 	}

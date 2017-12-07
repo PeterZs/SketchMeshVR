@@ -21,6 +21,7 @@ Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::viewer
 	stroke_edges = Eigen::MatrixXi::Zero(0, 2);
 	_time1 = std::chrono::high_resolution_clock::now();
 	closest_vert_bindings.clear();
+	cout << "test" << endl;
 	//map_to_vert_indices.clear();
 }
 
@@ -185,6 +186,8 @@ void Stroke::strokeReset() {
 	stroke_edges.resize(0, 2);
 	stroke_edges.setZero();
 	dep = -1;
+	_time1 = std::chrono::high_resolution_clock::now();
+	closest_vert_bindings.clear();
 }
 
 bool Stroke::toLoop() {
@@ -196,9 +199,6 @@ bool Stroke::toLoop() {
         stroke3DPoints.conservativeResize(stroke3DPoints.rows()+1, stroke3DPoints.cols());
         stroke3DPoints.row(stroke3DPoints.rows()-1) << stroke3DPoints.row(0);
 		closest_vert_bindings.push_back(0);
-		for(int i = 0; i < closest_vert_bindings.size(); i++) {
-			cout << closest_vert_bindings[i] << " ";
-		}
 		viewer.data.set_stroke_points(stroke3DPoints);
 		return true;
 	}
@@ -345,8 +345,11 @@ Eigen::MatrixX3d Stroke::get3DPoints() {
 }
 
 int Stroke::get_vertex_idx_for_point(int pt_idx) {
-	cout << pt_idx << endl;
 	return closest_vert_bindings[pt_idx];
+}
+
+vector<int> Stroke::get_closest_vert_bindings() {
+	return closest_vert_bindings;
 }
 
 int Stroke::selectClosestVertex(int mouse_x, int mouse_y, double& closest_distance) {
@@ -415,5 +418,7 @@ void Stroke::snap_to_vertices() {
 			}
 		}
 	}
+	stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, 3);
+	stroke3DPoints.row(stroke3DPoints.rows() - 1) << stroke3DPoints.row(0); // Also add a copy of the first point at the end for strokes that are later added, to keep consistency with the initial stroke
 	
 }
