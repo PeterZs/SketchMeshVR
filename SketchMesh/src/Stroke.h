@@ -23,7 +23,7 @@ public:
 	int selectClosestVertex(int mouse_x, int mouse_y, double& closest_distance);
 	double compute_stroke_diag();
 	void update_Positions(Eigen::MatrixXd V);
-	void snap_to_vertices();
+	void snap_to_vertices(Eigen::VectorXi & vertex_boundary_markers);
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 private:

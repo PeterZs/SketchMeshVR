@@ -21,7 +21,6 @@ Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::viewer
 	stroke_edges = Eigen::MatrixXi::Zero(0, 2);
 	_time1 = std::chrono::high_resolution_clock::now();
 	closest_vert_bindings.clear();
-	cout << "test" << endl;
 	//map_to_vert_indices.clear();
 }
 
@@ -103,6 +102,7 @@ void Stroke::strokeAddSegmentAdd(int mouse_x, int mouse_y) {
 
 		if(closest_vert_bindings.size()==0 || closest_vert_idx != closest_vert_bindings.back()) {
 			closest_vert_bindings.push_back(closest_vert_idx);
+
 		}
 
 		//Only add point when it's on the mesh
@@ -387,12 +387,12 @@ double Stroke::compute_stroke_diag() {
 
 void Stroke::update_Positions(Eigen::MatrixXd V) {
 	for(int i = 0; i < stroke3DPoints.rows()-1; i++) {
-		stroke3DPoints.row(i) = V.row(i);
+		stroke3DPoints.row(i) = V.row(closest_vert_bindings[i]);
 	}
 	stroke3DPoints.row(stroke3DPoints.rows() - 1) = stroke3DPoints.row(0); //The last vertex in the stroke is the first point again (and not the first inside mesh vertex)
 }
 
-void Stroke::snap_to_vertices() {
+void Stroke::snap_to_vertices(Eigen::VectorXi &vertex_boundary_markers) {
 	Eigen::VectorXd min_dist;
 	Eigen::VectorXi previous;
 	vector<int> result_path;
@@ -414,6 +414,7 @@ void Stroke::snap_to_vertices() {
 				final_vertices.push_back(idx);
 				stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, 3);
 				stroke3DPoints.row(stroke3DPoints.rows() - 1) << V.row(final_vertices.back());
+				vertex_boundary_markers[final_vertices.back()] = 1; //Set all vertices that are in the added stroke3DPoints to be "boundary"/constraint vertices
 				prev = idx;
 			}
 		}

@@ -68,6 +68,7 @@ vector<Stroke> stroke_collection;
 int handleID = -1;
 
 int turnNr = 0;
+bool dirty_boundary = false;
 
 bool callback_key_down(Viewer& viewer, unsigned char key, int modifiers) {
 	if (key == '1') {
@@ -126,7 +127,7 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 				closest_stroke_ID = i;
 			}
 		}
-		cout << endl << closest_stroke_ID << "  "  << handleID << endl;
+
 		if(handleID == -1) {//User clicked too far from any of the stroke vertices
 			return false;
 		}
@@ -148,7 +149,6 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 
 	return skip_standardcallback; //Will make sure that we use standard navigation responses if we didn't do special actions and vice versa
 }
-
 
 bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 	if (!skip_standardcallback) {
@@ -176,7 +176,7 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 
 		if(turnNr == 0) { //increase the number to smooth less often
 			CurveDeformation::pullCurve(pt, V);
-			SurfaceSmoothing::smooth(V, F, vertex_boundary_markers);
+			SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, dirty_boundary);
 			turnNr++;
 		} else {
 			turnNr++;
@@ -185,14 +185,25 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 			}
 		}
 		initial_stroke->update_Positions(V);
+		for(int i = 0; i < stroke_collection.size(); i++) {
+			stroke_collection[i].update_Positions(V);
+		}
 
 		viewer.data.set_mesh(V, F);
 		viewer.data.compute_normals();
-		//Overlay the drawn stroke
-		int strokeSize = (vertex_boundary_markers.array() > 0).count();
-		Eigen::MatrixXd strokePoints = V.block(0, 0, strokeSize, 3);
-		viewer.data.set_points(strokePoints, Eigen::RowVector3d(1, 0, 0)); //Displays dots
-		viewer.data.set_stroke_points(igl::cat(1, strokePoints, (Eigen::MatrixXd) V.row(0)));
+
+		Eigen::MatrixXd init_points = initial_stroke->get3DPoints();
+		viewer.data.set_points(init_points.topRows(init_points.rows()-1), Eigen::RowVector3d(1, 0, 0));
+		viewer.data.set_stroke_points(init_points);
+
+		viewer.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0, 0, 1));
+		Eigen::MatrixXd added_points;
+		for(int i = 0; i < stroke_collection.size(); i++) {
+			added_points = stroke_collection[i].get3DPoints();
+			viewer.data.add_points(added_points.topRows(added_points.rows()-1), Eigen::RowVector3d(0, 0, 1));
+			viewer.data.add_edges(added_points.block(0, 0, added_points.rows() - 2, 3), added_points.block(1, 0, added_points.rows() - 2, 3), Eigen::RowVector3d(0, 0, 1));
+		}
+
 		return true;
 	}
 	return false;
@@ -216,9 +227,12 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			F = viewer.data.F;
 			V = viewer.data.V;
 
+			dirty_boundary = true;
+
 			for(int i = 0; i < smooth_iter; i++) {
-				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers);
+				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, dirty_boundary);
 			}
+
 
 			viewer.data.set_mesh(V, F);
             viewer.data.compute_normals();
@@ -231,30 +245,47 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 
 		}
 		skip_standardcallback = false;
-	} else if(tool_mode == ADD) {
-		added_stroke->snap_to_vertices();
+	} 
+	else if(tool_mode == ADD) {
+		dirty_boundary = true;
+		added_stroke->snap_to_vertices(vertex_boundary_markers);
 		//TODO: remove original added_stroke from viewer (the one that isn't snapped to vertices)
 		stroke_collection.push_back(*added_stroke);
+
 		viewer.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0,0,1));
+		Eigen::MatrixXd added_points;
 		for(int i = 0; i < stroke_collection.size(); i++) {
-			viewer.data.add_points(stroke_collection[i].get3DPoints(), Eigen::RowVector3d(0, 0, 1));
-			viewer.data.add_edges(stroke_collection[i].get3DPoints().block(0, 0, stroke_collection[i].get3DPoints().rows() - 2, 3), stroke_collection[i].get3DPoints().block(1, 0, stroke_collection[i].get3DPoints().rows() - 2, 3), Eigen::RowVector3d(0, 0, 1));
+			added_points = stroke_collection[i].get3DPoints();
+			viewer.data.add_points(added_points, Eigen::RowVector3d(0, 0, 1));
+			viewer.data.add_edges(added_points.block(0, 0, added_points.rows() - 2, 3), added_points.block(1, 0, added_points.rows() - 2, 3), Eigen::RowVector3d(0, 0, 1));
 		}
 
 	}
-	else if(tool_mode == PULL && handleID != -1 && mouse_has_moved ) {
+	else if(tool_mode == PULL && handleID != -1 && mouse_has_moved) {
 		for(int i = 0; i < smooth_iter; i++) {
-			SurfaceSmoothing::smooth(V, F, vertex_boundary_markers);
+			SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, dirty_boundary);
+		}
+
+		for(int i = 0; i < stroke_collection.size(); i++) {
+			stroke_collection[i].update_Positions(V);
 		}
 
 		viewer.data.set_mesh(V, F);
 		viewer.data.compute_normals();
 
 		//Overlay the updated stroke
-		int strokeSize = (vertex_boundary_markers.array() > 0).count();
-		Eigen::MatrixXd strokePoints = V.block(0, 0, strokeSize, 3);
-		viewer.data.set_points(strokePoints, Eigen::RowVector3d(1, 0, 0));
-		viewer.data.set_stroke_points(igl::cat(1, strokePoints, (Eigen::MatrixXd) V.row(0)));
+		Eigen::MatrixXd init_points = initial_stroke->get3DPoints();
+		viewer.data.set_points(init_points.topRows(init_points.rows() - 1), Eigen::RowVector3d(1, 0, 0));
+		viewer.data.set_stroke_points(init_points);
+
+		viewer.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0, 0, 1));
+		Eigen::MatrixXd added_points;
+		for(int i = 0; i < stroke_collection.size(); i++) {
+			added_points = stroke_collection[i].get3DPoints();
+			viewer.data.add_points(added_points.topRows(added_points.rows() - 1), Eigen::RowVector3d(0, 0, 1));
+			viewer.data.add_edges(added_points.block(0, 0, added_points.rows() - 2, 3), added_points.block(1, 0, added_points.rows() - 2, 3), Eigen::RowVector3d(0, 0, 1));
+		}
+
 	}
 
 	mouse_has_moved = false;
@@ -300,7 +331,7 @@ int main(int argc, char *argv[]) {
         
         // Add a button
         viewer.ngui->addButton("Perform 1 smoothing iteration",[&viewer](){
-            SurfaceSmoothing::smooth(V,F,vertex_boundary_markers);
+            SurfaceSmoothing::smooth(V,F,vertex_boundary_markers, dirty_boundary);
             viewer.data.set_mesh(V, F);
             viewer.data.compute_normals();
         });

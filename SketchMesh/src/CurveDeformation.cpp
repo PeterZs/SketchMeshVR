@@ -94,42 +94,31 @@ bool CurveDeformation::update_ROI(double drag_size) {
 	current_ROI_size = drag_size;
 	no_ROI_vert = no_ROI_vert_tmp;
 
-	//int ROI_1 = (((moving_vertex_ID - no_ROI_vert) + no_vertices) % no_vertices);
-	//int ROI_2 = (((moving_vertex_ID + no_ROI_vert) + no_vertices) % no_vertices);
 	int ROI_1 = (((handle_ID - no_ROI_vert) + no_vertices) % no_vertices);
 	int ROI_2 = (((handle_ID + no_ROI_vert) + no_vertices) % no_vertices);
-	cout << "ROI" << handle_ID << " " << no_ROI_vert << " "<< ROI_1 << "  " << ROI_2 << endl;
 
 	vector<int> fixed;
 	vector<int> fixed_local;
 	is_fixed = Eigen::VectorXi::Zero(no_vertices);
 	if(ROI_1 < ROI_2) {
 		for(int i = 0; i < ROI_1; i++) {
-			//fixed.push_back(i);
 			is_fixed[i] = 1;
 			fixed.push_back(vert_bindings[i]);
 			fixed_local.push_back(i);
-			//is_fixed[vert_bindings[i]] = 1;
 		}
 		for(int i = ROI_2+1; i < no_vertices; i++) {
-			//fixed.push_back(i);
 			is_fixed[i] = 1;
 			fixed.push_back(vert_bindings[i]);
 			fixed_local.push_back(i);
-			//is_fixed[vert_bindings[i]] = 1;
 		}
 	} else {
 		for(int i = ROI_2+1; i < ROI_1; i++) {
-			//fixed.push_back(i);
 			is_fixed[i] = 1;
 			fixed.push_back(vert_bindings[i]);
 			fixed_local.push_back(i);
-			//is_fixed[vert_bindings[i]] = 1;
 		}
 	}
 
-	//fixed.push_back(handle_ID);
-	//is_fixed[handle_ID] = 1;
 	fixed.push_back(moving_vertex_ID);
 	fixed_local.push_back(handle_ID);
 	is_fixed[handle_ID] = 1;
@@ -147,7 +136,6 @@ void CurveDeformation::setup_for_update_curve(Eigen::MatrixXd& V) {
 	original_L0.resize(no_vertices, 3);
 
 	for(int i = 0; i < no_vertices; i++) {
-	//	original_L0.row(i) = V.row(i) - V.row(((i - 1) + no_vertices) % no_vertices);
 		original_L0.row(i) = V.row(vert_bindings[i]) - V.row(((vert_bindings[((i - 1) + no_vertices) % no_vertices]))); //This assumes that the stroke is looped, which might not always be true for added control strokes. TODO: check how bad this effect is
 	}
 	setup_for_L1_position_step(V);
