@@ -37,7 +37,7 @@ std::unordered_map<int, Eigen::SparseMatrix<double>> SurfaceSmoothing::precomput
 std::unordered_map<int, Eigen::SparseMatrix<double>> SurfaceSmoothing::AT_for_positions;
 
 
-void SurfaceSmoothing::smooth(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, bool& BOUNDARY_IS_DIRTY) {
+void SurfaceSmoothing::smooth(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, bool& BOUNDARY_IS_DIRTY) {
 	if(prev_vertex_count != V.rows()) { //The mesh topology has changed, so we need to reset the precomputed matrices. If only boundary constraints got added, we can reuse part of the matrices so don't clear it all out but instead overwrite certain parts
         ID++;
 		clear_precomputed_matrices();
@@ -48,12 +48,11 @@ void SurfaceSmoothing::smooth(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::Vec
 		iteration = 0;
 	}
 
-	Mesh m(V, F, vertex_boundary_markers, ID);
+	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, ID);
 	smooth_main(m, BOUNDARY_IS_DIRTY);
 	V = m.V;
 	F = m.F;
 	BOUNDARY_IS_DIRTY = false;
-
 	iteration++;
 }
 
@@ -81,8 +80,6 @@ void SurfaceSmoothing::smooth_main(Mesh &m, bool BOUNDARY_IS_DIRTY) {
 
 	if(BOUNDARY_IS_DIRTY) {
 		no_boundary_vertices = (m.vertex_boundary_markers.array() > 0).count();
-		cout << "adapting boundary vert" << endl;
-
 		no_boundary_adjacent_vertices = 0;
 		for(int i = 0; i < m.V.rows(); i++) {
 			if(m.vertex_boundary_markers[i] == 1) {
@@ -92,7 +89,6 @@ void SurfaceSmoothing::smooth_main(Mesh &m, bool BOUNDARY_IS_DIRTY) {
 	}
 
 	igl::per_vertex_normals(m.V, m.F, PER_VERTEX_NORMALS_WEIGHTING_TYPE_UNIFORM, vertex_normals);
-    
 	Eigen::VectorXd target_LMs = compute_target_LMs(m, L, BOUNDARY_IS_DIRTY);
 	Eigen::VectorXd target_edge_lengths = compute_target_edge_lengths(m, L);
 	compute_target_vertices(m, L, target_LMs, target_edge_lengths, BOUNDARY_IS_DIRTY);
@@ -265,7 +261,7 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_edge_lengths(Mesh &m, Eigen::Ma
 void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eigen::VectorXd &target_LMs, Eigen::VectorXd &target_edge_lengths, bool BOUNDARY_IS_DIRTY) {
 	Eigen::SparseMatrix<double> A = get_precompute_matrix_for_positions(m);
     Eigen::SparseMatrix<double> AT = get_AT_for_positions(m);
-	if(A.rows() == 0 && A.cols() == 0) { //We haven't set up A for this topology yet
+	if((A.rows() == 0 && A.cols() == 0) || BOUNDARY_IS_DIRTY) { //We haven't set up A for this topology or added curves yet
 		A = Eigen::SparseMatrix<double>(m.V.rows() + no_boundary_vertices + no_boundary_adjacent_vertices, m.V.rows());
 		int count = 0, count2 = 0;
 		for(int i = 0; i < m.V.rows(); i++) {
@@ -287,27 +283,9 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 		solver2.compute(AT*A);
 		set_precompute_matrix_for_positions(m, A);
         set_AT_for_positions(m, AT);
-	}else if(BOUNDARY_IS_DIRTY) {
-		int count = 0, count2=0;
-		for(int i = 0; i < m.V.rows(); i++) {
-			if(m.vertex_boundary_markers[i] == 1) {
-				A.coeffRef(m.V.rows() + count, i) = vertex_weight;
-				count++;
-
-				for(int j = 0; j < neighbors[i].size(); j++) {
-					A.insert(m.V.rows() + no_boundary_vertices + count2, i) = edge_weight;
-					A.insert(m.V.rows() + no_boundary_vertices + count2, neighbors[i][j]) = -edge_weight;
-					count2++;
-				}
-			}
-		}
-		AT = A.transpose();
-		solver2.compute(AT*A);
-		set_precompute_matrix_for_positions(m, A);
-		set_AT_for_positions(m, AT);
 	}
-
-	Eigen::VectorXd bx = Eigen::VectorXd::Zero(m.V.rows() + no_boundary_vertices + no_boundary_adjacent_vertices);
+    
+    Eigen::VectorXd bx = Eigen::VectorXd::Zero(m.V.rows() + no_boundary_vertices + no_boundary_adjacent_vertices);
 	Eigen::VectorXd by = Eigen::VectorXd::Zero(m.V.rows() + no_boundary_vertices + no_boundary_adjacent_vertices);
 	Eigen::VectorXd bz = Eigen::VectorXd::Zero(m.V.rows() + no_boundary_vertices + no_boundary_adjacent_vertices);
 
@@ -319,6 +297,7 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 		bx[i] = delta(0);
 		by[i] = delta(1);
 		bz[i] = delta(2);
+
 
 		if(m.vertex_boundary_markers[i] == 1) {
 			bx[m.V.rows() + count2] = m.V(i, 0) * vertex_weight;
@@ -344,7 +323,8 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 	Eigen::VectorXd Vnewz = solver2.solve(AT*bz);
 
 	for(int i = 0; i < m.V.rows(); i++) {
-		if(m.vertex_boundary_markers[i] == 0) {
+		//if(m.vertex_boundary_markers[i] == 0) {
+        if(m.part_of_original_stroke[i]==0){ //Don't update the original stroke points (will likely shrink the shape)
 			m.V.row(i) << Vnewx[i], Vnewy[i], Vnewz[i];
 		}
 	}

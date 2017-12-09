@@ -8,8 +8,8 @@ using namespace igl;
 
 double CurveDeformation::current_max_drag_size, CurveDeformation::current_ROI_size, CurveDeformation::drag_size, CurveDeformation::curve_diag_length;
 Eigen::RowVector3d CurveDeformation::start_pos;
-Eigen::VectorXi CurveDeformation::fixed_indices(0);
-Eigen::VectorXi CurveDeformation::fixed_indices_local(0);
+Eigen::VectorXi CurveDeformation::fixed_indices;
+Eigen::VectorXi CurveDeformation::fixed_indices_local;
 int CurveDeformation::moving_vertex_ID;
 int CurveDeformation::handle_ID;
 bool CurveDeformation::smooth_deform_mode;
@@ -42,9 +42,6 @@ void CurveDeformation::startPullCurve(Stroke& _stroke, int handle_ID, int no_tot
 	Rot.resize(no_vertices);
 	total_no_mesh_vertices = no_total_vertices;
 	vert_bindings = _stroke.get_closest_vert_bindings();
-	for(int i = 0; i < vert_bindings.size(); i++) {
-	//	cout << vert_bindings[i] << " ";
-	}
 }
 
 //pos is the unprojection from the position to where the user dragged the vertex
@@ -308,7 +305,6 @@ void CurveDeformation::final_L1_pos(Eigen::MatrixXd &V) {
 
 	for(int i = 0; i < no_vertices; i++) { //update the position of non-fixed stroke vertices
 		if(!is_fixed[i]) {
-			cout << vert_bindings[i] << " " << i << endl;
 			V.row(vert_bindings[i]) << xpos[i], ypos[i], zpos[i];
 		}
 	}

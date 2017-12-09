@@ -15,7 +15,7 @@ public:
 	void strokeAddSegmentExtrusion(int mouse_x, int mouse_y);
 	bool toLoop();
 	void strokeReset();
-	void generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers);
+    void generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke);
 	double total_stroke_length();
 	Eigen::MatrixX3d get3DPoints();
 	int get_vertex_idx_for_point(int i);

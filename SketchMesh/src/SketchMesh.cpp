@@ -48,6 +48,8 @@ Eigen::MatrixXd component_colors_per_face;
 
 // Per vertex indicator of whether vertex is on boundary (on boundary if == 1)
 Eigen::VectorXi vertex_boundary_markers;
+//Per vertex indicator of whether vertex is on original stroke (outline of shape) (on OG stroke if ==1)
+Eigen::VectorXi part_of_original_stroke;
 
 //Mouse interaction
 enum ToolMode{DRAW, ADD, CUT, EXTRUDE, PULL, REMOVE, CHANGE, SMOOTH, NAVIGATE, NONE};
@@ -176,7 +178,7 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 
 		if(turnNr == 0) { //increase the number to smooth less often
 			CurveDeformation::pullCurve(pt, V);
-			SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, dirty_boundary);
+			SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, dirty_boundary);
 			turnNr++;
 		} else {
 			turnNr++;
@@ -223,15 +225,15 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
             #else
                 usleep(200000);  /* sleep for 200 milliSeconds */
             #endif
-            initial_stroke->generate3DMeshFromStroke(vertex_boundary_markers);
+            initial_stroke->generate3DMeshFromStroke(vertex_boundary_markers, part_of_original_stroke);
 			F = viewer.data.F;
 			V = viewer.data.V;
 
 			dirty_boundary = true;
 
 			for(int i = 0; i < smooth_iter; i++) {
-				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, dirty_boundary);
-			}
+                SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, dirty_boundary);
+            }
 
 
 			viewer.data.set_mesh(V, F);
@@ -263,7 +265,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 	}
 	else if(tool_mode == PULL && handleID != -1 && mouse_has_moved) {
 		for(int i = 0; i < smooth_iter; i++) {
-			SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, dirty_boundary);
+            SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, dirty_boundary);
 		}
 
 		for(int i = 0; i < stroke_collection.size(); i++) {
@@ -331,7 +333,7 @@ int main(int argc, char *argv[]) {
         
         // Add a button
         viewer.ngui->addButton("Perform 1 smoothing iteration",[&viewer](){
-            SurfaceSmoothing::smooth(V,F,vertex_boundary_markers, dirty_boundary);
+            SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, dirty_boundary);
             viewer.data.set_mesh(V, F);
             viewer.data.compute_normals();
         });

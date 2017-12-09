@@ -205,7 +205,7 @@ bool Stroke::toLoop() {
 	return false;
 }
 
-void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers) {
+void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke) {
 	counter_clockwise(); //Ensure the stroke is counter-clockwise, handy later
 
 	Eigen::MatrixX2d original_stroke2DPoints = stroke2DPoints;
@@ -260,18 +260,22 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers) 
 	igl::per_vertex_normals(V2, F2, PER_VERTEX_NORMALS_WEIGHTING_TYPE_UNIFORM, N_Vertices);
 	
 	vertex_boundary_markers.resize(V2.rows());
+    part_of_original_stroke.resize(V2.rows());
 	for(int i = 0; i < V2.rows(); i++) {
 		if(i >= vertex_markers.rows()) { //vertex can't be boundary (it's on backside)
             V2.row(i) = V2.row(i) + 0.1*N_Vertices.row(i);
 			vertex_boundary_markers[i] = 0;
+            part_of_original_stroke[i] = 0;
 		} else {
 			if(vertex_markers(i) == 1) { //Don't change boundary vertices
 				vertex_boundary_markers[i] = 1;
+                part_of_original_stroke[i] = 1;
 				stroke3DPoints.row(i) = V2.row(i);
 				continue;
 			}
             V2.row(i) = V2.row(i) + 0.1*N_Vertices.row(i);
 			vertex_boundary_markers[i] = 0;
+            part_of_original_stroke[i] = 0;
 		}
 	}
 

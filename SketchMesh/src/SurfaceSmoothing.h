@@ -22,7 +22,7 @@ public:
 
 
 
-	static void smooth(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, bool& BOUNDARY_IS_DIRTY);
+    static void smooth(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, bool& BOUNDARY_IS_DIRTY);
 
 private:
 	static void clear_precomputed_matrices();
