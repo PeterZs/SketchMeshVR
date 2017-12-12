@@ -11,7 +11,7 @@ public:
 	bool empty2D() const { return stroke2DPoints.isZero(); }
 	bool empty3D() const { return stroke3DPoints.isZero(); }
 	void strokeAddSegment(int mouse_x, int mouse_y);
-	void strokeAddSegmentAdd(int mouse_x, int mouse_y);
+	bool strokeAddSegmentAdd(int mouse_x, int mouse_y);
 	void strokeAddSegmentExtrusion(int mouse_x, int mouse_y);
 	bool toLoop();
 	void strokeReset();

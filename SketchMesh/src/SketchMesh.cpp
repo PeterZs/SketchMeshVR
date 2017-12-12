@@ -112,8 +112,7 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 	} else if(tool_mode == ADD) { //Adding a new control curve onto an existing mesh
 		added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID);
 		next_added_stroke_ID++;
-		added_stroke->strokeAddSegmentAdd(down_mouse_x, down_mouse_y);
-		skip_standardcallback = true;
+		skip_standardcallback = added_stroke->strokeAddSegmentAdd(down_mouse_x, down_mouse_y); //If the user starts outside of the mesh, consider the movement as navigation
 	} else if (tool_mode == PULL) { //Dragging an existing curve
 		double closest_dist = INFINITY;
 		handleID = initial_stroke->selectClosestVertex(down_mouse_x, down_mouse_y, closest_dist);
@@ -155,13 +154,23 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 	if (!skip_standardcallback) {
 		return false;
 	}
-	mouse_has_moved = true;
+
+	if(viewer.down) { //Only consider it to be moving if the button was held down
+		mouse_has_moved = true;
+	}
+
+
 	if (tool_mode == DRAW && viewer.down) { //If we're still holding the mouse down
 		initial_stroke->strokeAddSegment(mouse_x, mouse_y);
 		return true;
 	} else if(tool_mode == ADD && viewer.down) {
-		added_stroke->strokeAddSegmentAdd(mouse_x, mouse_y);
-		return true;
+		bool success = added_stroke->strokeAddSegmentAdd(mouse_x, mouse_y);
+		if(success) {
+			mouse_has_moved = true;
+		} else {
+			mouse_has_moved = false;
+		}
+		return success;
 	} else if(tool_mode == EXTRUDE && viewer.down) {
 		initial_stroke->strokeAddSegmentExtrusion(mouse_x, mouse_y);
 		return true;
@@ -259,7 +268,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 		}
 		skip_standardcallback = false;
 	} 
-	else if(tool_mode == ADD) {
+	else if(tool_mode == ADD && mouse_has_moved) {
 		dirty_boundary = true;
 		added_stroke->snap_to_vertices(vertex_boundary_markers);
 		stroke_collection.push_back(*added_stroke);
@@ -271,7 +280,6 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			viewer.data.add_points(added_points, Eigen::RowVector3d(0, 0, 1));
 			viewer.data.add_edges(added_points.block(0, 0, added_points.rows() - 2, 3), added_points.block(1, 0, added_points.rows() - 2, 3), Eigen::RowVector3d(0, 0, 1));
 		}
-
 	}
 	else if(tool_mode == PULL && handleID != -1 && mouse_has_moved) {
 		for(int i = 0; i < smooth_iter; i++) {

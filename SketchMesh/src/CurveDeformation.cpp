@@ -136,10 +136,10 @@ void CurveDeformation::setup_for_update_curve(Eigen::MatrixXd& V) {
 	cout << stroke_is_loop << endl;
 	if(stroke_is_loop) {
 		for(int i = 0; i < no_vertices; i++) {
-			original_L0.row(i) = V.row(vert_bindings[i]) - V.row(((vert_bindings[((i - 1) + no_vertices) % no_vertices]))); //This assumes that the stroke is looped, which might not always be true for added control strokes. TODO: check how bad this effect is
+			original_L0.row(i) = V.row(vert_bindings[i]) - V.row(((vert_bindings[((i - 1) + no_vertices) % no_vertices]))); //This assumes that the stroke is looped, which might not always be true for added control strokes.
 		}
 	} else {
-		original_L0.row(0) = V.row(vert_bindings[0]) - V.row(vert_bindings[1]);// Eigen::RowVector3d(0.0, 0.0, 0.0);// V.row(vert_bindings[0]);
+		original_L0.row(0) = V.row(vert_bindings[0]) - V.row(vert_bindings[1]);
 		for(int i = 1; i < no_vertices; i++) {
 			original_L0.row(i) = V.row(vert_bindings[i]) - V.row(vert_bindings[i - 1]);
 		}

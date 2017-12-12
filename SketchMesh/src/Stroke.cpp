@@ -66,19 +66,20 @@ void Stroke::strokeAddSegment(int mouse_x, int mouse_y) {
 	_time1 = std::chrono::high_resolution_clock::now(); //restart the "start" timer
 }
 
-void Stroke::strokeAddSegmentAdd(int mouse_x, int mouse_y) {
+bool Stroke::strokeAddSegmentAdd(int mouse_x, int mouse_y) {
+	bool result = false;
 	//OpenGL has origin at left bottom, window(s) has origin at left top
 	double x = mouse_x;
 	double y = viewer.core.viewport(3) - mouse_y;
 	if(!empty2D() && x == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && y == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) { //Check that the point is new compared to last time
-		return;
+		return result;
 	}
 
 	if(!empty2D()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
 		if(timePast < 10000000) { //Don't add another segment before x nanoseconds
-			return;
+			return result;
 		}
 	}
 
@@ -120,9 +121,11 @@ void Stroke::strokeAddSegmentAdd(int mouse_x, int mouse_y) {
 		}
 		//using set_stroke_points will remove all previous strokes, using add_stroke_points might create duplicates
 		viewer.data.add_edges(stroke3DPoints.block(0, 0, stroke3DPoints.rows() - 1, 3), stroke3DPoints.block(1, 0, stroke3DPoints.rows() - 1, 3), Eigen::RowVector3d(0, 1, 0));
+		result = true;
 	}
 
 	_time1 = std::chrono::high_resolution_clock::now(); //restart the "start" timer
+	return result;
 }
 
 //For drawing extrusion strokes. Need to start on the existing mesh
@@ -404,9 +407,8 @@ void Stroke::snap_to_vertices(Eigen::VectorXi &vertex_boundary_markers) {
 	adjacency_list(F, adj_list);
 	vector<int> final_vertices;
 
-
 	//Determine whether the stroke is a loop or not
-	if((stroke3DPoints.row(0) - stroke3DPoints.row(stroke3DPoints.rows() - 1)).squaredNorm() < compute_stroke_diag() / 15.0) {
+	if((stroke3DPoints.row(0) - stroke3DPoints.row(stroke3DPoints.rows() - 1)).norm() < compute_stroke_diag() / 5.0) {
 		is_loop = true;
 	} else {
 		is_loop = false;
