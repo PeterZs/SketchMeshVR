@@ -23,10 +23,8 @@
 #include "SurfaceSmoothing.h"
 #include "CurveDeformation.h"
 
-/*** insert any libigl headers here ***/
 
 using namespace std;
-//using System.Diagnostics;
 using Viewer = igl::viewer::Viewer;
 
 // Vertex array, #V x3
@@ -63,7 +61,6 @@ bool mouse_is_down = false; //We need this due to mouse_down not working in the 
 bool mouse_has_moved = false;
 
 //For selecting vertices
-//std::unique_ptr<Stroke> _stroke;
 Stroke* initial_stroke;
 Stroke* added_stroke;
 vector<Stroke> stroke_collection;
@@ -71,6 +68,8 @@ int handleID = -1;
 
 int turnNr = 0;
 bool dirty_boundary = false;
+int closest_stroke_ID;
+int next_added_stroke_ID = 2;
 
 bool callback_key_down(Viewer& viewer, unsigned char key, int modifiers) {
 	if (key == '1') {
@@ -111,20 +110,20 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 		initial_stroke->strokeAddSegment(down_mouse_x, down_mouse_y);
 		skip_standardcallback = true;
 	} else if(tool_mode == ADD) { //Adding a new control curve onto an existing mesh
-		added_stroke = new Stroke(V, F, viewer);
+		added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID);
+		next_added_stroke_ID++;
 		added_stroke->strokeAddSegmentAdd(down_mouse_x, down_mouse_y);
 		skip_standardcallback = true;
 	} else if (tool_mode == PULL) { //Dragging an existing curve
 		double closest_dist = INFINITY;
 		handleID = initial_stroke->selectClosestVertex(down_mouse_x, down_mouse_y, closest_dist);
 		double current_closest = closest_dist;
-		int closest_stroke_ID = -1;
+		closest_stroke_ID = -1;
 
 		for(int i = 0; i < stroke_collection.size(); i++) {
 			int tmp_handleID = stroke_collection[i].selectClosestVertex(down_mouse_x, down_mouse_y, closest_dist);
-			if(closest_dist < current_closest && tmp_handleID != -1) {
+			if((closest_dist < current_closest) && (tmp_handleID != -1)) {
 				current_closest = closest_dist;
-				//handleID = stroke_collection[i].get_vertex_idx_for_point(tmp_handleID);
 				handleID = tmp_handleID;
 				closest_stroke_ID = i;
 			}
@@ -169,16 +168,28 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 	} else if(tool_mode == PULL && viewer.down && handleID != -1) {
 		double x = mouse_x;
 		double y = viewer.core.viewport(3) - mouse_y;
-
+		
 		Eigen::Matrix4f modelview = viewer.core.view * viewer.core.model;
-		Eigen::RowVector3f pt1(viewer.data.V(handleID, 0), viewer.data.V(handleID, 1), viewer.data.V(handleID, 2));
+		int global_handleID;
+		if(closest_stroke_ID == -1) {
+			global_handleID = initial_stroke->get_vertex_idx_for_point(handleID);
+		} else {
+			global_handleID = stroke_collection[closest_stroke_ID].get_vertex_idx_for_point(handleID);
+		}
+		Eigen::RowVector3f pt1(viewer.data.V(global_handleID, 0), viewer.data.V(global_handleID, 1), viewer.data.V(global_handleID, 2));
 		Eigen::RowVector3f pr;
 		igl::project(pt1, modelview, viewer.core.proj, viewer.core.viewport, pr);
 		Eigen::RowVector3d pt = igl::unproject(Eigen::Vector3f(x, y, pr[2]), modelview, viewer.core.proj, viewer.core.viewport).transpose().cast<double>();
 
 		if(turnNr == 0) { //increase the number to smooth less often
 			CurveDeformation::pullCurve(pt, V);
+			if(dirty_boundary) { //Smooth an extra time if the boundary is dirty, because smoothing once with a dirty boundary results in a flat mesh
+				for(int i = 0; i < 2; i++) {
+					SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, dirty_boundary);
+				}
+			}
 			SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, dirty_boundary);
+
 			turnNr++;
 		} else {
 			turnNr++;
@@ -251,7 +262,6 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 	else if(tool_mode == ADD) {
 		dirty_boundary = true;
 		added_stroke->snap_to_vertices(vertex_boundary_markers);
-		//TODO: remove original added_stroke from viewer (the one that isn't snapped to vertices)
 		stroke_collection.push_back(*added_stroke);
 
 		viewer.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0,0,1));
@@ -347,8 +357,7 @@ int main(int argc, char *argv[]) {
     };
 
 	//Init stroke selector
-	//_stroke = std::unique_ptr<Stroke>(new Stroke(V, F, viewer));
-	initial_stroke = new Stroke(V, F, viewer);
+	initial_stroke = new Stroke(V, F, viewer, 0);
 	if (argc == 2)
 	{
 		// Read mesh

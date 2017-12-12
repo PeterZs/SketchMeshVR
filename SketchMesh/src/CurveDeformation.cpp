@@ -28,6 +28,7 @@ vector<int> vert_bindings;
 Eigen::MatrixXd original_L0, original_L1;
 int CONSTRAINT_WEIGHT = 10000;
 Eigen::VectorXi is_fixed;
+bool stroke_is_loop, prev_loop_type;
 
 
 void CurveDeformation::startPullCurve(Stroke& _stroke, int handle_ID, int no_total_vertices) {
@@ -42,6 +43,7 @@ void CurveDeformation::startPullCurve(Stroke& _stroke, int handle_ID, int no_tot
 	Rot.resize(no_vertices);
 	total_no_mesh_vertices = no_total_vertices;
 	vert_bindings = _stroke.get_closest_vert_bindings();
+	stroke_is_loop = _stroke.is_loop;
 }
 
 //pos is the unprojection from the position to where the user dragged the vertex
@@ -71,28 +73,28 @@ double CurveDeformation::compute_curve_diag_length(Stroke& _stroke) {
 }
 
 bool CurveDeformation::update_ROI(double drag_size) {
-	if(current_max_drag_size >= drag_size) {
-		//return false;
-	}
 	current_max_drag_size = drag_size;
 	int no_ROI_vert_tmp;
 	if(smooth_deform_mode) {
-		//no_ROI_vert_tmp = max(0.16*total_no_mesh_vertices + 1, min(round(drag_size * total_no_mesh_vertices) + 1, ceil(((total_no_mesh_vertices - 1) / 2) - 1)));
 		no_ROI_vert_tmp = max(0.16*no_vertices + 1, min(round(drag_size * no_vertices) + 1, ceil(((no_vertices - 1) / 2) - 1))); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side, always at least 1/6th of the number of vertices + 1 vertex fixed, to take care of thin meshes with many vertices)
 	} else {
-		//no_ROI_vert_tmp = min(round(drag_size * total_no_mesh_vertices) + 1, ceil(((total_no_mesh_vertices - 1) / 2) - 1));
-		no_ROI_vert_tmp = max(0.0, min(round(drag_size * no_vertices) + 1, ceil(((no_vertices - 1) / 2) - 1))); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side)
+		no_ROI_vert_tmp = max(0.0, min(round(drag_size/4.0 * no_vertices), ceil(((no_vertices - 1) / 2) - 1))); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side)
 	}
-
-	if(no_ROI_vert == no_ROI_vert_tmp || no_ROI_vert_tmp == 0) { //number of vertices in ROI didn't change
+	if(((no_ROI_vert == no_ROI_vert_tmp) && prev_loop_type == stroke_is_loop) || no_ROI_vert_tmp == 0) { //number of vertices in ROI didn't change
 		return false;
 	}
 
 	current_ROI_size = drag_size;
 	no_ROI_vert = no_ROI_vert_tmp;
-
-	int ROI_1 = (((handle_ID - no_ROI_vert) + no_vertices) % no_vertices);
-	int ROI_2 = (((handle_ID + no_ROI_vert) + no_vertices) % no_vertices);
+	prev_loop_type = stroke_is_loop;
+	int ROI_1, ROI_2;
+	if(stroke_is_loop) {
+		ROI_1 = (((handle_ID - no_ROI_vert) + no_vertices) % no_vertices);
+		ROI_2 = (((handle_ID + no_ROI_vert) + no_vertices) % no_vertices);
+	} else {
+		ROI_1 = max(0, handle_ID - no_ROI_vert); //For non-loop strokes (e.g. added strokes), don't wrap around but instead cap at the first and last vertex of the stroke
+		ROI_2 = min(no_vertices-1, handle_ID + no_ROI_vert);
+	}
 
 	vector<int> fixed;
 	vector<int> fixed_local;
@@ -131,9 +133,17 @@ void CurveDeformation::setup_for_update_curve(Eigen::MatrixXd& V) {
 	A.resize(no_vertices*3 + no_vertices * 9 + fixed_indices.size()*3 + fixed_indices.size()*3, no_vertices*3 + no_vertices*3); //Solve for x,y,z simultaneously since we cannot reuse A anyway
 	B.resize(no_vertices*3 + no_vertices * 9 + fixed_indices.size()*3 + fixed_indices.size()*3);
 	original_L0.resize(no_vertices, 3);
+	cout << stroke_is_loop << endl;
+	if(stroke_is_loop) {
+		for(int i = 0; i < no_vertices; i++) {
+			original_L0.row(i) = V.row(vert_bindings[i]) - V.row(((vert_bindings[((i - 1) + no_vertices) % no_vertices]))); //This assumes that the stroke is looped, which might not always be true for added control strokes. TODO: check how bad this effect is
+		}
+	} else {
+		original_L0.row(0) = V.row(vert_bindings[0]) - V.row(vert_bindings[1]);// Eigen::RowVector3d(0.0, 0.0, 0.0);// V.row(vert_bindings[0]);
+		for(int i = 1; i < no_vertices; i++) {
+			original_L0.row(i) = V.row(vert_bindings[i]) - V.row(vert_bindings[i - 1]);
+		}
 
-	for(int i = 0; i < no_vertices; i++) {
-		original_L0.row(i) = V.row(vert_bindings[i]) - V.row(((vert_bindings[((i - 1) + no_vertices) % no_vertices]))); //This assumes that the stroke is looped, which might not always be true for added control strokes. TODO: check how bad this effect is
 	}
 	setup_for_L1_position_step(V);
 }
@@ -142,16 +152,38 @@ void CurveDeformation::setup_for_L1_position_step(Eigen::MatrixXd& V) {
 	A_L1 = Eigen::SparseMatrix<double>(no_vertices + fixed_indices.size(), no_vertices);
 	original_L1.resize(no_vertices, 3);
 	int cur, next, prev;
-	for(int i = 0; i < no_vertices; i++) {
-		cur = vert_bindings[i];
-		next = vert_bindings[(i + 1) % no_vertices];
-		prev = vert_bindings[(((i - 1) + no_vertices) % no_vertices)];
+	if(stroke_is_loop) {
+		for(int i = 0; i < no_vertices; i++) {
+			cur = vert_bindings[i];
+			next = vert_bindings[(i + 1) % no_vertices];
+			prev = vert_bindings[(((i - 1) + no_vertices) % no_vertices)];
 
-		A_L1.insert(i, (((i - 1) + no_vertices) % no_vertices)) = -0.5;
-		A_L1.insert(i, i) = 1;
-		A_L1.insert(i, (i + 1) % no_vertices) = -0.5;
+			A_L1.insert(i, (((i - 1) + no_vertices) % no_vertices)) = -0.5;
+			A_L1.insert(i, i) = 1;
+			A_L1.insert(i, (i + 1) % no_vertices) = -0.5;
 
-		original_L1.row(i) = V.row(cur) - (0.5*V.row(next) + 0.5*V.row(prev));
+			original_L1.row(i) = V.row(cur) - (0.5*V.row(next) + 0.5*V.row(prev));
+		}
+	} else {
+		A_L1.insert(0, 0) = 1;
+		A_L1.insert(0, 1) = -1;
+		original_L1.row(0) = V.row(vert_bindings[0]) - V.row(vert_bindings[1]);
+
+		A_L1.insert(no_vertices - 1, no_vertices - 1) = 1;
+		A_L1.insert(no_vertices - 1, no_vertices - 2) = -1;
+		original_L1.row(no_vertices - 1) = V.row(vert_bindings[no_vertices - 1]) - V.row(vert_bindings[no_vertices - 2]);
+
+		for(int i = 1; i < no_vertices - 1; i++) {
+			cur = vert_bindings[i];
+			next = vert_bindings[(i + 1) % no_vertices];
+			prev = vert_bindings[(((i - 1) + no_vertices) % no_vertices)];
+
+			A_L1.insert(i, i - 1) = -0.5;
+			A_L1.insert(i, i) = 1;
+			A_L1.insert(i, i + 1) = -0.5;
+
+			original_L1.row(i) = V.row(cur) - (0.5*V.row(next) + 0.5*V.row(prev));
+		}
 	}
 
 	for(int i = 0; i < fixed_indices.size(); i++) {
@@ -179,25 +211,32 @@ void CurveDeformation::solve_for_pos_and_rot(Eigen::MatrixXd& V){
 	B.setZero();
 
 	int prev, cur;
+	int start = !stroke_is_loop; //Make sure to skip wrapping around for index 0
 	for(int i = 0; i < no_vertices; i++) {
 		prev = (((i - 1) + no_vertices) % no_vertices);
 		cur = i;
-		A.insert(i * 3 + 0, prev * 3) = -1; //L0
-		A.insert(i * 3 + 0, cur * 3) = 1; //L0
+		if(i > 0 || stroke_is_loop) {
+			A.insert(i * 3 + 0, prev * 3) = -1; //L0
+			A.insert(i * 3 + 0, cur * 3) = 1; //L0
+		}
 		A.insert(i * 3, no_vertices * 3 + cur * 3) = 0;
 		A.insert(i * 3, no_vertices * 3 + cur * 3 + 1) = -(Rot[i].row(2).dot(original_L0.row(i)));
 		A.insert(i * 3, no_vertices * 3 + cur * 3 + 2) = Rot[i].row(1).dot(original_L0.row(i));
 		B[i*3] = Rot[i].row(0).dot(original_L0.row(i)); //constant
 
-		A.insert(i * 3 + 1, prev * 3 + 1) = -1; //L0
-		A.insert(i * 3 + 1, cur * 3 + 1) = 1; //L0
+		if(i > 0 || stroke_is_loop) {
+			A.insert(i * 3 + 1, prev * 3 + 1) = -1; //L0
+			A.insert(i * 3 + 1, cur * 3 + 1) = 1; //L0
+		}
 		A.insert(i * 3 + 1, no_vertices * 3 + cur * 3) = Rot[i].row(2).dot(original_L0.row(i));
 		A.insert(i * 3 + 1, no_vertices * 3 + cur * 3 + 1) = 0;
 		A.insert(i * 3 + 1, no_vertices * 3 + cur * 3 + 2) = -Rot[i].row(0).dot(original_L0.row(i));
 		B[i * 3 + 1] = Rot[i].row(1).dot(original_L0.row(i));
 
-		A.insert(i * 3 + 2, prev * 3 + 2) = -1;//L0
-		A.insert(i * 3 + 2, cur * 3 + 2) = 1;//L0
+		if(i > 0 || stroke_is_loop) {
+			A.insert(i * 3 + 2, prev * 3 + 2) = -1;//L0
+			A.insert(i * 3 + 2, cur * 3 + 2) = 1;//L0
+		}
 		A.insert(i * 3 + 2, no_vertices * 3 + cur * 3) = -Rot[i].row(1).dot(original_L0.row(i)); //TODO: in teddy this is row(0)
 		A.insert(i * 3 + 2, no_vertices * 3 + cur * 3 + 1) = Rot[i].row(0).dot(original_L0.row(i)); //TODO: in teddy this is row(1)
 		A.insert(i * 3 + 2, no_vertices * 3 + cur * 3 + 2) = 0;
@@ -206,7 +245,7 @@ void CurveDeformation::solve_for_pos_and_rot(Eigen::MatrixXd& V){
 
 	//Setup for r_i*R_i - r_j*R_j = 0 for i,j in Edges
 	int prev_rot;
-	for(int i = 0; i < no_vertices; i++) {
+	for(int i = start; i < no_vertices; i++) { //For non-closed strokes, start at index 1 (we can't fill in a partial entry since they depend on eachother, unlike the previous block)
 		prev = (((i - 1) + no_vertices) % no_vertices);
 		prev_rot = (((i - 1) + no_vertices) % no_vertices);
 		for(int j = 0; j < 3; j++) {

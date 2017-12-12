@@ -10,18 +10,17 @@ using namespace igl;
 using namespace std;
 
 std::chrono::steady_clock::time_point _time2, _time1;
-//map<int, int> map_to_vert_indices;
 
-Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::viewer::Viewer &v) :
+Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::viewer::Viewer &v, int stroke_ID_) :
 	V(V_),
 	F(F_),
-	viewer(v) {
+	viewer(v), 
+	stroke_ID(stroke_ID_) {
 	stroke2DPoints = Eigen::MatrixX2d::Zero(1, 2);
 	stroke3DPoints = Eigen::MatrixX3d::Zero(1, 3);
 	stroke_edges = Eigen::MatrixXi::Zero(0, 2);
 	_time1 = std::chrono::high_resolution_clock::now();
 	closest_vert_bindings.clear();
-	//map_to_vert_indices.clear();
 }
 
 Stroke::~Stroke() {}
@@ -120,8 +119,6 @@ void Stroke::strokeAddSegmentAdd(int mouse_x, int mouse_y) {
 			stroke_edges.row(stroke_edges.rows() - 1) << stroke2DPoints.rows() - 2, stroke2DPoints.rows() - 1;
 		}
 		//using set_stroke_points will remove all previous strokes, using add_stroke_points might create duplicates
-	//	viewer.data.set_stroke_points(stroke3DPoints);
-	//	viewer.data.add_stroke_points(stroke3DPoints.row(stroke3DPoints.rows() - 1));
 		viewer.data.add_edges(stroke3DPoints.block(0, 0, stroke3DPoints.rows() - 1, 3), stroke3DPoints.block(1, 0, stroke3DPoints.rows() - 1, 3), Eigen::RowVector3d(0, 1, 0));
 	}
 
@@ -200,8 +197,10 @@ bool Stroke::toLoop() {
         stroke3DPoints.row(stroke3DPoints.rows()-1) << stroke3DPoints.row(0);
 		closest_vert_bindings.push_back(0);
 		viewer.data.set_stroke_points(stroke3DPoints);
+		is_loop = true;
 		return true;
 	}
+	is_loop = false;
 	return false;
 }
 
@@ -377,7 +376,7 @@ int Stroke::selectClosestVertex(int mouse_x, int mouse_y, double& closest_distan
 	closest_dist = sqrt(closest_dist);
 	double stroke_diag = compute_stroke_diag();
 	closest_distance = closest_dist;
-	if(closest_dist > 0.15*stroke_diag) { //Don't do pulling when the user clicks too far away from any curve (treat as navigation movement)
+	if(closest_dist > 0.1*stroke_diag) { //Don't do pulling when the user clicks too far away from any curve (treat as navigation movement)
 		return -1;
 	}
 	return closest_ID;
@@ -405,6 +404,14 @@ void Stroke::snap_to_vertices(Eigen::VectorXi &vertex_boundary_markers) {
 	adjacency_list(F, adj_list);
 	vector<int> final_vertices;
 
+
+	//Determine whether the stroke is a loop or not
+	if((stroke3DPoints.row(0) - stroke3DPoints.row(stroke3DPoints.rows() - 1)).squaredNorm() < compute_stroke_diag() / 15.0) {
+		is_loop = true;
+	} else {
+		is_loop = false;
+	}
+
 	stroke3DPoints.resize(0, 3);
 	for(int i = 0; i < closest_vert_bindings.size()-1; i++) {
 		set<int> goal;
@@ -418,7 +425,7 @@ void Stroke::snap_to_vertices(Eigen::VectorXi &vertex_boundary_markers) {
 				final_vertices.push_back(idx);
 				stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, 3);
 				stroke3DPoints.row(stroke3DPoints.rows() - 1) << V.row(final_vertices.back());
-				vertex_boundary_markers[final_vertices.back()] = 1; //Set all vertices that are in the added stroke3DPoints to be "boundary"/constraint vertices
+				vertex_boundary_markers[final_vertices.back()] = stroke_ID; //Set all vertices that are in the added stroke3DPoints to be "boundary"/constraint vertices
 				prev = idx;
 			}
 		}

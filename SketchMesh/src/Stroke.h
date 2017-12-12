@@ -6,7 +6,7 @@
 class Stroke {
 public:
 	
-	Stroke(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,  igl::viewer::Viewer &v);
+	Stroke(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,  igl::viewer::Viewer &v, int stroke_ID_);
 	~Stroke();
 	bool empty2D() const { return stroke2DPoints.isZero(); }
 	bool empty3D() const { return stroke3DPoints.isZero(); }
@@ -24,12 +24,16 @@ public:
 	double compute_stroke_diag();
 	void update_Positions(Eigen::MatrixXd V);
 	void snap_to_vertices(Eigen::VectorXi & vertex_boundary_markers);
+
+
+	bool is_loop;
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 private:
 	const Eigen::MatrixXd &V;
 	const Eigen::MatrixXi &F;
 	igl::viewer::Viewer &viewer;
+	const int stroke_ID;
 
 	Eigen::MatrixX3d stroke3DPoints; //Used for screen output
 	Eigen::MatrixX2d stroke2DPoints; //Used for early checking if point is new (in screen coordinates)
