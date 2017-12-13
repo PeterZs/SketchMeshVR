@@ -6,7 +6,7 @@
 
 class CurveDeformation {
 public:
-	static void startPullCurve(Stroke & _stroke, int handle_ID, int no_total_vertices);
+	static void startPullCurve(Stroke & _stroke, int handle_ID, int no_total_vertices, Eigen::VectorXi & part_of_original_stroke_);
 	static void pullCurve(Eigen::RowVector3d& pos, Eigen::MatrixXd& V);
 
 	static bool smooth_deform_mode;
@@ -20,6 +20,7 @@ private:
 	static Eigen::RowVector3d start_pos;
 	static Eigen::VectorXi fixed_indices;
 	static Eigen::VectorXi fixed_indices_local;
+	static Eigen::VectorXi part_of_original_stroke;
 	static int moving_vertex_ID;
 	static double curve_diag_length;
 

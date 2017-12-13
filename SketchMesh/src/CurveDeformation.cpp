@@ -13,6 +13,7 @@ Eigen::VectorXi CurveDeformation::fixed_indices_local;
 int CurveDeformation::moving_vertex_ID;
 int CurveDeformation::handle_ID;
 bool CurveDeformation::smooth_deform_mode;
+Eigen::VectorXi CurveDeformation::part_of_original_stroke;
 int no_vertices, no_ROI_vert = -1, total_no_mesh_vertices;
 Eigen::SparseMatrix<double> A;
 Eigen::SparseMatrix<double> A_L1;
@@ -29,9 +30,10 @@ Eigen::MatrixXd original_L0, original_L1;
 int CONSTRAINT_WEIGHT = 10000;
 Eigen::VectorXi is_fixed;
 bool stroke_is_loop, prev_loop_type;
+int stroke_ID;
 
 
-void CurveDeformation::startPullCurve(Stroke& _stroke, int handle_ID, int no_total_vertices) {
+void CurveDeformation::startPullCurve(Stroke& _stroke, int handle_ID, int no_total_vertices, Eigen::VectorXi& part_of_original_stroke_) {
 	CurveDeformation::current_max_drag_size = -1.0;
 	CurveDeformation::start_pos = (_stroke.get3DPoints()).row(handle_ID);
 	CurveDeformation::moving_vertex_ID = _stroke.get_vertex_idx_for_point(handle_ID); //The global vertex index (in V) for the moving vertex
@@ -44,6 +46,8 @@ void CurveDeformation::startPullCurve(Stroke& _stroke, int handle_ID, int no_tot
 	total_no_mesh_vertices = no_total_vertices;
 	vert_bindings = _stroke.get_closest_vert_bindings();
 	stroke_is_loop = _stroke.is_loop;
+	stroke_ID = _stroke.get_ID();
+	CurveDeformation::part_of_original_stroke = part_of_original_stroke_;
 }
 
 //pos is the unprojection from the position to where the user dragged the vertex
@@ -133,7 +137,7 @@ void CurveDeformation::setup_for_update_curve(Eigen::MatrixXd& V) {
 	A.resize(no_vertices*3 + no_vertices * 9 + fixed_indices.size()*3 + fixed_indices.size()*3, no_vertices*3 + no_vertices*3); //Solve for x,y,z simultaneously since we cannot reuse A anyway
 	B.resize(no_vertices*3 + no_vertices * 9 + fixed_indices.size()*3 + fixed_indices.size()*3);
 	original_L0.resize(no_vertices, 3);
-	cout << stroke_is_loop << endl;
+
 	if(stroke_is_loop) {
 		for(int i = 0; i < no_vertices; i++) {
 			original_L0.row(i) = V.row(vert_bindings[i]) - V.row(((vert_bindings[((i - 1) + no_vertices) % no_vertices]))); //This assumes that the stroke is looped, which might not always be true for added control strokes.
@@ -342,9 +346,17 @@ void CurveDeformation::final_L1_pos(Eigen::MatrixXd &V) {
 	Eigen::VectorXd ypos = solverL1.solve(A_L1_T*By);
 	Eigen::VectorXd zpos = solverL1.solve(A_L1_T*Bz);
 
-	for(int i = 0; i < no_vertices; i++) { //update the position of non-fixed stroke vertices
-		if(!is_fixed[i]) {
-			V.row(vert_bindings[i]) << xpos[i], ypos[i], zpos[i];
+	if(stroke_ID==0){ //We're pulling on the original stroke
+		for(int i = 0; i < no_vertices; i++) { //update the position of non-fixed stroke vertices
+			if(!is_fixed[i]) {
+				V.row(vert_bindings[i]) << xpos[i], ypos[i], zpos[i];
+			}
+		}
+	} else { //We're pulling on an added stroke, and we want to avoid deforming the original curve, so don't update positions of the original stroke
+		for(int i = 0; i < no_vertices; i++) { //update the position of non-fixed stroke vertices
+			if(!is_fixed[i] && !part_of_original_stroke[i]) {
+				V.row(vert_bindings[i]) << xpos[i], ypos[i], zpos[i];
+			}
 		}
 	}
 

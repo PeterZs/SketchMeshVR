@@ -21,6 +21,7 @@ Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::viewer
 	stroke_edges = Eigen::MatrixXi::Zero(0, 2);
 	_time1 = std::chrono::high_resolution_clock::now();
 	closest_vert_bindings.clear();
+	has_points_on_mesh = false;
 }
 
 Stroke::~Stroke() {}
@@ -104,6 +105,8 @@ bool Stroke::strokeAddSegmentAdd(int mouse_x, int mouse_y) {
 			closest_vert_bindings.push_back(closest_vert_idx);
 
 		}
+
+		has_points_on_mesh = true;
 
 		//Only add point when it's on the mesh
 		if(stroke2DPoints.rows() == 1 && empty2D()) { //Add first point
@@ -207,7 +210,7 @@ bool Stroke::toLoop() {
 	return false;
 }
 
-void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke) {
+unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke) {
 	counter_clockwise(); //Ensure the stroke is counter-clockwise, handy later
 
 	Eigen::MatrixX2d original_stroke2DPoints = stroke2DPoints;
@@ -231,15 +234,16 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, 
 	
 	int original_size = V2.rows();
 	V2.conservativeResize(2*original_size - nr_boundary_vertices, V2.cols()); //Increase size, such that boundary vertices only get included one
-	unordered_map<int, int> vertex_map;
+	unordered_map<int, int> backside_vertex_map;
 	int count = 0;
 	for(int i = 0; i < original_size; i++) {
 		if(vertex_markers(i) != 1) { //If the vertex is NOT on the boundary, duplicate it
 			V2.row(original_size + count) << V2.row(i);
-			vertex_map.insert({i, original_size + count});
+			backside_vertex_map.insert({i, original_size + count});
+			backside_vertex_map.insert({original_size + count, i});
 			count++;
 		} else {
-			vertex_map.insert({i, i});
+			backside_vertex_map.insert({i, i});
 		}
 	}
     
@@ -252,7 +256,7 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, 
 	F2.conservativeResize(original_size*2, F2.cols());
 	for(int i = 0; i < original_size; i++) {
 		for(int j = 0; j < 3; j++) {
-			auto got = vertex_map.find(F2_back(i, j));
+			auto got = backside_vertex_map.find(F2_back(i, j));
 			F2(original_size + i, j) = got->second;
 		}
 	}
@@ -287,6 +291,8 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, 
 
 	viewer.data.set_normals(N_Faces);
 	viewer.core.align_camera_center(viewer.data.V);
+
+	return backside_vertex_map;
 }
 
 void Stroke::counter_clockwise() {
@@ -379,7 +385,7 @@ int Stroke::selectClosestVertex(int mouse_x, int mouse_y, double& closest_distan
 	closest_dist = sqrt(closest_dist);
 	double stroke_diag = compute_stroke_diag();
 	closest_distance = closest_dist;
-	if(closest_dist > 0.1*stroke_diag) { //Don't do pulling when the user clicks too far away from any curve (treat as navigation movement)
+	if(closest_dist > 0.08*stroke_diag) { //Don't do pulling when the user clicks too far away from any curve (treat as navigation movement)
 		return -1;
 	}
 	return closest_ID;
@@ -405,7 +411,6 @@ void Stroke::snap_to_vertices(Eigen::VectorXi &vertex_boundary_markers) {
 	int prev = -1;
 	vector<vector<int>> adj_list;
 	adjacency_list(F, adj_list);
-	vector<int> final_vertices;
 
 	//Determine whether the stroke is a loop or not
 	if((stroke3DPoints.row(0) - stroke3DPoints.row(stroke3DPoints.rows() - 1)).norm() < compute_stroke_diag() / 5.0) {
@@ -424,15 +429,44 @@ void Stroke::snap_to_vertices(Eigen::VectorXi &vertex_boundary_markers) {
 		for(int j = result_path.size()-1; j >= 0; j--) {
 			int idx = result_path[j];
 			if(idx != prev) {
-				final_vertices.push_back(idx);
+			//	if(vertex_boundary_markers[idx]== 0) {
+
+				added_stroke_final_vertices.push_back(idx);
 				stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, 3);
-				stroke3DPoints.row(stroke3DPoints.rows() - 1) << V.row(final_vertices.back());
-				vertex_boundary_markers[final_vertices.back()] = stroke_ID; //Set all vertices that are in the added stroke3DPoints to be "boundary"/constraint vertices
-				prev = idx;
+				stroke3DPoints.row(stroke3DPoints.rows() - 1) << V.row(added_stroke_final_vertices.back());
+			//	cout << vertex_boundary_markers[added_stroke_final_vertices.back()] << " ";
+					vertex_boundary_markers[added_stroke_final_vertices.back()] = stroke_ID; //Set all vertices that are in the added stroke3DPoints to be "boundary"/constraint vertices
+			//		cout << vertex_boundary_markers[added_stroke_final_vertices.back()] << endl;
+					prev = idx;
+			//	}
 			}
 		}
 	}
 	stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, 3);
 	stroke3DPoints.row(stroke3DPoints.rows() - 1) << stroke3DPoints.row(0); // Also add a copy of the first point at the end for strokes that are later added, to keep consistency with the initial stroke
 	
+}
+
+void Stroke::mirror_on_backside(Eigen::VectorXi &vertex_boundary_markers, unordered_map<int, int> backside_vertex_map) {
+	int original_added_stroke_size = added_stroke_final_vertices.size();
+	stroke3DPoints.conservativeResize(stroke3DPoints.rows() - 1, 3); //Should remove the last point, which is a duplicate of the first, to keep consistency with original strokes
+
+	int back_idx;
+	for(int i = original_added_stroke_size - 1; i >= 0; i--) {
+		back_idx = backside_vertex_map.at(added_stroke_final_vertices[i]);
+		if(back_idx != added_stroke_final_vertices[i]) { //Don't add "backside" vertices for vertices that are on the original stroke
+			added_stroke_final_vertices.push_back(back_idx);
+			stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, 3);
+			stroke3DPoints.row(stroke3DPoints.rows() - 1) << V.row(back_idx);
+			vertex_boundary_markers[added_stroke_final_vertices.back()] = stroke_ID;
+			closest_vert_bindings.push_back(back_idx);
+		}
+	}
+	stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, 3);
+	stroke3DPoints.row(stroke3DPoints.rows() - 1) << stroke3DPoints.row(0); // Also add a copy of the first point at the end for strokes that are later added, to keep consistency with the initial stroke
+	is_loop = true;
+}
+
+int Stroke::get_ID() {
+	return stroke_ID;
 }

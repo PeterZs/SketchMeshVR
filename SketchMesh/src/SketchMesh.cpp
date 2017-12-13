@@ -70,6 +70,8 @@ int turnNr = 0;
 bool dirty_boundary = false;
 int closest_stroke_ID;
 int next_added_stroke_ID = 2;
+bool last_add_on_mesh = false;
+unordered_map<int, int> backside_vertex_map;
 
 bool callback_key_down(Viewer& viewer, unsigned char key, int modifiers) {
 	if (key == '1') {
@@ -112,14 +114,16 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 	} else if(tool_mode == ADD) { //Adding a new control curve onto an existing mesh
 		added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID);
 		next_added_stroke_ID++;
-		skip_standardcallback = added_stroke->strokeAddSegmentAdd(down_mouse_x, down_mouse_y); //If the user starts outside of the mesh, consider the movement as navigation
+		added_stroke->strokeAddSegmentAdd(down_mouse_x, down_mouse_y); //If the user starts outside of the mesh, consider the movement as navigation
+		 skip_standardcallback = true;
+		//skip_standardcallback = added_stroke->strokeAddSegmentAdd(down_mouse_x, down_mouse_y); //If the user starts outside of the mesh, consider the movement as navigation
 	} else if (tool_mode == PULL) { //Dragging an existing curve
 		double closest_dist = INFINITY;
 		handleID = initial_stroke->selectClosestVertex(down_mouse_x, down_mouse_y, closest_dist);
 		double current_closest = closest_dist;
 		closest_stroke_ID = -1;
 
-		for(int i = 0; i < stroke_collection.size(); i++) {
+		for(int i = 0; i < stroke_collection.size(); i++) { //Additional strokes that cross the original stroke will never be selected as the pulled curve when the user clicks a vertex that also belongs to the original boundary, since their vertex positions are the same and we check for SMALLER distances
 			int tmp_handleID = stroke_collection[i].selectClosestVertex(down_mouse_x, down_mouse_y, closest_dist);
 			if((closest_dist < current_closest) && (tmp_handleID != -1)) {
 				current_closest = closest_dist;
@@ -132,9 +136,9 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 			return false;
 		}
 		if(closest_stroke_ID == -1) {
-			CurveDeformation::startPullCurve(*initial_stroke, handleID, V.rows());
+			CurveDeformation::startPullCurve(*initial_stroke, handleID, V.rows(), part_of_original_stroke);
 		} else {
-			CurveDeformation::startPullCurve(stroke_collection[closest_stroke_ID], handleID, V.rows());
+			CurveDeformation::startPullCurve(stroke_collection[closest_stroke_ID], handleID, V.rows(), part_of_original_stroke);
 		}
 		skip_standardcallback = true;
 	}
@@ -164,13 +168,8 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 		initial_stroke->strokeAddSegment(mouse_x, mouse_y);
 		return true;
 	} else if(tool_mode == ADD && viewer.down) {
-		bool success = added_stroke->strokeAddSegmentAdd(mouse_x, mouse_y);
-		if(success) {
-			mouse_has_moved = true;
-		} else {
-			mouse_has_moved = false;
-		}
-		return success;
+		last_add_on_mesh = added_stroke->strokeAddSegmentAdd(mouse_x, mouse_y);
+		return true;
 	} else if(tool_mode == EXTRUDE && viewer.down) {
 		initial_stroke->strokeAddSegmentExtrusion(mouse_x, mouse_y);
 		return true;
@@ -245,7 +244,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
             #else
                 usleep(200000);  /* sleep for 200 milliSeconds */
             #endif
-            initial_stroke->generate3DMeshFromStroke(vertex_boundary_markers, part_of_original_stroke);
+            backside_vertex_map = initial_stroke->generate3DMeshFromStroke(vertex_boundary_markers, part_of_original_stroke);
 			F = viewer.data.F;
 			V = viewer.data.V;
 
@@ -268,16 +267,23 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 		}
 		skip_standardcallback = false;
 	} 
-	else if(tool_mode == ADD && mouse_has_moved) {
+	else if(tool_mode == ADD) {
 		dirty_boundary = true;
+		if(!added_stroke->has_points_on_mesh) {
+			return true;
+		}
 		added_stroke->snap_to_vertices(vertex_boundary_markers);
+		if(!last_add_on_mesh) {
+			//mirror stroke on backside
+			added_stroke->mirror_on_backside(vertex_boundary_markers, backside_vertex_map);
+		}
 		stroke_collection.push_back(*added_stroke);
 
 		viewer.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0,0,1));
 		Eigen::MatrixXd added_points;
 		for(int i = 0; i < stroke_collection.size(); i++) {
 			added_points = stroke_collection[i].get3DPoints();
-			viewer.data.add_points(added_points, Eigen::RowVector3d(0, 0, 1));
+			viewer.data.add_points(added_points, Eigen::RowVector3d(0.7*(rand() / (double)RAND_MAX), 0.7*(rand() / (double)RAND_MAX), 0.7*(rand() / (double)RAND_MAX)));
 			viewer.data.add_edges(added_points.block(0, 0, added_points.rows() - 2, 3), added_points.block(1, 0, added_points.rows() - 2, 3), Eigen::RowVector3d(0, 0, 1));
 		}
 	}

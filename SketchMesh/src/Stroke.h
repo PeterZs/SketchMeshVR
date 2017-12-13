@@ -15,18 +15,21 @@ public:
 	void strokeAddSegmentExtrusion(int mouse_x, int mouse_y);
 	bool toLoop();
 	void strokeReset();
-    void generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke);
+    std::unordered_map<int, int> generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke);
 	double total_stroke_length();
 	Eigen::MatrixX3d get3DPoints();
 	int get_vertex_idx_for_point(int i);
+	int get_ID();
 	std::vector<int> get_closest_vert_bindings();
 	int selectClosestVertex(int mouse_x, int mouse_y, double& closest_distance);
 	double compute_stroke_diag();
 	void update_Positions(Eigen::MatrixXd V);
 	void snap_to_vertices(Eigen::VectorXi & vertex_boundary_markers);
 
+	void mirror_on_backside(Eigen::VectorXi & vertex_boundary_markers, std::unordered_map<int, int> backside_vertex_map);
 
 	bool is_loop;
+	bool has_points_on_mesh;
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 private:
@@ -41,6 +44,7 @@ private:
 	double dep = -1;
 
 	std::vector<int> closest_vert_bindings;
+	std::vector<int> added_stroke_final_vertices;
 
 	void counter_clockwise();
 	static Eigen::MatrixX2d resample_stroke(Eigen::MatrixX2d & original_stroke2DPoints);
