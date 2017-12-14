@@ -365,6 +365,28 @@ int main(int argc, char *argv[]) {
             SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, dirty_boundary);
             viewer.data.set_mesh(V, F);
             viewer.data.compute_normals();
+
+
+			for(int i = 0; i < stroke_collection.size(); i++) {
+				stroke_collection[i].update_Positions(V);
+			}
+
+			//Overlay the updated stroke
+			initial_stroke->update_Positions(V);
+			Eigen::MatrixXd init_points = initial_stroke->get3DPoints();
+			viewer.data.set_points(init_points.topRows(init_points.rows() - 1), Eigen::RowVector3d(1, 0, 0));
+			viewer.data.set_stroke_points(init_points);
+
+			viewer.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0, 0, 1));
+			Eigen::MatrixXd added_points;
+			int points_to_hold_back;
+			for(int i = 0; i < stroke_collection.size(); i++) {
+				added_points = stroke_collection[i].get3DPoints();
+				points_to_hold_back = 1 + !stroke_collection[i].is_loop;
+				viewer.data.add_points(added_points.topRows(added_points.rows() - 1), stroke_collection[i].stroke_color);// Eigen::RowVector3d(0, 0, 1));
+				viewer.data.add_edges(added_points.block(0, 0, added_points.rows() - points_to_hold_back, 3), added_points.block(1, 0, added_points.rows() - points_to_hold_back, 3), stroke_collection[i].stroke_color);// Eigen::RowVector3d(0, 0, 1));
+			}
+
         });
 
 		viewer.ngui->addGroup("Curve deformation");
