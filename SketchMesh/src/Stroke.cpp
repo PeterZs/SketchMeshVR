@@ -22,6 +22,7 @@ Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::viewer
 	_time1 = std::chrono::high_resolution_clock::now();
 	closest_vert_bindings.clear();
 	has_points_on_mesh = false;
+	stroke_color = Eigen::RowVector3d(0.8*(rand() / (double)RAND_MAX), 0.8*(rand() / (double)RAND_MAX), 0.8*(rand() / (double)RAND_MAX));
 }
 
 Stroke::~Stroke() {}

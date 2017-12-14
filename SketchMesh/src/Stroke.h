@@ -30,6 +30,7 @@ public:
 
 	bool is_loop;
 	bool has_points_on_mesh;
+	Eigen::RowVector3d stroke_color;
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 private:

@@ -80,11 +80,11 @@ bool CurveDeformation::update_ROI(double drag_size) {
 	current_max_drag_size = drag_size;
 	int no_ROI_vert_tmp;
 	if(smooth_deform_mode) {
-		no_ROI_vert_tmp = max(0.16*no_vertices + 1, min(round(drag_size * no_vertices) + 1, ceil(((no_vertices - 1) / 2) - 1))); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side, always at least 1/6th of the number of vertices + 1 vertex fixed, to take care of thin meshes with many vertices)
+		no_ROI_vert_tmp = max(round(0.17*no_vertices) + 1, min(round(drag_size * no_vertices) + 1, ceil(((no_vertices - 1) / 2) - 1))); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side, always at least 1/6th of the number of vertices + 1 vertex fixed, to take care of thin meshes with many vertices)
 	} else {
 		no_ROI_vert_tmp = max(0.0, min(round(drag_size/4.0 * no_vertices), ceil(((no_vertices - 1) / 2) - 1))); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side)
 	}
-	cout << "loop " << stroke_is_loop << " " << no_ROI_vert_tmp << endl;
+
 	if(((no_ROI_vert == no_ROI_vert_tmp) && prev_loop_type == stroke_is_loop) || no_ROI_vert_tmp == 0) { //number of vertices in ROI didn't change
 		return false;
 	}
@@ -104,7 +104,6 @@ bool CurveDeformation::update_ROI(double drag_size) {
 	vector<int> fixed;
 	vector<int> fixed_local;
 	is_fixed = Eigen::VectorXi::Zero(no_vertices);
-	cout << "ROI_OG " << ROI_1 << " " << ROI_2 << "  " << stroke_ID << endl;
 	/*if(stroke_ID != 0 && stroke_is_loop) {//We've chosen an added stroke that's looped
 		int ROI_1_original = ROI_1, ROI_2_original = ROI_2;
 		if(ROI_1 < ROI_2) {
@@ -183,7 +182,6 @@ bool CurveDeformation::update_ROI(double drag_size) {
 
 	fixed_indices = Eigen::VectorXi::Map(fixed.data(), fixed.size()); //Create an Eigen::VectorXi from a std::vector
 	fixed_indices_local = Eigen::VectorXi::Map(fixed_local.data(), fixed_local.size()); //Create an Eigen::VectorXi from a std::vector
-	cout << is_fixed << endl << "ROI" << ROI_1 << " " << ROI_2 <<endl;
 
 	return true;
 }
