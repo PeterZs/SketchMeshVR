@@ -115,8 +115,7 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 		added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID);
 		next_added_stroke_ID++;
 		added_stroke->strokeAddSegmentAdd(down_mouse_x, down_mouse_y); //If the user starts outside of the mesh, consider the movement as navigation
-		 skip_standardcallback = true;
-		//skip_standardcallback = added_stroke->strokeAddSegmentAdd(down_mouse_x, down_mouse_y); //If the user starts outside of the mesh, consider the movement as navigation
+		skip_standardcallback = true;
 	} else if (tool_mode == PULL) { //Dragging an existing curve
 		double closest_dist = INFINITY;
 		handleID = initial_stroke->selectClosestVertex(down_mouse_x, down_mouse_y, closest_dist);
