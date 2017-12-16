@@ -31,18 +31,6 @@ using Viewer = igl::viewer::Viewer;
 Eigen::MatrixXd V;
 // Face array, #F x3
 Eigen::MatrixXi F;
-// Per-face normal array, #F x3
-Eigen::MatrixXd FN;
-// Per-vertex normal array, #V x3
-Eigen::MatrixXd VN;
-// Per-corner normal array, (3#F) x3
-Eigen::MatrixXd CN;
-// Vectors of indices for adjacency relations
-std::vector<std::vector<int> > VF, VFi, VV;
-// Integer vector of component IDs per face, #F x1
-Eigen::VectorXi cid;
-// Per-face color array, #F x3
-Eigen::MatrixXd component_colors_per_face;
 
 // Per vertex indicator of whether vertex is on boundary (on boundary if == 1)
 Eigen::VectorXi vertex_boundary_markers;
@@ -68,10 +56,13 @@ int handleID = -1;
 
 int turnNr = 0;
 bool dirty_boundary = false;
-int closest_stroke_ID;
+int closest_stroke_ID, prev_closest_stroke_ID;
 int next_added_stroke_ID = 2;
 bool last_add_on_mesh = false;
 unordered_map<int, int> backside_vertex_map;
+
+bool stroke_was_removed = false;
+int remove_stroke_clicked = 0;
 
 bool callback_key_down(Viewer& viewer, unsigned char key, int modifiers) {
 	if (key == '1') {
@@ -90,9 +81,14 @@ bool callback_key_down(Viewer& viewer, unsigned char key, int modifiers) {
 			return true;
 		}
 		tool_mode = ADD;
-	}
+	} else if(key == 'R') {
+		if(stroke_collection.size() == 0) { //Don't go into "remove curve mode" if there is no additional curves
+			return true;
+		}
+		tool_mode = REMOVE;
+	} 
 
-	//viewer.ngui->refresh(); //TODO: is this needed?
+
 	return true;
 }
 
@@ -116,14 +112,59 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 		next_added_stroke_ID++;
 		added_stroke->strokeAddSegmentAdd(down_mouse_x, down_mouse_y); //If the user starts outside of the mesh, consider the movement as navigation
 		skip_standardcallback = true;
-	} else if (tool_mode == PULL) { //Dragging an existing curve
+	} else if(tool_mode == REMOVE) {
+		double closest_dist = INFINITY;
+		double current_closest = closest_dist;
+		int tmp_handleID;
+		handleID = -1;
+		for(int i = 0; i < stroke_collection.size(); i++) {
+			tmp_handleID = stroke_collection[i].selectClosestVertex(down_mouse_x, down_mouse_y, closest_dist);
+			if((closest_dist < current_closest) && (tmp_handleID != -1)) {
+				current_closest = closest_dist;
+				handleID = tmp_handleID;
+				closest_stroke_ID = i;
+			}
+		}
+
+		if(handleID == -1) {//User clicked too far from any of the stroke vertices
+			return false;
+		}
+		if(closest_stroke_ID == prev_closest_stroke_ID) {
+			remove_stroke_clicked++;
+		} else {
+			remove_stroke_clicked = 1; //Start from 1
+			prev_closest_stroke_ID = closest_stroke_ID;
+		}
+	
+		//Redraw the original stroke and all added strokes, where the selected stroke is drawn in black.
+		Eigen::MatrixXd init_points = initial_stroke->get3DPoints();
+		viewer.data.set_points(init_points.topRows(init_points.rows() - 1), Eigen::RowVector3d(1, 0, 0));
+		Eigen::MatrixXd added_points = stroke_collection[closest_stroke_ID].get3DPoints();
+		viewer.data.add_points(added_points.topRows(added_points.rows() - 1), Eigen::RowVector3d(0, 0, 0));
+		for(int i = 0; i < stroke_collection.size(); i++) {
+			if(i == closest_stroke_ID) {
+				continue;
+			}
+			added_points = stroke_collection[i].get3DPoints();
+			viewer.data.add_points(added_points.topRows(added_points.rows() - 1), stroke_collection[i].stroke_color);
+		}
+
+	
+		if(remove_stroke_clicked == 2) { //Mechanism to force the user to click twice on the same stroke before removing it (safeguard)
+			stroke_was_removed = true;
+			stroke_collection.erase(stroke_collection.begin() + closest_stroke_ID);
+			remove_stroke_clicked = 0; //Reset
+		}
+
+		skip_standardcallback = true;
+	} else if(tool_mode == PULL) { //Dragging an existing curve
 		double closest_dist = INFINITY;
 		handleID = initial_stroke->selectClosestVertex(down_mouse_x, down_mouse_y, closest_dist);
 		double current_closest = closest_dist;
 		closest_stroke_ID = -1;
-
+		int tmp_handleID;
 		for(int i = 0; i < stroke_collection.size(); i++) { //Additional strokes that cross the original stroke will never be selected as the pulled curve when the user clicks a vertex that also belongs to the original boundary, since their vertex positions are the same and we check for SMALLER distances
-			int tmp_handleID = stroke_collection[i].selectClosestVertex(down_mouse_x, down_mouse_y, closest_dist);
+			tmp_handleID = stroke_collection[i].selectClosestVertex(down_mouse_x, down_mouse_y, closest_dist);
 			if((closest_dist < current_closest) && (tmp_handleID != -1)) {
 				current_closest = closest_dist;
 				handleID = tmp_handleID;
@@ -286,7 +327,22 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 		for(int i = 0; i < stroke_collection.size(); i++) {
 			added_points = stroke_collection[i].get3DPoints();
 			points_to_hold_back = 1 + !stroke_collection[i].is_loop;
-			viewer.data.add_points(added_points, stroke_collection[i].stroke_color);// Eigen::RowVector3d(0.7*(rand() / (double)RAND_MAX), 0.7*(rand() / (double)RAND_MAX), 0.7*(rand() / (double)RAND_MAX)));
+			viewer.data.add_points(added_points, stroke_collection[i].stroke_color);
+			viewer.data.add_edges(added_points.block(0, 0, added_points.rows() - points_to_hold_back, 3), added_points.block(1, 0, added_points.rows() - points_to_hold_back, 3), stroke_collection[i].stroke_color);
+		}
+	}
+	else if(tool_mode == REMOVE && stroke_was_removed) { //Only redraw if we actually removed a stroke (otherwise we draw unnecessary)
+		stroke_was_removed = false; //Reset
+
+		Eigen::MatrixXd init_points = initial_stroke->get3DPoints();
+		viewer.data.set_points(init_points.topRows(init_points.rows() - 1), Eigen::RowVector3d(1, 0, 0));
+		viewer.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0, 0, 1));
+		Eigen::MatrixXd added_points;
+		int points_to_hold_back;
+		for(int i = 0; i < stroke_collection.size(); i++) {
+			added_points = stroke_collection[i].get3DPoints();
+			points_to_hold_back = 1 + !stroke_collection[i].is_loop;
+			viewer.data.add_points(added_points.topRows(added_points.rows() - 1), stroke_collection[i].stroke_color);
 			viewer.data.add_edges(added_points.block(0, 0, added_points.rows() - points_to_hold_back, 3), added_points.block(1, 0, added_points.rows() - points_to_hold_back, 3), stroke_collection[i].stroke_color);// Eigen::RowVector3d(0, 0, 1));
 		}
 	}
@@ -313,7 +369,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 		for(int i = 0; i < stroke_collection.size(); i++) {
 			added_points = stroke_collection[i].get3DPoints();
 			points_to_hold_back = 1 + !stroke_collection[i].is_loop;
-			viewer.data.add_points(added_points.topRows(added_points.rows() - 1), stroke_collection[i].stroke_color);// Eigen::RowVector3d(0, 0, 1));
+			viewer.data.add_points(added_points.topRows(added_points.rows() - 1), stroke_collection[i].stroke_color);
 			viewer.data.add_edges(added_points.block(0, 0, added_points.rows() - points_to_hold_back, 3), added_points.block(1, 0, added_points.rows() - points_to_hold_back, 3), stroke_collection[i].stroke_color);// Eigen::RowVector3d(0, 0, 1));
 		}
 
@@ -383,7 +439,7 @@ int main(int argc, char *argv[]) {
 			for(int i = 0; i < stroke_collection.size(); i++) {
 				added_points = stroke_collection[i].get3DPoints();
 				points_to_hold_back = 1 + !stroke_collection[i].is_loop;
-				viewer.data.add_points(added_points.topRows(added_points.rows() - 1), stroke_collection[i].stroke_color);// Eigen::RowVector3d(0, 0, 1));
+				viewer.data.add_points(added_points.topRows(added_points.rows() - 1), stroke_collection[i].stroke_color);
 				viewer.data.add_edges(added_points.block(0, 0, added_points.rows() - points_to_hold_back, 3), added_points.block(1, 0, added_points.rows() - points_to_hold_back, 3), stroke_collection[i].stroke_color);// Eigen::RowVector3d(0, 0, 1));
 			}
 

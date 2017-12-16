@@ -7,6 +7,9 @@ class Stroke {
 public:
 	
 	Stroke(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,  igl::viewer::Viewer &v, int stroke_ID_);
+	Stroke(const Stroke& origin);
+	Stroke& operator=(Stroke);
+	void swap(Stroke & tmp);
 	~Stroke();
 	bool empty2D() const { return stroke2DPoints.isZero(); }
 	bool empty3D() const { return stroke3DPoints.isZero(); }
@@ -16,7 +19,7 @@ public:
 	bool toLoop();
 	void strokeReset();
     std::unordered_map<int, int> generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke);
-	double total_stroke_length();
+	//double total_stroke_length();
 	Eigen::MatrixX3d get3DPoints();
 	int get_vertex_idx_for_point(int i);
 	int get_ID();
@@ -37,7 +40,7 @@ private:
 	const Eigen::MatrixXd &V;
 	const Eigen::MatrixXi &F;
 	igl::viewer::Viewer &viewer;
-	const int stroke_ID;
+	int stroke_ID; //Non-const for the sake of copy assignment operator 
 
 	Eigen::MatrixX3d stroke3DPoints; //Used for screen output
 	Eigen::MatrixX2d stroke2DPoints; //Used for early checking if point is new (in screen coordinates)

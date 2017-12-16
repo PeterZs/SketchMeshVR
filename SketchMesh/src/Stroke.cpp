@@ -25,6 +25,42 @@ Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::viewer
 	stroke_color = Eigen::RowVector3d(0.8*(rand() / (double)RAND_MAX), 0.8*(rand() / (double)RAND_MAX), 0.8*(rand() / (double)RAND_MAX));
 }
 
+Stroke::Stroke(const Stroke& origin) :
+	V(origin.V),
+	F(origin.F),
+	viewer(origin.viewer),
+	stroke_ID(origin.stroke_ID),
+	stroke2DPoints(origin.stroke2DPoints),
+	stroke3DPoints(origin.stroke3DPoints),
+	stroke_edges(origin.stroke_edges),
+	closest_vert_bindings(origin.closest_vert_bindings),
+	has_points_on_mesh(origin.has_points_on_mesh),
+	stroke_color(origin.stroke_color),
+	dep(origin.dep),
+	added_stroke_final_vertices(origin.added_stroke_final_vertices),
+	is_loop(origin.is_loop)
+	{
+	_time1 = std::chrono::high_resolution_clock::now();
+}
+Stroke& Stroke::operator=(Stroke other) {
+	swap(other);
+	return *this;
+}
+
+void Stroke::swap(Stroke & tmp) {//The pointers to V and F will always be the same for all stroke instances, so no need to copy
+	std::swap(this->viewer, tmp.viewer);
+	std::swap(this->stroke_ID, tmp.stroke_ID);
+	std::swap(this->stroke2DPoints, tmp.stroke2DPoints);
+	std::swap(this->stroke3DPoints, tmp.stroke3DPoints);
+	std::swap(this->stroke_edges, tmp.stroke_edges);
+	std::swap(this->closest_vert_bindings, tmp.closest_vert_bindings);
+	std::swap(this->has_points_on_mesh, tmp.has_points_on_mesh);
+	std::swap(this->stroke_color, tmp.stroke_color);
+	std::swap(this->dep, tmp.dep);
+	std::swap(this->added_stroke_final_vertices, tmp.added_stroke_final_vertices);
+	std::swap(this->is_loop, tmp.is_loop);
+}
+
 Stroke::~Stroke() {}
 
 //To be used exclusively for drawing strokes for INITIAL MESHES (no extrusion)
@@ -341,13 +377,13 @@ void Stroke::move_to_middle(Eigen::MatrixX2d &positions, Eigen::MatrixX2d &new_p
 	}
 }
 
-double Stroke::total_stroke_length() {
+/*double Stroke::total_stroke_length() {
 	double total_length = 0;
 	for(int i = 0; i < stroke2DPoints.rows(); i++) {
 		total_length += (stroke2DPoints.row(i) - stroke2DPoints.row((i + 1) % stroke2DPoints.rows())).norm();
 	}
 	return total_length;
-}
+}*/
 
 void Stroke::generate_backfaces(Eigen::MatrixXi &faces, Eigen::MatrixXi &back_faces) {
 	back_faces = faces.rowwise().reverse().eval();
@@ -430,16 +466,11 @@ void Stroke::snap_to_vertices(Eigen::VectorXi &vertex_boundary_markers) {
 		for(int j = result_path.size()-1; j >= 0; j--) {
 			int idx = result_path[j];
 			if(idx != prev) {
-			//	if(vertex_boundary_markers[idx]== 0) {
-
 				added_stroke_final_vertices.push_back(idx);
 				stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, 3);
 				stroke3DPoints.row(stroke3DPoints.rows() - 1) << V.row(added_stroke_final_vertices.back());
-			//	cout << vertex_boundary_markers[added_stroke_final_vertices.back()] << " ";
-					vertex_boundary_markers[added_stroke_final_vertices.back()] = stroke_ID; //Set all vertices that are in the added stroke3DPoints to be "boundary"/constraint vertices
-			//		cout << vertex_boundary_markers[added_stroke_final_vertices.back()] << endl;
-					prev = idx;
-			//	}
+				vertex_boundary_markers[added_stroke_final_vertices.back()] = stroke_ID; //Set all vertices that are in the added stroke3DPoints to be "boundary"/constraint vertices
+				prev = idx;
 			}
 		}
 	}
