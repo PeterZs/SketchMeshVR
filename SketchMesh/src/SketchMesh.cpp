@@ -44,7 +44,7 @@ bool skip_standardcallback = false;
 int down_mouse_x = -1, down_mouse_y = -1;
 
 double vertex_weights;
-int smooth_iter = 1;
+int initial_smooth_iter = 8;
 bool mouse_is_down = false; //We need this due to mouse_down not working in the nanogui menu, whilst mouse_up does work there
 bool mouse_has_moved = false;
 
@@ -292,7 +292,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 
 			dirty_boundary = true;
 
-			for(int i = 0; i < smooth_iter; i++) {
+			for(int i = 0; i < initial_smooth_iter; i++) {
                 SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, dirty_boundary);
             }
 
@@ -347,7 +347,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 		}
 	}
 	else if(tool_mode == PULL && handleID != -1 && mouse_has_moved) {
-		for(int i = 0; i < smooth_iter; i++) {
+		for(int i = 0; i < 2; i++) {
             SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, dirty_boundary);
 		}
 
@@ -413,7 +413,7 @@ int main(int argc, char *argv[]) {
 
         
         // Expose a variable directly ...
-        viewer.ngui->addVariable("Smoothing iterations",smooth_iter);
+        viewer.ngui->addVariable("Initial smoothing iterations",initial_smooth_iter);
 
         
         // Add a button
