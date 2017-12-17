@@ -4,8 +4,6 @@ Master thesis on a sketch-based 3D modeling system for VR.
 
 ## Getting Started
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
-
 ### Prerequisites
 
 Tested on Windows 10 with Microsoft Visual Studio 17 (with Visual C++) and OS X El Capitan with clang 8.0.0.
