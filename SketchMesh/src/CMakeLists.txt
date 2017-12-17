@@ -11,6 +11,9 @@ set(SOURCE_FILES
     Stroke.cpp
     Stroke.h
     SurfaceSmoothing.cpp
-    SurfaceSmoothing.h)
+    SurfaceSmoothing.h
+    CurveDeformation.cpp
+    CurveDeformation.h
+)
 
 add_executable(src ${SOURCE_FILES})

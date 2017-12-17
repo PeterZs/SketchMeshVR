@@ -2,6 +2,7 @@
 #define _Stroke_H_
 #include <igl/viewer/Viewer.h>
 #include <vector>
+#include <unordered_map>
 
 class Stroke {
 public:

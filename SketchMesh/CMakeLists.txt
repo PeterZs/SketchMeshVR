@@ -44,6 +44,7 @@ option(LIBIGL_WITH_TRIANGLE    "Use Triangle"       ON)
 option(LIBIGL_WITH_XML         "Use XML"            OFF)
 option(LIBIGL_WITH_LIM         "Use LIM"            OFF)
 option(LIBIGL_WITH_COMISO      "Use CoMiso"         OFF)
+option(LIBIGL_WITH_NANOGUI     "Use NanoGUI"        ON) 
 option(LIBIGL_WITH_MATLAB      "Use Matlab"         OFF) # This option is not supported yet
 option(LIBIGL_WITH_MOSEK       "Use MOSEK"          OFF) # This option is not supported yet
 option(LIBIGL_WITH_CGAL        "Use CGAL"           OFF)
