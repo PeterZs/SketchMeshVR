@@ -13,11 +13,17 @@ Tested on Windows 10 with Microsoft Visual Studio 17 (with Visual C++) and OS X 
 Clone the repository including submodules (this contains an adapted version of libigl that is necessary) with 
 
 ```
-git clone --recursive 
+git clone --recursive https://github.com/FloorVerhoeven/thesis.git
 ```
 
-Use CMake to build the binaries for your system. 
-Then navigate into the bulid folder and execute the following to make and run:
+Create a build folder in the "SketchMesh" folder.
+Use CMake to build the binaries for your system. You can either do this via the CMake GUI (press configure and then generate) or via the command line with navigating into the build folder and running:
+
+```
+cmake -DCMAKE_BUILD_TYPE=Release ../
+```
+
+Then, from inside the build folder run the following to compile and run the executable:
 ```
 make && ./SketchMesh_bin
 ```
