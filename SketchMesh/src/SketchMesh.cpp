@@ -63,6 +63,7 @@ unordered_map<int, int> backside_vertex_map;
 
 bool stroke_was_removed = false;
 int remove_stroke_clicked = 0;
+bool cut_stroke_already_drawn = false;
 
 bool callback_key_down(Viewer& viewer, unsigned char key, int modifiers) {
 	if (key == '1') {
@@ -71,6 +72,9 @@ bool callback_key_down(Viewer& viewer, unsigned char key, int modifiers) {
 		//Draw initial curve/mesh
 		tool_mode = DRAW;
 	}else if (key == 'P') {
+		if(initial_stroke->empty2D()) { //Don't go into "pull mode" if there is no mesh yet
+			return true;
+		}
 		tool_mode = PULL;
 	}else if (key == 'N') {
 		//Use navigation
@@ -86,7 +90,12 @@ bool callback_key_down(Viewer& viewer, unsigned char key, int modifiers) {
 			return true;
 		}
 		tool_mode = REMOVE;
-	} 
+	} else if(key == 'C') {
+		if(initial_stroke->empty2D()) { //Don't go into "cut mode" if there is no mesh yet
+			return true;
+		}
+		tool_mode = CUT;
+	}
 
 
 	return true;
@@ -157,7 +166,8 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 		}
 
 		skip_standardcallback = true;
-	} else if(tool_mode == PULL) { //Dragging an existing curve
+	} 
+	else if(tool_mode == PULL) { //Dragging an existing curve
 		double closest_dist = INFINITY;
 		handleID = initial_stroke->selectClosestVertex(down_mouse_x, down_mouse_y, closest_dist);
 		double current_closest = closest_dist;
@@ -187,6 +197,14 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 	}
 	else if(tool_mode == EXTRUDE) {
 		initial_stroke->strokeAddSegmentExtrusion(down_mouse_x, down_mouse_y);
+		skip_standardcallback = true;
+	}
+	else if(tool_mode == CUT) {
+		if(cut_stroke_already_drawn) {
+			return true;
+		}
+		added_stroke = new Stroke(V, F, viewer, -1); //Use ID -1 to indicate that it is a cut stroke
+		added_stroke->strokeAddSegmentCut(down_mouse_x, down_mouse_y);
 		skip_standardcallback = true;
 	}
 
@@ -269,6 +287,11 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 
 		return true;
 	}
+	else if(tool_mode == CUT && viewer.down) {
+		added_stroke->strokeAddSegmentCut(mouse_x, mouse_y);
+		return true;
+	}
+	
 	return false;
 }
 
@@ -312,6 +335,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 	else if(tool_mode == ADD) {
 		dirty_boundary = true;
 		if(!added_stroke->has_points_on_mesh) {
+			mouse_has_moved = false;
 			return true;
 		}
 		added_stroke->snap_to_vertices(vertex_boundary_markers);
@@ -373,6 +397,18 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			viewer.data.add_edges(added_points.block(0, 0, added_points.rows() - points_to_hold_back, 3), added_points.block(1, 0, added_points.rows() - points_to_hold_back, 3), stroke_collection[i].stroke_color);// Eigen::RowVector3d(0, 0, 1));
 		}
 
+	}
+	else if(tool_mode == CUT) {
+		if(!added_stroke->has_points_on_mesh) {
+			mouse_has_moved = false;
+			return true;
+		}
+		if(cut_stroke_already_drawn) { //User has drawn the final stroke for removing the part
+			//DO cutting
+			cut_stroke_already_drawn = false; //Reset
+		} else { //We're finished drawing the cut stroke, prepare for when user draws the final stroke to remove the part
+			cut_stroke_already_drawn = true;
+		}
 	}
 
 	mouse_has_moved = false;

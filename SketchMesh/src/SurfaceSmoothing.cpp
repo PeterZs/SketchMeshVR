@@ -50,8 +50,7 @@ void SurfaceSmoothing::smooth(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::Vec
 
 	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, ID);
 	smooth_main(m, BOUNDARY_IS_DIRTY);
-	V = m.V;
-	F = m.F;
+
 	BOUNDARY_IS_DIRTY = false;
 	iteration++;
 }

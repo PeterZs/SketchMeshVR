@@ -6,9 +6,3 @@ Mesh::Mesh(Eigen::MatrixXd & V_, Eigen::MatrixXi & F_, const Eigen::VectorXi & v
 
 Mesh::~Mesh() {
 }
-
-/*bool Mesh::operator==(const Mesh &other) const {
-	return (V == other.V
-		&& F == other.F
-		&& vertex_boundary_markers == other.vertex_boundary_markers);
-}*/

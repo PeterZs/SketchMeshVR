@@ -1,15 +1,19 @@
 #include "Stroke.h"
 #include <igl/unproject_onto_mesh.h>
 #include <igl/unproject.h>
+#include <igl/unproject_ray.h>
 #include <igl/triangle/triangulate.h>
 #include <algorithm> 
 #include <igl/per_face_normals.h>
 #include <igl/per_vertex_normals.h>
 #include <igl/dijkstra.h>
+#include <igl/edge_topology.h>
+#include "Plane.h"
 using namespace igl;
 using namespace std;
 
 std::chrono::steady_clock::time_point _time2, _time1;
+Eigen::MatrixXi EV, FE, EF;
 
 Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::viewer::Viewer &v, int stroke_ID_) :
 	V(V_),
@@ -42,6 +46,7 @@ Stroke::Stroke(const Stroke& origin) :
 	{
 	_time1 = std::chrono::high_resolution_clock::now();
 }
+
 Stroke& Stroke::operator=(Stroke other) {
 	swap(other);
 	return *this;
@@ -167,6 +172,56 @@ bool Stroke::strokeAddSegmentAdd(int mouse_x, int mouse_y) {
 	_time1 = std::chrono::high_resolution_clock::now(); //restart the "start" timer
 	return result;
 }
+
+bool Stroke::strokeAddSegmentCut(int mouse_x, int mouse_y) {
+	bool result = false;
+	//OpenGL has origin at left bottom, window(s) has origin at left top
+	double x = mouse_x;
+	double y = viewer.core.viewport(3) - mouse_y;
+	if(!empty2D() && x == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && y == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) { //Check that the point is new compared to last time
+		return result;
+	}
+
+	if(!empty2D()) {
+		_time2 = std::chrono::high_resolution_clock::now();
+		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
+		if(timePast < 10000000) { //Don't add another segment before x nanoseconds
+			return result;
+		}
+	}
+
+	Eigen::Matrix4f modelview = viewer.core.view * viewer.core.model;
+	Eigen::RowVector3d pt(0, 0, 0);
+	int faceID = -1;
+
+	Eigen::Vector3f bc;
+	if(igl::unproject_onto_mesh(Eigen::Vector2f(x, y), modelview, viewer.core.proj, viewer.core.viewport, V, F, faceID, bc)) {
+		pt = V.row(F(faceID, 0))*bc(0) + V.row(F(faceID, 1))*bc(1) + V.row(F(faceID, 2))*bc(2);
+		has_points_on_mesh = true;
+
+		//Only add point when it's on the mesh
+		if(stroke2DPoints.rows() == 1 && empty2D()) { //Add first point
+			stroke2DPoints.row(0) << x, y;
+			stroke3DPoints.row(0) << pt[0], pt[1], pt[2];
+		} else {
+			stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, stroke2DPoints.cols());
+			stroke2DPoints.row(stroke2DPoints.rows() - 1) << x, y;
+
+			stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, stroke3DPoints.cols());
+			stroke3DPoints.row(stroke3DPoints.rows() - 1) << pt[0], pt[1], pt[2];
+
+			stroke_edges.conservativeResize(stroke_edges.rows() + 1, stroke_edges.cols());
+			stroke_edges.row(stroke_edges.rows() - 1) << stroke2DPoints.rows() - 2, stroke2DPoints.rows() - 1;
+		}
+		//using set_stroke_points will remove all previous strokes, using add_stroke_points might create duplicates
+		viewer.data.add_edges(stroke3DPoints.block(0, 0, stroke3DPoints.rows() - 1, 3), stroke3DPoints.block(1, 0, stroke3DPoints.rows() - 1, 3), Eigen::RowVector3d(0, 1, 0));
+		result = true;
+	}
+
+	_time1 = std::chrono::high_resolution_clock::now(); //restart the "start" timer
+	return result;
+}
+
 
 //For drawing extrusion strokes. Need to start on the existing mesh
 void Stroke::strokeAddSegmentExtrusion(int mouse_x, int mouse_y) {
@@ -501,4 +556,124 @@ void Stroke::mirror_on_backside(Eigen::VectorXi &vertex_boundary_markers, unorde
 
 int Stroke::get_ID() {
 	return stroke_ID;
+}
+
+//Adds stroke elements at the intersection points of the original drawn stroke with mesh edges
+void Stroke::prepare_for_cut() {
+	Eigen::Matrix4f modelview = viewer.core.view * viewer.core.model;
+	int faceID = -1;
+	Eigen::Vector3f bc;
+
+	int prev_p = 0;
+	int start_p = prev_p;
+	int next_p;
+	igl::unproject_onto_mesh(stroke2DPoints.row(prev_p), modelview, viewer.core.proj, viewer.core.viewport, V, F, faceID, bc);
+
+	int start_face = faceID;
+	int n = 1;
+	Eigen::RowVector3d pt(0, 0, 0);
+
+	igl::edge_topology(V, F, EV, FE, EF);
+
+	while(true) {
+		next_p = n;
+		pt = V.row(F(faceID, 0))*bc(0) + V.row(F(faceID, 1))*bc(1) + V.row(F(faceID, 2))*bc(2);
+
+		Eigen::VectorXi forward;
+		faceID = extend_path(prev_p, next_p, faceID, forward, false, modelview);
+	}
+}
+
+int Stroke::extend_path(int prev_p, int next_p, int faceID, Eigen::VectorXi forward, bool front_facing_only, Eigen::Matrix4f modelview) {
+	Eigen::Vector3d source, dir;
+	Eigen::Vector2d tmp = stroke2DPoints.row(prev_p);
+	igl::unproject_ray(tmp, modelview, viewer.core.proj, viewer.core.viewport, source, dir);
+	Plane cutPlane(source, stroke3DPoints.row(prev_p), stroke3DPoints.row(next_p));
+
+	int edge = NULL;
+	pair<int, int> strokeEdge(prev_p, next_p);
+
+	int proj_faceID = -1;
+	Eigen::Vector3f bc;
+	while(true) {
+		if(igl::unproject_onto_mesh(stroke2DPoints.row(next_p), modelview, viewer.core.proj, viewer.core.viewport, V, F, proj_faceID, bc)){
+			if(proj_faceID == faceID) {
+				forward[0] = true;
+				return faceID;
+			}
+		}
+
+		edge = find_next_edge(strokeEdge, edge, faceID, modelview);
+		if(edge == NULL) {
+			return NULL;
+		}
+
+		Eigen::Vector3d v = cutPlane.cross_point(stroke3DPoints.row(EV(edge,0)), stroke3DPoints.row(EV(edge,1)));
+
+		//TODO:: ADD PATH ELEMENT LIKE SURFACEPATH LINE 357
+
+
+		faceID = (EF(edge, 0) == faceID) ? EF(edge, 1) : EF(edge, 0); //get the polygon on the other side of the edge
+
+		if(igl::unproject_onto_mesh(stroke2DPoints.row(prev_p), modelview, viewer.core.proj, viewer.core.viewport, V, F, proj_faceID, bc)) {
+			if(proj_faceID == faceID) {
+				forward[0] = false;
+				return faceID;
+			}
+		}
+	}
+}
+
+int Stroke::find_next_edge(pair<int, int> strokeEdge, int prev_edge, int polygon, Eigen::Matrix4f modelview) {
+	Eigen::RowVector3d start, end, stroke_start, stroke_end;
+	Eigen::Vector3d tmp;
+	for(int i = 0; i < 3; i++) {
+		int edge = FE(polygon, i);
+		if(edge != prev_edge) {
+			tmp = V.row(EV(edge, 0)).transpose();
+			igl::project(tmp, modelview, viewer.core.proj, viewer.core.viewport, start);
+
+			tmp = V.row(EV(edge, 1)).transpose();
+			igl::project(tmp, modelview, viewer.core.proj, viewer.core.viewport, end);
+
+			stroke_start = stroke2DPoints.row(strokeEdge.first);
+			stroke_end = stroke2DPoints.row(strokeEdge.second);
+			if(edges2D_cross({stroke_start, stroke_end}, {start, end})) {
+				return edge;
+			}
+		}
+	}
+	return NULL;
+}
+
+
+//Follows principle from https://stackoverflow.com/questions/14176776/find-out-if-2-lines-intersect but slightly different
+bool Stroke::edges2D_cross(pair<Eigen::Vector2d, Eigen::Vector2d> edge1, pair<Eigen::Vector2d, Eigen::Vector2d> edge2) {
+	double a0, b0, c0, a1, b1, c1;
+	a0 = edge1.first[1] - edge1.second[1]; //y coordinates of start and end point of first edge
+	b0 = edge1.second[0] - edge1.first[0];
+	c0 = edge1.second[1] * edge1.first[0] - edge1.second[0] * edge1.first[1];
+	a1 = edge2.first[1] - edge2.second[1]; //y coordinates of start and end point of first edge
+	b1 = edge2.second[0] - edge2.first[0];
+	c1 = edge2.second[1] * edge2.first[0] - edge2.second[0] * edge2.first[1];
+
+	if(((a0*edge2.first[0] + b0*edge2.first[1] + c0)*(a0*edge2.second[0] + b0*edge2.second[1] + c0) <= 0) &&
+		((a1*edge1.first[0] + b1*edge1.first[1] + c1)*(a1*edge1.second[0] + b1*edge1.second[1] + c1) <= 0)) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+
+Eigen::MatrixXd Stroke::get_V() {
+	return V;
+}
+
+Eigen::MatrixXi Stroke::get_F() {
+	return F;
+}
+
+Eigen::MatrixX2d Stroke::get_stroke2DPoints() {
+	return stroke2DPoints;
 }
