@@ -22,6 +22,7 @@
 #include "Stroke.h"
 #include "SurfaceSmoothing.h"
 #include "CurveDeformation.h"
+#include "MeshCut.h"
 
 
 using namespace std;
@@ -201,8 +202,10 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 	}
 	else if(tool_mode == CUT) {
 		if(cut_stroke_already_drawn) {
+			cout << "clicked while cut stroke alredy drawn" << endl;
 			return true;
 		}
+		cout << "clicked with no cut stroke drawn yet" << endl;
 		added_stroke = new Stroke(V, F, viewer, -1); //Use ID -1 to indicate that it is a cut stroke
 		added_stroke->strokeAddSegmentCut(down_mouse_x, down_mouse_y);
 		skip_standardcallback = true;
@@ -288,7 +291,9 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 		return true;
 	}
 	else if(tool_mode == CUT && viewer.down) {
-		added_stroke->strokeAddSegmentCut(mouse_x, mouse_y);
+		if(!cut_stroke_already_drawn) {
+			added_stroke->strokeAddSegmentCut(mouse_x, mouse_y);
+		}
 		return true;
 	}
 	
@@ -405,8 +410,12 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 		}
 		if(cut_stroke_already_drawn) { //User has drawn the final stroke for removing the part
 			//DO cutting
+			cout << "mouse released after stroke already drawn" << endl;
+			added_stroke->append_final_point();
+			MeshCut::cut(V, F, vertex_boundary_markers, part_of_original_stroke, *added_stroke);
 			cut_stroke_already_drawn = false; //Reset
 		} else { //We're finished drawing the cut stroke, prepare for when user draws the final stroke to remove the part
+			cout << "mouse released with new cut stroke" << endl;
 			cut_stroke_already_drawn = true;
 		}
 	}

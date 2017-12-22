@@ -2,6 +2,7 @@
 #include <iostream>
 #include <igl/unproject.h>
 #include "Mesh.h"
+#include "SurfacePath.h"
 
 using namespace std;
 using namespace igl;
@@ -16,10 +17,13 @@ void MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &verte
 	}
 	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, ID);
 
-	stroke.prepare_for_cut();
-	cut_main(m);
+	SurfacePath surface_path;
+	surface_path.create_from_stroke(stroke); //Prepares the drawn stroke (inserts extra points at the edges that it crosses)
+
+	//stroke.prepare_for_cut();
+	//cut_main(m);
 }
 
-void MeshCut::cut_main(Mesh &m) {
+/*void MeshCut::cut_main(Mesh &m) {
 
-}
+}*/

@@ -2,11 +2,11 @@
 #include <Eigen/Core>
 
 Plane::Plane(Eigen::Vector3d v0, Eigen::Vector3d v1, Eigen::Vector3d v2) {
-	Eigen::Vector3d vec0 = v1 - v0;
+	/*Eigen::Vector3d vec0 = v1 - v0;
 	Eigen::Vector3d vec1 = v2 - v0;
 	normal = vec0.cross(vec1);
 	base = v0;
-	normal.normalize();
+	normal.normalize();*/
 }
 
 Eigen::RowVector3d Plane::cross_point(Eigen::RowVector3d edge_start, Eigen::RowVector3d edge_end) {
