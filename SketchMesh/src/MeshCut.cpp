@@ -19,11 +19,10 @@ void MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &verte
 
 	SurfacePath surface_path;
 	surface_path.create_from_stroke(stroke); //Prepares the drawn stroke (inserts extra points at the edges that it crosses)
+	for(int i = 0; i < surface_path.get_path().size(); i++) { //NOTE: cut stroke points that lie inside the polygons aren't visible because they're "overwritten" by the pink ones
+		cout << surface_path.get_path()[i].get_vertex().transpose() << endl;
+		stroke.viewer.data.add_points(surface_path.get_path()[i].get_vertex().transpose(), Eigen::RowVector3d(1, 0, 0));
+	}
 
-	//stroke.prepare_for_cut();
 	//cut_main(m);
 }
-
-/*void MeshCut::cut_main(Mesh &m) {
-
-}*/

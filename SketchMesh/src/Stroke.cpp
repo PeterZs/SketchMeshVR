@@ -201,8 +201,10 @@ bool Stroke::strokeAddSegmentCut(int mouse_x, int mouse_y) {
 
 		//Only add point when it's on the mesh
 		if(stroke2DPoints.rows() == 1 && empty2D()) { //Add first point
-			stroke2DPoints.row(0) << x, y;
-			stroke3DPoints.row(0) << pt[0], pt[1], pt[2];
+			cout << "this shouldn't happen. Draw the first point outside of the mesh" << endl;
+			return false;
+		//	stroke2DPoints.row(0) << x, y;
+		//	stroke3DPoints.row(0) << pt[0], pt[1], pt[2];
 		} else {
 			stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, stroke2DPoints.cols());
 			stroke2DPoints.row(stroke2DPoints.rows() - 1) << x, y;
@@ -215,19 +217,23 @@ bool Stroke::strokeAddSegmentCut(int mouse_x, int mouse_y) {
 		}
 		//using set_stroke_points will remove all previous strokes, using add_stroke_points might create duplicates
 		viewer.data.add_points(stroke3DPoints.row(stroke3DPoints.rows() - 1), Eigen::RowVector3d(1, 0, 1));
-	//	viewer.data.add_edges(stroke3DPoints.block(0, 0, stroke3DPoints.rows() - 1, 3), stroke3DPoints.block(1, 0, stroke3DPoints.rows() - 1, 3), Eigen::RowVector3d(0, 1, 0));
 		result = true;
 		just_came_from_mesh = true;
 	} else if(stroke2DPoints.rows()>1 && just_came_from_mesh) { //We need to add the final point of the stroke, even though it is off the mesh (needed in order to wrap around to the backside)
 		cut_stroke_final_point = igl::unproject(Eigen::Vector3f(x, y, 0.95*dep), modelview, viewer.core.proj, viewer.core.viewport).transpose().cast<double>();
 		cut_stroke_final_point_2D = Eigen::RowVector2d(x, y);
 		just_came_from_mesh = false;
+	} else if(stroke2DPoints.rows() == 1) { //Add the first point, which should be outside the mesh. Refresh the "first" point until we get to the last one before we enter the mesh
+		Eigen::RowVector3d tmp = igl::unproject(Eigen::Vector3f(x, y, 0.95*dep), modelview, viewer.core.proj, viewer.core.viewport).cast<double>();
+		stroke2DPoints.row(0) << x, y;
+		stroke3DPoints.row(0) = tmp;
 	}
 
 	_time1 = std::chrono::high_resolution_clock::now(); //restart the "start" timer
 	return result;
 }
 
+//Final point doesn't get drawn on screen but is somewhere of the mesh
 void Stroke::append_final_point() {
 	stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, stroke2DPoints.cols());
 	stroke2DPoints.row(stroke2DPoints.rows() - 1) << cut_stroke_final_point_2D[0], cut_stroke_final_point_2D[1];
@@ -238,7 +244,6 @@ void Stroke::append_final_point() {
 	stroke_edges.conservativeResize(stroke_edges.rows() + 1, stroke_edges.cols());
 	stroke_edges.row(stroke_edges.rows() - 1) << stroke2DPoints.rows() - 2, stroke2DPoints.rows() - 1;
 
-	viewer.data.add_edges(stroke3DPoints.block(0, 0, stroke3DPoints.rows() - 1, 3), stroke3DPoints.block(1, 0, stroke3DPoints.rows() - 1, 3), Eigen::RowVector3d(0, 1, 0));
 }
 
 
