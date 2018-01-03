@@ -38,6 +38,8 @@ public:
 	};
 
 	Eigen::Vector3d get_vertex() { return vertex; };
+	ElementType get_type() { return type; };
+	int get_ID() { return ID; };
 
 private:
 	int ID;
