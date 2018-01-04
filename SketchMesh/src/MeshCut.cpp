@@ -8,6 +8,7 @@
 #include <igl/triangle/triangulate.h>
 #include "Mesh.h"
 #include "SurfacePath.h"
+#include <string>
 
 using namespace std;
 using namespace igl;
@@ -28,15 +29,19 @@ void MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &verte
 	SurfacePath surface_path;
 	surface_path.create_from_stroke(stroke); //Prepares the drawn stroke (inserts extra points at the edges that it crosses)
 	for(int i = 0; i < surface_path.get_path().size(); i++) { //NOTE: cut stroke points that lie inside the polygons aren't visible because they're "overwritten" by the pink ones
-		stroke.viewer.data.add_points(surface_path.get_path()[i].get_vertex().transpose(), Eigen::RowVector3d(1, 0, 0));
+		//stroke.viewer.data.add_points(surface_path.get_path()[i].get_vertex().transpose(), Eigen::RowVector3d(1, 0, 0));
 	}
 
 	adjacency_list(m.F, VV);
-	cut_main(m, surface_path);
+	cut_main(m, surface_path, stroke);
+
+	for (int i = 0; i < m.V.rows(); i++) {
+		stroke.viewer.data.add_points(m.V.row(i), Eigen::RowVector3d(1, 0, 1));
+		stroke.viewer.data.add_label(m.V.row(i), to_string(i));
+	}
 
 	stroke.viewer.data.clear();
-	cout << m.V << endl << endl;
-	cout << m.F << endl;
+	//cout << m.F << endl;
 	stroke.viewer.data.set_mesh(m.V, m.F);
 }
 
@@ -76,8 +81,8 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 	Eigen::MatrixXd V2;
 	Eigen::MatrixXi F2, vertex_markers, edge_markers;
 	igl::triangle::triangulate(boundary_vertices_2D, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(boundary_vertices_2D.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "Qq25", V2, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
-	cout << "checking vertex numbers that are stored in faces. i assumed starts counting from 0" << F2 << endl;
-	//project back to 3D
+
+																																																															 //project back to 3D
 	for (int i = 0; i < V2.rows(); i++) {
 		if (i < boundary_vertices.size()) {//Original boundary vertex
 		}
@@ -102,14 +107,17 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 			m.F(m.F.rows() - 1, j) = vert_idx_in_mesh;
 		}
 	}
-
+	
 	//TODO: see laplacianCut::cut lines 93-104 about sharp boundaries
 }
 
 
-void MeshCut::cut_main(Mesh& m, SurfacePath& surface_path){
+void MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke){
 	Eigen::VectorXi boundary_vertices = remesh_cut_remove_inside(m, surface_path);
-	mesh_open_hole(boundary_vertices, m);
+	for (int i = 0; i < boundary_vertices.rows(); i++) {
+		stroke.viewer.data.add_points(m.V.row(boundary_vertices[i]), Eigen::RowVector3d(0, 1, 0));
+	}
+	//mesh_open_hole(boundary_vertices, m);
 }
 
 Eigen::VectorXi MeshCut::remesh_cut_remove_inside(Mesh& m, SurfacePath& surface_path) {
@@ -158,6 +166,7 @@ Eigen::VectorXi MeshCut::remesh_cut_remove_inside(Mesh& m, SurfacePath& surface_
 			outer_boundary_vertices.push_back(i);
 		}
 	}
+
 
 	//Collect faces along the path
 	for (int i = 0; i < path.size(); i++) {
@@ -223,7 +232,6 @@ Eigen::VectorXi MeshCut::remesh_cut_remove_inside(Mesh& m, SurfacePath& surface_
 		path.push_back(newElement);
 	}*/
 
-
 	stitch(path_vertices, outer_boundary_vertices, m);
 	if (!remove_inside_faces) {
 		reverse_path(path_vertices);
@@ -234,8 +242,6 @@ Eigen::VectorXi MeshCut::remesh_cut_remove_inside(Mesh& m, SurfacePath& surface_
 	//TODO: check if 708-728 in laplacianremesh is needed here
 
 	return Eigen::VectorXi::Map(path_vertices.data(), path_vertices.size()); //Create an Eigen::VectorXi from a std::vector
-
-	//return path_vertices;
 }
 
 
@@ -272,14 +278,14 @@ vector<int> MeshCut::sort_boundary_vertices(Eigen::Vector3d start_vertex, std::v
 }
 
  int MeshCut::find_closest(vector<int> vertices, Eigen::Vector3d base, Mesh& m) {
-	 int closest = 0;
+	 int closest = vertices[0];
 	 double min = (m.V.row(vertices[0]) - base.transpose()).norm(); 
 	 double d;
 	 for (int i = 1; i<vertices.size(); i++) {
 		d = (m.V.row(vertices[i]), base.transpose()).norm(); 
 		if (d < min) {
 			min = d;
-			closest = i;
+			closest = vertices[i];
 		}
 	}
 	return closest;
@@ -288,8 +294,13 @@ vector<int> MeshCut::sort_boundary_vertices(Eigen::Vector3d start_vertex, std::v
 void MeshCut::stitch(std::vector<int> path_vertices, std::vector<int> boundary_vertices, Mesh& m) {
 	int path_idx = 0;
 	int outer_idx = 0;
-
+	
 	boundary_vertices = reorder(boundary_vertices, m.V.row(path_vertices[0]), m);
+
+	cout << "Fo" << endl;
+	for (int i = 0; i < boundary_vertices.size(); i++) {
+		cout << boundary_vertices[i] << endl;
+	}
 
 	Eigen::RowVector3d start_path_v = m.V.row(path_vertices[0]);
 	Eigen::RowVector3d start_outer_v = m.V.row(boundary_vertices[0]);
@@ -327,7 +338,7 @@ void MeshCut::stitch(std::vector<int> path_vertices, std::vector<int> boundary_v
 		if (proceed_outer_v) {
 			m.F.conservativeResize(m.F.rows() + 1, m.F.cols());
 			m.F.row(m.F.rows() - 1) << path_v_idx, next_outer_v_idx, outer_v_idx;
-
+			cout << path_v_idx  << " " << next_outer_v_idx << " " << outer_v_idx << endl;
 			outer_v = next_outer_v;
 			outer_v_idx = next_outer_v_idx;
 			outer_idx++;
@@ -335,6 +346,7 @@ void MeshCut::stitch(std::vector<int> path_vertices, std::vector<int> boundary_v
 		else {
 			m.F.conservativeResize(m.F.rows() + 1, m.F.cols());
 			m.F.row(m.F.rows() - 1) << next_path_v_idx, outer_v_idx, path_v_idx;
+			cout << next_path_v_idx << " " << outer_v_idx << " "<< path_v_idx << endl;
 			path_v = next_path_v;
 			path_v_idx = next_path_v_idx;
 			path_idx++;
@@ -342,12 +354,8 @@ void MeshCut::stitch(std::vector<int> path_vertices, std::vector<int> boundary_v
 
 		if (path_idx == path_vertices.size() && outer_idx == boundary_vertices.size()) {
 			break;
-		}
-
-
+		} 
 	}
-
-
 }
 
 vector<int> MeshCut::reorder(vector<int> boundary_vertices, Eigen::Vector3d start_v, Mesh& m) {
@@ -364,7 +372,7 @@ vector<int> MeshCut::reorder(vector<int> boundary_vertices, Eigen::Vector3d star
 
 	vector<int> reordered;
 	for (int i = 0; i < boundary_vertices.size(); i++) {
-		reordered.push_back((i + index) % boundary_vertices.size());
+		reordered.push_back(boundary_vertices[(i + index) % boundary_vertices.size()]);
 	}
 	return reordered;
 }

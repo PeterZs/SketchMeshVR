@@ -16,7 +16,7 @@ private:
 	static int ID;
 	static Eigen::MatrixXi EV, FE, EF;
 
-	static void cut_main(Mesh& m, SurfacePath& surface_path);
+	static void cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke);
 
 	static Eigen::VectorXi remesh_cut_remove_inside(Mesh & m, SurfacePath & surface_path);
 	static void propagate_dirty_faces(int face, std::vector<bool>& dirty_face);
