@@ -319,26 +319,32 @@ void MeshCut::stitch(std::vector<int> path_vertices, std::vector<int> boundary_v
 		
 		proceed_outer_v = true;
 		if (outer_idx == boundary_vertices.size()) {
+			cout << next_outer_v_idx << endl;
 			proceed_outer_v = false;
 		}
 		else if (path_idx == path_vertices.size()) {
+			cout << "option2" << endl;
 			proceed_outer_v = true;
 		}
 		else if ((next_path_v - path_v).dot(next_outer_v - outer_v) < 0) { //Open path
+			cout << "option3" << endl;
 			proceed_outer_v = true;
 		}
 		else if ((path_v - next_outer_v).norm() < (outer_v - next_path_v).norm()) {
 			proceed_outer_v = true;
+			cout << "option4" << endl;
 		}
 		else {
 			proceed_outer_v = false;
+			cout << "option5" << endl;
+
 		}
 
 		//Add faces
 		if (proceed_outer_v) {
 			m.F.conservativeResize(m.F.rows() + 1, m.F.cols());
 			m.F.row(m.F.rows() - 1) << path_v_idx, next_outer_v_idx, outer_v_idx;
-			cout << path_v_idx  << " " << next_outer_v_idx << " " << outer_v_idx << endl;
+			cout << "first" << path_v_idx << " " << next_outer_v_idx << " " << outer_v_idx << endl;
 			outer_v = next_outer_v;
 			outer_v_idx = next_outer_v_idx;
 			outer_idx++;
@@ -346,7 +352,7 @@ void MeshCut::stitch(std::vector<int> path_vertices, std::vector<int> boundary_v
 		else {
 			m.F.conservativeResize(m.F.rows() + 1, m.F.cols());
 			m.F.row(m.F.rows() - 1) << next_path_v_idx, outer_v_idx, path_v_idx;
-			cout << next_path_v_idx << " " << outer_v_idx << " "<< path_v_idx << endl;
+			cout << "second" << next_path_v_idx << " " << outer_v_idx << " "<< path_v_idx << endl;
 			path_v = next_path_v;
 			path_v_idx = next_path_v_idx;
 			path_idx++;
@@ -390,3 +396,9 @@ void MeshCut::reverse_path(vector<int> path_vertices) {
 	path_vertices.insert(path_vertices.begin() + 1, path_vertices.begin(), path_vertices.end() - 1);
 	path_vertices[0] = v;
 }
+
+
+
+
+
+
