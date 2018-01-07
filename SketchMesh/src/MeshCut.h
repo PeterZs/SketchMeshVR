@@ -8,7 +8,7 @@
 class MeshCut {
 
 public:
-	static void cut(Eigen::MatrixXd & V, Eigen::MatrixXi & F, Eigen::VectorXi & vertex_boundary_markers, Eigen::VectorXi & part_of_original_stroke, Stroke & stroke);
+	static Eigen::MatrixXd cut(Eigen::MatrixXd & V, Eigen::MatrixXi & F, Eigen::VectorXi & vertex_boundary_markers, Eigen::VectorXi & part_of_original_stroke, Stroke & stroke);
 
 
 private:
@@ -27,7 +27,7 @@ private:
 	static int find_closest(std::vector<int> vertices, Eigen::Vector3d base, Mesh& m);
 	//static void reverse_path(Eigen::MatrixXd path_vertices);
 	static void reverse_path(std::vector<int> path_vertices);
-	static void mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m);
+	static void mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m, Stroke& stroke);
 };
 
 

@@ -9,6 +9,7 @@
 #include "Mesh.h"
 #include "SurfacePath.h"
 #include <string>
+#include <sstream>
 
 using namespace std;
 using namespace igl;
@@ -17,9 +18,11 @@ int MeshCut::prev_vertex_count = -1;
 int MeshCut::ID = -1;
 Eigen::MatrixXi MeshCut::EV, MeshCut::FE, MeshCut::EF;
 vector<vector<int>> VV;
+Eigen::MatrixXd test_interior;
+Eigen::MatrixXd V2;
+Eigen::MatrixXi F2;
 
-
-void MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Stroke& stroke) {
+Eigen::MatrixXd MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Stroke& stroke) {
 	if(V.rows() != prev_vertex_count) {
 		ID++;
 		prev_vertex_count = V.rows();
@@ -35,32 +38,29 @@ void MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &verte
 	adjacency_list(m.F, VV);
 	cut_main(m, surface_path, stroke);
 
-	for (int i = 0; i < m.V.rows(); i++) {
-		stroke.viewer.data.add_points(m.V.row(i), Eigen::RowVector3d(1, 0, 1));
-		stroke.viewer.data.add_label(m.V.row(i), to_string(i));
-	}
-
 	stroke.viewer.data.clear();
-	//cout << m.F << endl;
-	stroke.viewer.data.set_mesh(m.V, m.F);
-	Eigen::MatrixXd N_Faces;
-	igl::per_face_normals(m.V, m.F, N_Faces);
-	stroke.viewer.data.set_normals(N_Faces);
+	//stroke.viewer.data.set_mesh(V2, F2);
+stroke.viewer.data.set_mesh(m.V, m.F);
+//	Eigen::MatrixXd N_Faces;
+	//igl::per_face_normals(m.V, m.F, N_Faces);
+	//stroke.viewer.data.set_normals(N_Faces);
+	return test_interior;
 }
 
 
-void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
+void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m, Stroke& stroke) {
 	//project points to 2D. TODO: for now following the example, should be able to work with libigl's project??
 	Eigen::RowVector3d center(0,0,0);
-	for (int i = 0; i < boundary_vertices.size(); i++) {
+	for (int i = 0; i < boundary_vertices.rows(); i++) {
 		center += m.V.row(boundary_vertices[i]);
 	}
-	center /= boundary_vertices.size();
+	center /= boundary_vertices.rows();
 
-	Eigen::Vector3d normal, vec0, vec1;
-	for (int i = 0; i < boundary_vertices.size(); i++) {
+	Eigen::Vector3d normal(0, 0, 0);
+	Eigen::Vector3d vec0, vec1;
+	for (int i = 0; i < boundary_vertices.rows(); i++) {
 		vec0 = m.V.row(boundary_vertices[i]) - center;
-		vec1 = m.V.row(boundary_vertices[(i + 1) % boundary_vertices.size()]) - center;
+		vec1 = m.V.row(boundary_vertices[(i + 1) % boundary_vertices.rows()]) - center;
 		normal += vec1.cross(vec0);
 	}
 	normal.normalize();
@@ -69,25 +69,39 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 	x_vec.normalize();
 	Eigen::Vector3d y_vec = normal.cross(x_vec);
 
-	Eigen::MatrixXd boundary_vertices_2D(0, 2);
+	Eigen::MatrixXd boundary_vertices_2D(boundary_vertices.rows(), 2);
+	Eigen::MatrixXd test(boundary_vertices.rows(), 2);
 	Eigen::Vector3d vec;
 	Eigen::MatrixXi stroke_edges;
 	stroke_edges.resize(boundary_vertices.rows(), 2);
-	for (int i = 0; i < boundary_vertices.size(); i++) {
+	for (int i = 0; i < boundary_vertices.rows(); i++) {
 		vec = m.V.row(boundary_vertices[i]) - center;
-		boundary_vertices_2D.conservativeResize(boundary_vertices_2D.rows() + 1, Eigen::NoChange);
-		boundary_vertices_2D.row(boundary_vertices_2D.rows() - 1) << vec.dot(x_vec), vec.dot(y_vec);
-
+		boundary_vertices_2D.row(i) << vec.dot(x_vec), vec.dot(y_vec);
+		test.row(i) << vec.dot(x_vec), vec.dot(y_vec);
+		
 		stroke_edges.row(i) << i, ((i + 1) % boundary_vertices.size());
 	}
+	cout << "test" << test << endl << endl;
 
-	Eigen::MatrixXd V2;
-	Eigen::MatrixXi F2, vertex_markers, edge_markers;
-	igl::triangle::triangulate(boundary_vertices_2D, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(boundary_vertices_2D.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "Qq25", V2, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
+	Eigen::Matrix4f modelview = stroke.viewer.core.view * stroke.viewer.core.model;
+	Eigen::MatrixXd points_to_project;
+	igl::slice(m.V, boundary_vertices, 1, points_to_project);
+	//igl::project(points_to_project, modelview, stroke.viewer.core.proj, stroke.viewer.core.viewport, boundary_vertices_2D);
+	cout << endl << endl << boundary_vertices_2D.leftCols(2) << endl;
+//	Eigen::MatrixXd V2;
+//	Eigen::MatrixXi F2, 
+	Eigen::MatrixXi vertex_markers, edge_markers;
+	igl::triangle::triangulate(boundary_vertices_2D.leftCols(2), stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(boundary_vertices_2D.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "q25", V2, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
+	test_interior = V2;
 
-																																																															 //project back to 3D
+	int original_v_size = m.V.rows()-boundary_vertices.rows();																																																				 
+	//project back to 3D
 	for (int i = 0; i < V2.rows(); i++) {
-		if (i < boundary_vertices.size()) {//Original boundary vertex
+		if (i < boundary_vertices.rows()) {//Original boundary 
+			Eigen::Vector3d v_tmp = center.transpose();
+			v_tmp += x_vec*V2(i, 0);
+			v_tmp += y_vec*V2(i, 1);
+		//	m.V.row(boundary_vertices[i]) = v_tmp.transpose();
 		}
 		else {
 			Eigen::Vector3d v_tmp = center.transpose();
@@ -95,6 +109,8 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 			v_tmp += y_vec*V2(i, 1);
 			m.V.conservativeResize(m.V.rows() + 1, Eigen::NoChange);
 			m.V.row(m.V.rows() - 1) << v_tmp.transpose(); //Add interior vertex of the cut plane to mesh
+			//Eigen::RowVector3d pt = igl::unproject(Eigen::Vector3f(V2(i, 0), V2(i, 1), boundary_vertices_2D(i, 2)), modelview, stroke.viewer.core.proj, stroke.viewer.core.viewport).transpose().cast<double>();
+			//m.V.row(m.V.rows() - 1) << pt;
 		}
 	}
 
@@ -102,10 +118,10 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 	for (int i = 0; i < F2.rows(); i++) {
 		m.F.conservativeResize(m.F.rows() + 1, Eigen::NoChange);
 		for (int j = 0; j < 3; j++) { //Go over the face vertices
-			if (F2(i, j) < boundary_vertices.size()) { //Original boundary vertex
+			if (F2(i, j) < boundary_vertices.rows()) { //Original boundary vertex
 				vert_idx_in_mesh = boundary_vertices[F2(i, j)];
 			} else { //Interior to cut plane
-				vert_idx_in_mesh = F2(i, j) + m.V.rows(); //Add index to the currently existing number of mesh vertices (which already includes the boundary vertices on the cut stroke)
+				vert_idx_in_mesh = F2(i, j) + original_v_size; //Add index to the currently existing number of mesh vertices (which already includes the boundary vertices on the cut stroke)
 			}
 			m.F(m.F.rows() - 1, j) = vert_idx_in_mesh;
 		}
@@ -117,10 +133,7 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 
 void MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke){
 	Eigen::VectorXi boundary_vertices = remesh_cut_remove_inside(m, surface_path);
-	for (int i = 0; i < boundary_vertices.rows(); i++) {
-		stroke.viewer.data.add_points(m.V.row(boundary_vertices[i]), Eigen::RowVector3d(0, 1, 0));
-	}
-	//mesh_open_hole(boundary_vertices, m);
+	mesh_open_hole(boundary_vertices, m, stroke);
 }
 
 Eigen::VectorXi MeshCut::remesh_cut_remove_inside(Mesh& m, SurfacePath& surface_path) {

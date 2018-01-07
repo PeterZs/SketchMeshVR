@@ -412,7 +412,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			//DO cutting
 			cout << "mouse released after stroke already drawn" << endl;
 			added_stroke->append_final_point();
-			MeshCut::cut(V, F, vertex_boundary_markers, part_of_original_stroke, *added_stroke);
+			Eigen::MatrixXd test_points = MeshCut::cut(V, F, vertex_boundary_markers, part_of_original_stroke, *added_stroke);
 			cut_stroke_already_drawn = false; //Reset
 		} else { //We're finished drawing the cut stroke, prepare for when user draws the final stroke to remove the part
 			cout << "mouse released with new cut stroke" << endl;
