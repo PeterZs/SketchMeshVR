@@ -43,6 +43,9 @@ void MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &verte
 	stroke.viewer.data.clear();
 	//cout << m.F << endl;
 	stroke.viewer.data.set_mesh(m.V, m.F);
+	Eigen::MatrixXd N_Faces;
+	igl::per_face_normals(m.V, m.F, N_Faces);
+	stroke.viewer.data.set_normals(N_Faces);
 }
 
 
@@ -297,11 +300,6 @@ void MeshCut::stitch(std::vector<int> path_vertices, std::vector<int> boundary_v
 	
 	boundary_vertices = reorder(boundary_vertices, m.V.row(path_vertices[0]), m);
 
-	cout << "Fo" << endl;
-	for (int i = 0; i < boundary_vertices.size(); i++) {
-		cout << boundary_vertices[i] << endl;
-	}
-
 	Eigen::RowVector3d start_path_v = m.V.row(path_vertices[0]);
 	Eigen::RowVector3d start_outer_v = m.V.row(boundary_vertices[0]);
 	Eigen::RowVector3d path_v = start_path_v;
@@ -319,32 +317,22 @@ void MeshCut::stitch(std::vector<int> path_vertices, std::vector<int> boundary_v
 		
 		proceed_outer_v = true;
 		if (outer_idx == boundary_vertices.size()) {
-			cout << next_outer_v_idx << endl;
 			proceed_outer_v = false;
 		}
 		else if (path_idx == path_vertices.size()) {
-			cout << "option2" << endl;
 			proceed_outer_v = true;
 		}
-		else if ((next_path_v - path_v).dot(next_outer_v - outer_v) < 0) { //Open path
-			cout << "option3" << endl;
+		else if ((path_v - next_outer_v).norm() < (outer_v - next_path_v).norm()) { 
 			proceed_outer_v = true;
-		}
-		else if ((path_v - next_outer_v).norm() < (outer_v - next_path_v).norm()) {
-			proceed_outer_v = true;
-			cout << "option4" << endl;
 		}
 		else {
 			proceed_outer_v = false;
-			cout << "option5" << endl;
-
 		}
 
 		//Add faces
 		if (proceed_outer_v) {
 			m.F.conservativeResize(m.F.rows() + 1, m.F.cols());
 			m.F.row(m.F.rows() - 1) << path_v_idx, next_outer_v_idx, outer_v_idx;
-			cout << "first" << path_v_idx << " " << next_outer_v_idx << " " << outer_v_idx << endl;
 			outer_v = next_outer_v;
 			outer_v_idx = next_outer_v_idx;
 			outer_idx++;
@@ -352,7 +340,6 @@ void MeshCut::stitch(std::vector<int> path_vertices, std::vector<int> boundary_v
 		else {
 			m.F.conservativeResize(m.F.rows() + 1, m.F.cols());
 			m.F.row(m.F.rows() - 1) << next_path_v_idx, outer_v_idx, path_v_idx;
-			cout << "second" << next_path_v_idx << " " << outer_v_idx << " "<< path_v_idx << endl;
 			path_v = next_path_v;
 			path_v_idx = next_path_v_idx;
 			path_idx++;

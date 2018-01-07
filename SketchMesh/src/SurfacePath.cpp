@@ -43,7 +43,7 @@ void SurfacePath::create_from_stroke(const Stroke & stroke) {
 
 		bool forward;
 		faceID = extend_path(prev_p, next_p, faceID, forward, false, modelview);
-
+		
 		if(!forward) {
 			next_p = prev_p;
 		}
@@ -70,7 +70,7 @@ int SurfacePath::extend_path(int prev_p, int next_p, int faceID, bool& forward, 
 	igl::unproject_ray(tmp, modelview, origin_stroke->viewer.core.proj, origin_stroke->viewer.core.viewport, source, dir);
 	Plane cutPlane(source, stroke3DPoints.row(prev_p), stroke3DPoints.row(next_p));
 
-	int edge = NULL;
+	int edge = -1;
 	pair<int, int> strokeEdge(prev_p, next_p);
 
 	int proj_faceID = -1;
@@ -83,8 +83,9 @@ int SurfacePath::extend_path(int prev_p, int next_p, int faceID, bool& forward, 
 		}
 
 		edge = find_next_edge(strokeEdge, edge, faceID, modelview);
-		if(edge == NULL) {
-			return NULL;
+		if(edge == -1) {
+			cout << "This shouldn't happen" << endl;
+			return -1;
 		}
 
 		Eigen::Vector3d v = cutPlane.cross_point(origin_stroke->get_V().row(EV(edge, 0)), origin_stroke->get_V().row(EV(edge, 1)));
@@ -115,7 +116,7 @@ int SurfacePath::find_next_edge(pair<int, int> strokeEdge, int prev_edge, int po
 
 			tmp = origin_stroke->get_V().row(EV(edge, 1));
 			igl::project(tmp, modelview, origin_stroke->viewer.core.proj, origin_stroke->viewer.core.viewport, end);
-			
+
 			stroke_start = stroke2DPoints.row(strokeEdge.first).transpose();
 			stroke_end = stroke2DPoints.row(strokeEdge.second).transpose();
 			if(edges2D_cross({stroke_start, stroke_end}, {start.block(0,0,1,2).transpose(), end.block(0,0,1,2).transpose()})) {
@@ -123,7 +124,7 @@ int SurfacePath::find_next_edge(pair<int, int> strokeEdge, int prev_edge, int po
 			}
 		}
 	}
-	return NULL;
+	return -1;
 }
 
 
