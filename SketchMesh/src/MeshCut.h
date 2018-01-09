@@ -8,7 +8,7 @@
 class MeshCut {
 
 public:
-	static Eigen::MatrixXd cut(Eigen::MatrixXd & V, Eigen::MatrixXi & F, Eigen::VectorXi & vertex_boundary_markers, Eigen::VectorXi & part_of_original_stroke, Stroke & stroke);
+	static void cut(Eigen::MatrixXd & V, Eigen::MatrixXi & F, Eigen::VectorXi & vertex_boundary_markers, Eigen::VectorXi & part_of_original_stroke, Stroke & stroke);
 
 
 private:
@@ -27,6 +27,12 @@ private:
 	static int find_closest(std::vector<int> vertices, Eigen::Vector3d base, Mesh& m);
 	//static void reverse_path(Eigen::MatrixXd path_vertices);
 	static void reverse_path(std::vector<int> path_vertices);
+	static double compute_average_length_of_crossing_edges(std::vector<PathElement> path, Mesh& m);
+	static double compute_average_distance_between_onPolygon_vertices(std::vector<PathElement> path, Mesh & m);
+	static double get_length(Eigen::MatrixX3d path_vertices);
+	static Eigen::MatrixXd resample_by_length_with_fixes(std::vector<int> path_vertices, Mesh & m, double unit_length);
+	static Eigen::MatrixX3d resample_stroke(Eigen::MatrixX3d & original_stroke3DPoints);
+	static void move_to_middle(Eigen::MatrixX3d & positions, Eigen::MatrixX3d & new_positions);
 	static void mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m, Stroke& stroke);
 };
 
