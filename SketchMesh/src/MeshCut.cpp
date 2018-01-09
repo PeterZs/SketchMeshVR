@@ -91,9 +91,11 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m, Stroke
 			Eigen::Vector3d v_tmp = center.transpose();
 			v_tmp += x_vec*V2(i, 0);
 			v_tmp += y_vec*V2(i, 1);
-			m.V.row(original_v_size+i) = v_tmp;
-		//	m.V.row(boundary_vertices[i]) = v_tmp.transpose();
+		//	m.V.row(original_v_size+i) = v_tmp.transpose();
+			m.V.row(boundary_vertices[i]) = v_tmp.transpose();
 		}
+
+
 		else {
 			Eigen::Vector3d v_tmp = center.transpose();
 			v_tmp += x_vec*V2(i, 0);
@@ -207,16 +209,18 @@ Eigen::VectorXi MeshCut::remesh_cut_remove_inside(Mesh& m, SurfacePath& surface_
 	row_idx = Eigen::VectorXi::Map(clean_faces.data(), clean_faces.size()); //Create an Eigen::VectorXi from a std::vector
 	col_idx.col(0) << 0, 1, 2;
 	igl::slice(m.F, row_idx, col_idx, tmp_F); //Keep only the clean faces in the mesh
-	
+
 	m.F = tmp_F;
 	Eigen::MatrixXi EV_new;
 	igl::edge_topology(m.V, m.F, EV_new, FE, EF);
 	igl::vertex_triangle_adjacency(m.V.rows(), m.F, VF, VI);
+	cout << "getting out" << endl;
 
 	outer_boundary_vertices = sort_boundary_vertices(surface_path.get_path()[0].get_vertex(), outer_boundary_vertices, m);
 	if (!remove_inside_faces) {
 		inner_boundary_vertices = sort_boundary_vertices(surface_path.get_path()[0].get_vertex(), inner_boundary_vertices, m);
 	}
+	cout << "getting out" << endl;
 
 	vector<int> path_vertices;
 	Eigen::MatrixX3d path_vert_positions(path.size(), 3);
@@ -280,13 +284,41 @@ vector<int> MeshCut::sort_boundary_vertices(Eigen::Vector3d start_vertex, std::v
 	int start_v = find_closest(boundary_vertices, start_vertex, m);
 	int v = start_v;
 	int prev = start_v;
-
+	vector<int> visited(m.V.rows(), 0);
+	cout <<  m.part_of_original_stroke << endl;
+	bool found_another_one;
 	while (true) {
 		sorted_boundary_vertices.push_back(v);
 		for (int i = 0; i < VV[v].size(); i++) {
-			if (std::find(boundary_vertices.begin(), boundary_vertices.end(), VV[v][i]) != boundary_vertices.end() && VV[v][i] != prev) {
-				prev = v;
-				v = VV[v][i];
+			if ((std::find(boundary_vertices.begin(), boundary_vertices.end(), VV[v][i]) != boundary_vertices.end()) && !visited[VV[v][i]]) { //Find a neighboring vertex that's also on the boundary, and hasn't been visited before (original boundary vertices are never set as visited, check in next line)
+				if(VV[v][i] == prev) {
+					if(m.part_of_original_stroke(VV[v][i])) {//The found vertex is on the original boundary and the previously visited vertex. First check if there's any more vertices available that are not on the original boundary, as the boundary vertex is the last point before wrapping around (has to do with loops)
+						//do stuff
+						found_another_one = false;
+						for(int j = i + 1; j < VV[v].size(); j++) {
+							if((std::find(boundary_vertices.begin(), boundary_vertices.end(), VV[v][j]) != boundary_vertices.end()) && !visited[VV[v][j]] && VV[v][j] != prev) { //Another suitable vertex that ISN'T the previous one
+								prev = v;
+								v = VV[v][j];
+								found_another_one = true;
+								break;
+							}
+						}
+						if(!found_another_one) {
+							prev = v;
+							v = VV[v][i];
+						}
+
+					} else { //The found vertex is the previously found vertex but isn't on the original boundary. Backtracking on interior vertices is not allowed, so search for next option!
+						continue;
+					}
+				} else {
+					prev = v;
+					v = VV[v][i];
+				}
+
+				if(!m.part_of_original_stroke(prev)) {
+					visited[prev] = 1; //Do this afterwards, so that the start_v doesn't get set as visited (otherwise we will never reach it again and won't be able to break the loop)
+				}
 				break;
 			}
 		}
@@ -294,6 +326,7 @@ vector<int> MeshCut::sort_boundary_vertices(Eigen::Vector3d start_vertex, std::v
 			break;
 		}
 	}
+	cout << " yippie" << endl;
 	return sorted_boundary_vertices;
 }
 
@@ -301,8 +334,9 @@ vector<int> MeshCut::sort_boundary_vertices(Eigen::Vector3d start_vertex, std::v
 	 int closest = vertices[0];
 	 double min = (m.V.row(vertices[0]) - base.transpose()).norm(); 
 	 double d;
+
 	 for (int i = 1; i<vertices.size(); i++) {
-		d = (m.V.row(vertices[i]), base.transpose()).norm(); 
+		d = (m.V.row(vertices[i]) - base.transpose()).norm(); 
 		if (d < min) {
 			min = d;
 			closest = vertices[i];

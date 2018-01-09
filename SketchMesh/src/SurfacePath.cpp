@@ -101,8 +101,6 @@ int SurfacePath::extend_path(int prev_p, int next_p, int faceID, bool& forward, 
 	}
 }
 
-
-
 int SurfacePath::find_next_edge(pair<int, int> strokeEdge, int prev_edge, int polygon, Eigen::Matrix4f modelview) {
 	Eigen::RowVector2d stroke_start, stroke_end;
 	Eigen::RowVector3d start, end;
@@ -149,7 +147,6 @@ bool SurfacePath::edges2D_cross(pair<Eigen::Vector2d, Eigen::Vector2d> edge1, pa
 bool SurfacePath::front_facing(int faceID) {
 	return is_counter_clockwise(faceID);
 }
-
 
 bool SurfacePath::is_counter_clockwise(int faceID) {
 	double total_area = 0;
