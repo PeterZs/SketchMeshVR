@@ -28,22 +28,19 @@ Eigen::MatrixXd MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::Vect
 		prev_vertex_count = V.rows();
 	}
 	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, ID);
-
+	cout << "so far" << endl;
 	SurfacePath surface_path;
 	surface_path.create_from_stroke(stroke); //Prepares the drawn stroke (inserts extra points at the edges that it crosses)
-	for(int i = 0; i < surface_path.get_path().size(); i++) { //NOTE: cut stroke points that lie inside the polygons aren't visible because they're "overwritten" by the pink ones
-		//stroke.viewer.data.add_points(surface_path.get_path()[i].get_vertex().transpose(), Eigen::RowVector3d(1, 0, 0));
-	}
-
+	cout << "So good" << endl;
 	adjacency_list(m.F, VV);
 	cut_main(m, surface_path, stroke);
-
+	cout << "doing stuff" << endl;
 	stroke.viewer.data.clear();
 	//stroke.viewer.data.set_mesh(V2, F2);
 stroke.viewer.data.set_mesh(m.V, m.F);
-//	Eigen::MatrixXd N_Faces;
-	//igl::per_face_normals(m.V, m.F, N_Faces);
-	//stroke.viewer.data.set_normals(N_Faces);
+	Eigen::MatrixXd N_Faces;
+	igl::per_face_normals(m.V, m.F, N_Faces);
+	stroke.viewer.data.set_normals(N_Faces);
 	return test_interior;
 }
 
@@ -70,24 +67,19 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m, Stroke
 	Eigen::Vector3d y_vec = normal.cross(x_vec);
 
 	Eigen::MatrixXd boundary_vertices_2D(boundary_vertices.rows(), 2);
-	Eigen::MatrixXd test(boundary_vertices.rows(), 2);
 	Eigen::Vector3d vec;
 	Eigen::MatrixXi stroke_edges;
 	stroke_edges.resize(boundary_vertices.rows(), 2);
 	for (int i = 0; i < boundary_vertices.rows(); i++) {
 		vec = m.V.row(boundary_vertices[i]) - center;
 		boundary_vertices_2D.row(i) << vec.dot(x_vec), vec.dot(y_vec);
-		test.row(i) << vec.dot(x_vec), vec.dot(y_vec);
-		
 		stroke_edges.row(i) << i, ((i + 1) % boundary_vertices.size());
 	}
-	cout << "test" << test << endl << endl;
 
 	Eigen::Matrix4f modelview = stroke.viewer.core.view * stroke.viewer.core.model;
 	Eigen::MatrixXd points_to_project;
 	igl::slice(m.V, boundary_vertices, 1, points_to_project);
 	//igl::project(points_to_project, modelview, stroke.viewer.core.proj, stroke.viewer.core.viewport, boundary_vertices_2D);
-	cout << endl << endl << boundary_vertices_2D.leftCols(2) << endl;
 //	Eigen::MatrixXd V2;
 //	Eigen::MatrixXi F2, 
 	Eigen::MatrixXi vertex_markers, edge_markers;

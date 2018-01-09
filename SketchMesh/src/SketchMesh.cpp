@@ -202,7 +202,7 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 	}
 	else if(tool_mode == CUT) {
 		if(cut_stroke_already_drawn) {
-			cout << "clicked while cut stroke alredy drawn" << endl;
+			cout << "clicked while cut stroke already drawn" << endl;
 			return true;
 		}
 		cout << "clicked with no cut stroke drawn yet" << endl;
@@ -412,6 +412,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			//DO cutting
 			cout << "mouse released after stroke already drawn" << endl;
 			added_stroke->append_final_point();
+			cout << "managed to append" << endl;
 			Eigen::MatrixXd test_points = MeshCut::cut(V, F, vertex_boundary_markers, part_of_original_stroke, *added_stroke);
 			cut_stroke_already_drawn = false; //Reset
 		} else { //We're finished drawing the cut stroke, prepare for when user draws the final stroke to remove the part
