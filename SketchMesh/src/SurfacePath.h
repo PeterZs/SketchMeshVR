@@ -11,6 +11,7 @@ public:
 
 
 	SurfacePath();
+	void create_from_stroke_extrude(const Stroke & stroke);
 	void create_from_stroke(const Stroke& stroke);
 	std::vector<PathElement> get_path();
 

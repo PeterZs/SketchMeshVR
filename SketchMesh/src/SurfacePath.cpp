@@ -15,7 +15,57 @@ SurfacePath::SurfacePath() {
 
 }
 
+void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
+	origin_stroke = new Stroke(stroke);
+	Eigen::Matrix4f modelview = stroke.viewer.core.view * stroke.viewer.core.model;
+	int faceID = -1;
+	Eigen::Vector3f bc;
+
+	int prev_p = stroke.get_stroke2DPoints().rows()-1; //Start at end-1
+	int start_p = prev_p;
+	int next_p;
+	igl::unproject_onto_mesh(stroke.get_stroke2DPoints().row(prev_p).cast<float>(), modelview, stroke.viewer.core.proj, stroke.viewer.core.viewport, stroke.get_V(), stroke.get_F(), faceID, bc);
+
+	int start_face = faceID;
+	int n = 0;
+	Eigen::RowVector3d pt(0, 0, 0);
+
+	igl::edge_topology(stroke.get_V(), stroke.get_F(), EV, FE, EF);
+	igl::per_face_normals(stroke.get_V(), stroke.get_F(), N_faces);
+
+	while(true) {
+		next_p = n;
+
+		pt = unproject_onto_polygon(stroke.get_stroke2DPoints().row(prev_p), faceID, modelview);
+		PathElement newElement(faceID, PathElement::FACE, pt);
+		path.push_back(newElement);
+
+		bool forward;
+		faceID = extend_path(prev_p, next_p, faceID, forward, false, modelview);
+
+		if(!forward) {
+			next_p = prev_p;
+		}
+
+		if(next_p == start_p && faceID == start_face) {
+			break;
+		}
+
+		if(front_facing(faceID)) {
+			n = next_p + 1;
+		} else {
+			n = next_p - 1;
+		}
+		prev_p = next_p;
+	}
+	pt = unproject_onto_polygon(stroke.get_stroke2DPoints().row(start_p), faceID, modelview);
+	PathElement lastElement(faceID, PathElement::FACE, pt);
+	path.push_back(lastElement);
+
+}
+
 //Adds stroke elements at the intersection points of the original drawn stroke with mesh edges
+//Used in CUT
 void SurfacePath::create_from_stroke(const Stroke & stroke) {
 	origin_stroke = new Stroke(stroke);
 	Eigen::Matrix4f modelview = stroke.viewer.core.view * stroke.viewer.core.model;

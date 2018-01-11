@@ -17,7 +17,7 @@ public:
 	bool empty3D() const { return stroke3DPoints.isZero(); }
 	void strokeAddSegment(int mouse_x, int mouse_y);
 	bool strokeAddSegmentAdd(int mouse_x, int mouse_y);
-	bool strokeAddSegmentCut(int mouse_x, int mouse_y);
+	void strokeAddSegmentCut(int mouse_x, int mouse_y);
 	void append_final_point();
 	void strokeAddSegmentExtrusion(int mouse_x, int mouse_y);
 	bool toLoop();
@@ -35,6 +35,7 @@ public:
 	void snap_to_vertices(Eigen::VectorXi & vertex_boundary_markers);
 
 	void mirror_on_backside(Eigen::VectorXi & vertex_boundary_markers, std::unordered_map<int, int> backside_vertex_map);
+	void counter_clockwise();
 
 	bool is_loop;
 	bool has_points_on_mesh;
@@ -64,7 +65,6 @@ private:
 	std::vector<int> closest_vert_bindings;
 	std::vector<int> added_stroke_final_vertices;
 
-	void counter_clockwise();
 	static Eigen::MatrixX2d resample_stroke(Eigen::MatrixX2d & original_stroke2DPoints);
 	static void move_to_middle(Eigen::MatrixX2d &positions, Eigen::MatrixX2d &new_positions);
 	static void generate_backfaces(Eigen::MatrixXi &faces, Eigen::MatrixXi &back_faces);
