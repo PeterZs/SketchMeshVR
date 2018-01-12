@@ -19,7 +19,8 @@ public:
 	bool strokeAddSegmentAdd(int mouse_x, int mouse_y);
 	void strokeAddSegmentCut(int mouse_x, int mouse_y);
 	void append_final_point();
-	void strokeAddSegmentExtrusion(int mouse_x, int mouse_y);
+	void strokeAddSegmentExtrusionBase(int mouse_x, int mouse_y);
+	void strokeAddSegmentExtrusionSilhouette(int mouse_x, int mouse_y);
 	bool toLoop();
 	void strokeReset();
     std::unordered_map<int, int> generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke);

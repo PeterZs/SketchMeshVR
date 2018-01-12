@@ -23,23 +23,12 @@ Eigen::RowVector3d Plane::cross_point(Eigen::RowVector3d edge_start, Eigen::RowV
 	return result;
 }
 
-Eigen::RowVector3d Plane::cross_point_ray(Eigen::Vector3d ray_source, Eigen::Vector3d ray_dir) {
-	double plane_to_source = signed_distance(ray_source);
-	double cos_ = cos(-normal, ray_dir);
-	return ray_source + ray_dir*(plane_to_source/cos_);
+Eigen::RowVector3d Plane::intersect_point(Eigen::Vector3d ray_source, Eigen::Vector3d ray_dir) {
+	double t = ((base - ray_source).dot(normal)) / (ray_dir.dot(normal));
+	return (ray_source + ray_dir*t).transpose();
 }
 
 double Plane::signed_distance(Eigen::RowVector3d v) {
 	Eigen::Vector3d vec = v.transpose() - base;
 	return normal.dot(vec);
-}
-
-//TODO: convince myself that this works. comes from teddy. rename and move to better place? Comes from teddy.vector3
-double Plane::cos(Eigen::Vector3d u, Eigen::Vector3d v) {
-	double length = sqrt((u.dot(u))*(v.dot(v)));
-	if(length > 0) {
-		return u.dot(v) / length;
-	} else {
-		return 0;
-	}
 }

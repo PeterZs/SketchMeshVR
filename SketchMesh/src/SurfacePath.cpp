@@ -134,7 +134,7 @@ int SurfacePath::extend_path(int prev_p, int next_p, int faceID, bool& forward, 
 
 		edge = find_next_edge(strokeEdge, edge, faceID, modelview);
 		if(edge == -1) {
-			cout << "This shouldn't happen" << endl;
+			cout << "This (maybe) shouldn't happen" << endl; //TODO
 			return -1;
 		}
 

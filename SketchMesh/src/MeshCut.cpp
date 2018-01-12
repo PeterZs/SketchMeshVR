@@ -65,17 +65,16 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m, Stroke
 
 	Eigen::MatrixXd boundary_vertices_2D(boundary_vertices.rows(), 2);
 	Eigen::Vector3d vec;
-	Eigen::MatrixXi stroke_edges;
-	stroke_edges.resize(boundary_vertices.rows(), 2);
+	Eigen::MatrixXi stroke_edges(boundary_vertices.rows(), 2);
 	for (int i = 0; i < boundary_vertices.rows(); i++) {
 		vec = m.V.row(boundary_vertices[i]) - center;
 		boundary_vertices_2D.row(i) << vec.dot(x_vec), vec.dot(y_vec);
 		stroke_edges.row(i) << i, ((i + 1) % boundary_vertices.size());
 	}
 
-	Eigen::Matrix4f modelview = stroke.viewer.core.view * stroke.viewer.core.model;
-	Eigen::MatrixXd points_to_project;
-	igl::slice(m.V, boundary_vertices, 1, points_to_project);
+	//Eigen::Matrix4f modelview = stroke.viewer.core.view * stroke.viewer.core.model;
+	//Eigen::MatrixXd points_to_project;
+//	igl::slice(m.V, boundary_vertices, 1, points_to_project);
 	//igl::project(points_to_project, modelview, stroke.viewer.core.proj, stroke.viewer.core.viewport, boundary_vertices_2D);
 	Eigen::MatrixXd V2;
 	Eigen::MatrixXi F2;

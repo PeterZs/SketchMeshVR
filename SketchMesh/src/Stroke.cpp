@@ -240,8 +240,8 @@ void Stroke::append_final_point() {
 
 }
 
-//For drawing extrusion strokes. Need to start on the existing mesh
-void Stroke::strokeAddSegmentExtrusion(int mouse_x, int mouse_y) {
+//For drawing extrusion base strokes. Need to be drawn entirely on the existing mesh
+void Stroke::strokeAddSegmentExtrusionBase(int mouse_x, int mouse_y) {
 	//OpenGL has origin at left bottom, window(s) has origin at left top
 	double x = mouse_x;
 	double y = viewer.core.viewport(3) - mouse_y;
@@ -252,7 +252,7 @@ void Stroke::strokeAddSegmentExtrusion(int mouse_x, int mouse_y) {
 	if(!empty2D()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if(timePast < 10000000) { //Don't add another segment before x nanoseconds
+		if(timePast < 100000000) { //Don't add another segment before x nanoseconds
 			return;
 		}
 	}
@@ -302,6 +302,47 @@ void Stroke::strokeAddSegmentExtrusion(int mouse_x, int mouse_y) {
 
 	_time1 = std::chrono::high_resolution_clock::now(); //restart the "start" timer
 }
+
+//For drawing extrusion silhouette strokes. Draw in a perpendicular view. CAUTION: do not use stroke3DPoints as they are. Project onto the right plane first.
+void Stroke::strokeAddSegmentExtrusionSilhouette(int mouse_x, int mouse_y) {
+	//OpenGL has origin at left bottom, window(s) has origin at left top
+	double x = mouse_x;
+	double y = viewer.core.viewport(3) - mouse_y;
+	if(!empty2D() && x == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && y == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) { //Check that the point is new compared to last time
+		return;
+	}
+
+	if(!empty2D()) {
+		_time2 = std::chrono::high_resolution_clock::now();
+		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
+		if(timePast < 100000000) { //Don't add another segment before x nanoseconds
+			return;
+		}
+	}
+
+	Eigen::Matrix4f modelview = viewer.core.view * viewer.core.model;
+	Eigen::RowVector3d pt(0, 0, 0);
+
+	pt = igl::unproject(Eigen::Vector3f(x, y, 0.8f), modelview, viewer.core.proj, viewer.core.viewport).transpose().cast<double>();
+	if(stroke2DPoints.rows() == 1 && empty2D()) { //Add first point
+		stroke2DPoints.row(0) << x, y;
+		stroke3DPoints.row(0) << pt[0], pt[1], pt[2];
+	} else {
+		stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, stroke2DPoints.cols());
+		stroke2DPoints.row(stroke2DPoints.rows() - 1) << x, y;
+
+		stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, stroke3DPoints.cols());
+		stroke3DPoints.row(stroke3DPoints.rows() - 1) << pt[0], pt[1], pt[2];
+
+		stroke_edges.conservativeResize(stroke_edges.rows() + 1, stroke_edges.cols());
+		stroke_edges.row(stroke_edges.rows() - 1) << stroke2DPoints.rows() - 2, stroke2DPoints.rows() - 1;
+	}
+	//using set_stroke_points will remove all previous strokes, using add_stroke_points might create duplicates
+	viewer.data.add_points(stroke3DPoints.row(stroke3DPoints.rows() - 1), Eigen::RowVector3d(0, 0, 1));
+
+	_time1 = std::chrono::high_resolution_clock::now(); //restart the "start" timer
+}
+
 
 void Stroke::strokeReset() {
 	stroke2DPoints.resize(1, 2);

@@ -24,6 +24,7 @@
 #include "CurveDeformation.h"
 #include "MeshCut.h"
 #include "MeshExtrusion.h"
+#include "SurfacePath.h"
 
 
 using namespace std;
@@ -68,6 +69,9 @@ bool stroke_was_removed = false;
 int remove_stroke_clicked = 0;
 bool cut_stroke_already_drawn = false;
 bool extrusion_base_already_drawn = false;
+
+SurfacePath base_surface_path;
+
 
 bool callback_key_down(Viewer& viewer, unsigned char key, int modifiers) {
 	if (key == '1') {
@@ -218,13 +222,14 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 		if(extrusion_base_already_drawn) {
 			cout << "clicked while the extrude base was already drawn" << endl;
 			added_stroke = new Stroke(V, F, viewer, -3); //Use ID -3 to indicate that is is a extrusion silhouette stroke
-			added_stroke->strokeAddSegmentExtrusion(down_mouse_x, down_mouse_y);
+			added_stroke->strokeAddSegmentExtrusionSilhouette(down_mouse_x, down_mouse_y);
 		} else {
 			cout << "clicked with no extrude base yet" << endl;
 			extrusion_base = new Stroke(V, F, viewer, -2); //Use ID -2 to indicate that it is a extrude base stroke
-			extrusion_base->strokeAddSegmentExtrusion(down_mouse_x, down_mouse_y);
-			skip_standardcallback = true;
+			extrusion_base->strokeAddSegmentExtrusionBase(down_mouse_x, down_mouse_y);
 		}
+		skip_standardcallback = true;
+
 	}
 
 	return skip_standardcallback; //Will make sure that we use standard navigation responses if we didn't do special actions and vice versa
@@ -248,9 +253,9 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 		return true;
 	} else if(tool_mode == EXTRUDE && viewer.down) {
 		if(extrusion_base_already_drawn) {
-			added_stroke->strokeAddSegmentExtrusion(mouse_x, mouse_y);
+			added_stroke->strokeAddSegmentExtrusionSilhouette(mouse_x, mouse_y);
 		} else {
-			extrusion_base->strokeAddSegmentExtrusion(mouse_x, mouse_y);
+			extrusion_base->strokeAddSegmentExtrusionBase(mouse_x, mouse_y);
 		}
 		return true;
 	} else if(tool_mode == PULL && viewer.down && handleID != -1) {
@@ -440,22 +445,19 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 	}
 	else if(tool_mode == EXTRUDE) {
 		if(extrusion_base_already_drawn) { //User has drawn the silhouette stroke for extrusion
-			if(!added_stroke->has_points_on_mesh) {
-				mouse_has_moved = false;
-				return true;
-			}
 			cout << "mouse released after extrusion silhouette drawn" << endl;
 			added_stroke->toLoop();
-			MeshExtrusion::extrude(V, F, vertex_boundary_markers, part_of_original_stroke, *extrusion_base, *added_stroke);
+			MeshExtrusion::extrude_main(V, F, vertex_boundary_markers, part_of_original_stroke, base_surface_path, *added_stroke);
 			extrusion_base_already_drawn = false; //Reset
 		} else {
 			if(!extrusion_base->has_points_on_mesh) {
 				mouse_has_moved = false;
 				return true;
 			}
-			cout << "mouse released after extrusion base drawn" << endl;
 			extrusion_base->toLoop();
 			extrusion_base_already_drawn = true;
+			MeshExtrusion::extrude_prepare(*extrusion_base, base_surface_path);
+			cout << "mouse released after extrusion base drawn" << endl;
 		}
 	}
 
