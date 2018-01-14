@@ -229,7 +229,6 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 			extrusion_base->strokeAddSegmentExtrusionBase(down_mouse_x, down_mouse_y);
 		}
 		skip_standardcallback = true;
-
 	}
 
 	return skip_standardcallback; //Will make sure that we use standard navigation responses if we didn't do special actions and vice versa
@@ -433,7 +432,6 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			return true;
 		}
 		if(cut_stroke_already_drawn) { //User has drawn the final stroke for removing the part
-			//DO cutting
 			cout << "mouse released after stroke already drawn" << endl;
 			added_stroke->append_final_point();
 			MeshCut::cut(V, F, vertex_boundary_markers, part_of_original_stroke, *added_stroke);

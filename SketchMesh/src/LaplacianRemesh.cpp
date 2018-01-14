@@ -29,14 +29,6 @@ Eigen::VectorXi LaplacianRemesh::remesh_extrusion_remove_inside(Mesh & m, Surfac
 	is_front_loop = true;
 	remove_inside_faces = true;
 	adjacency_list(m.F, VV);
-	vector<PathElement> path = surface_path.get_path();
-	Eigen::MatrixXd test_path(0, 3);
-	for(int i = 0; i < path.size(); i++) {
-		test_path.conservativeResize(test_path.rows() + 1, Eigen::NoChange);
-		test_path.row(test_path.rows() - 1) = path[i].get_vertex();
-	}
-	Eigen::Matrix4f modelview = stroke.viewer.core.view * stroke.viewer.core.model;
-	cout << "Is the base stroke actually counter-clockwise?  " << is_counter_clockwise_boundaries(test_path, modelview, stroke.viewer.core.proj, stroke.viewer.core.viewport);
 	return remesh(m, surface_path, stroke);
 }
 
@@ -74,16 +66,13 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Stro
 	//Collect vertices on the boundary
 	vector<int> outer_boundary_vertices;
 	vector<int> inner_boundary_vertices;
-	cout << "inner vertices are: ";
 	for(int i = 0; i < m.V.rows(); i++) {
 		if(dirty_vertices[i] < 0) {
 			inner_boundary_vertices.push_back(i);
-			cout << i << " ";
 		} else if(dirty_vertices[i] > 0) {
 			outer_boundary_vertices.push_back(i);
 		}
 	}
-	cout << endl;
 
 
 	//Collect faces along the path
@@ -127,25 +116,17 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Stro
 	igl::vertex_triangle_adjacency(m.V.rows(), m.F, VF, VI);
 
 
-	stroke.viewer.data.add_points(surface_path.get_path()[1].get_vertex().transpose(), Eigen::RowVector3d(0, 1, 0));
-	for(int i = 0; i < surface_path.get_path().size(); i++) {
-		stroke.viewer.data.add_label(surface_path.get_path()[i].get_vertex().transpose(), to_string(i));
-	}
-
-
 	//NOTE: Output from sort_boundary_vertices is not necessarily counter-clockwise
 	outer_boundary_vertices = sort_boundary_vertices(path[0].get_vertex(), outer_boundary_vertices, m);
 	if(!remove_inside_faces) {
 		inner_boundary_vertices = sort_boundary_vertices(path[0].get_vertex(), inner_boundary_vertices, m);
 	}
-	for(int i = 0; i < outer_boundary_vertices.size(); i++) {
-		cout << outer_boundary_vertices[i] << endl;
-	}
 
+	//Do not use the last path vertex, as it is a copy of the first and creates unwanted behaviour
 	vector<int> path_vertices;
-	Eigen::MatrixX3d path_vert_positions(path.size(), 3);
+	Eigen::MatrixX3d path_vert_positions(path.size()-1, 3);
 	int original_V_size = m.V.rows();
-	for(int i = 0; i < path.size(); i++) {
+	for(int i = 0; i < path.size()-1; i++) {
 		path_vertices.push_back(original_V_size + i);
 		path_vert_positions.row(i) << path[i].get_vertex().transpose();
 	}
@@ -166,9 +147,9 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Stro
 	Eigen::MatrixX3d tmp_path = resample_stroke(path_vert_positions); //Resamples the stroke by moving vertices to the middle of their neigbors --> implicitly results in smoothing/round stroke. not what we want
 	*/
 	int size_before = m.V.rows();
-	m.V.conservativeResize(m.V.rows() + path.size(), Eigen::NoChange);
+	m.V.conservativeResize(m.V.rows() + path.size()-1, Eigen::NoChange);
 	//TODO NOTE: NEED TO CHAGNE THIS TO USE THE OUTCOME OF RESAMPLE_BY_LENGTH...
-	for(int i = 0; i < path.size(); i++) {
+	for(int i = 0; i < path.size()-1; i++) {
 		m.V.row(size_before + i) << path[i].get_vertex().transpose();
 		//m.V.row(size_before + i) << tmp_path.row(i); //this version uses the smoothing but results in a roundish stroke.
 	}
@@ -180,22 +161,13 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Stro
 	row_idx2 = Eigen::VectorXi::Map(outer_boundary_vertices.data(), outer_boundary_vertices.size()); //Create an Eigen::VectorXi from a std::vector
 	col_idx2.col(0) << 0, 1, 2;
 	 
-	cout << "All vertices before slice: " << endl << m.V << endl << endl;
 	igl::slice(m.V, row_idx2, col_idx2, tmp_V); //Keep only the boundary vertices in the mesh
-	stroke.viewer.data.add_points(tmp_V, Eigen::MatrixXd::Zero(tmp_V.rows(), 3));
-	cout << "Vertices kept after slice:  " << endl << tmp_V << endl << endl;
-	//TODO: Check till here
 	
 	Eigen::Matrix4f modelview = stroke.viewer.core.view * stroke.viewer.core.model;
 	if(!is_counter_clockwise_boundaries(tmp_V, modelview, stroke.viewer.core.proj, stroke.viewer.core.viewport)) {
 		reverse(outer_boundary_vertices.begin(), outer_boundary_vertices.end());
-		cout << "outer boundary vertices after reversing:" << endl;
-		for(int i = 0; i < outer_boundary_vertices.size(); i++) {
-			cout << outer_boundary_vertices[i] << " ";
-		}
 	}
 
-	cout << endl;
 
 	stitch(path_vertices, outer_boundary_vertices, m);
 	if(!remove_inside_faces) {
@@ -289,6 +261,9 @@ void LaplacianRemesh::stitch(std::vector<int> path_vertices, std::vector<int> bo
 	int outer_idx = 0;
 
 	boundary_vertices = reorder(boundary_vertices, m.V.row(path_vertices[0]), m);
+	for(int i = 0; i < boundary_vertices.size(); i++) {
+		cout << boundary_vertices[i] << endl;
+	}
 
 	Eigen::RowVector3d start_path_v = m.V.row(path_vertices[0]);
 	Eigen::RowVector3d start_outer_v = m.V.row(boundary_vertices[0]);
@@ -419,18 +394,12 @@ Eigen::MatrixX3d LaplacianRemesh::resample_stroke(Eigen::MatrixX3d & original_st
 
 void LaplacianRemesh::move_to_middle(Eigen::MatrixX3d &positions, Eigen::MatrixX3d &new_positions) {
 	int n = positions.rows();
-	//Do seperately for i=0, because modulo gives -1
-	Eigen::Vector3d prev = positions.row(n - 1);
-	Eigen::Vector3d cur = positions.row(0);
-	Eigen::Vector3d next = positions.row(1);
-	new_positions(0, 0) = (cur[0] * 2 + prev[0] + next[0]) / 4;
-	new_positions(0, 1) = (cur[1] * 2 + prev[1] + next[1]) / 4;
-	new_positions(0, 2) = (cur[2] * 2 + prev[2] + next[2]) / 4;
+	Eigen::Vector3d prev, cur, next;
 
-	for(int i = 1; i < n; i++) {
-		prev = positions.row((i - 1) % n);
-		cur = positions.row(i%n);
-		next = positions.row((i + 1) % n);
+	for(int i = 0; i < n; i++) {
+		prev = positions.row(((i - 1) + n) % n);
+		cur = positions.row(i % n);
+		next = positions.row(((i + 1) + n) % n);
 
 		new_positions(i, 0) = (cur[0] * 2 + prev[0] + next[0]) / 4;
 		new_positions(i, 1) = (cur[1] * 2 + prev[1] + next[1]) / 4;
@@ -439,33 +408,27 @@ void LaplacianRemesh::move_to_middle(Eigen::MatrixX3d &positions, Eigen::MatrixX
 }
 
 bool LaplacianRemesh::is_counter_clockwise_boundaries(Eigen::MatrixXd boundary_points, Eigen::Matrix4f modelview, Eigen::Matrix4f proj, Eigen::Vector4f viewport) {
-	double total_area = 0;
+	double total_area = 0; //TODO: if this doesn't work, then zero-mean the boundary_points by subtracting the center
 	Eigen::RowVector3d center = boundary_points.colwise().mean();
 	boundary_points = boundary_points.rowwise() - center;
 	Eigen::RowVector3d pt, vert;
 	Eigen::Vector2d prev, next;
 	vert = boundary_points.row(boundary_points.rows() - 1);
 	igl::project(vert, modelview, proj, viewport, pt); //project the boundary vertex and store in pt
-	cout << "testflo " << pt << endl << endl;
-	//prev = pt.leftCols(2).transpose();
-	//TODO: SHOULD MAKE THIS WORK WITH THE PROJECTED VERTICES INSTEAD OF TAKING THE X AND Y COORDINATES
-	prev = boundary_points.row(boundary_points.rows() - 1).leftCols(2);
+	//prev = pt.leftCols(2).transpose(); //TODO: FIX THIS
+	prev = vert.leftCols(2).transpose();
 	for(int i = 0; i < boundary_points.rows(); i++) {
 		vert = boundary_points.row(i);
 		igl::project(vert, modelview, proj, viewport, pt); //project the boundary vertex and store in pt
 		//next = pt.leftCols(2).transpose();
-		next = boundary_points.row(i).leftCols(2);
-		cout <<"prev " << prev << endl << endl << "next " << i << " "<< next << endl << endl;
+		next = vert.leftCols(2).transpose();
 		total_area += (prev[1] + next[1]) * (next[0] - prev[0]);
-		cout << total_area << endl << endl;
 		prev = next;
 	}
 
 	if(total_area > 0) { //reverse the vector
-		cout << "no" << endl;
-		return false;// boundary_points = boundary_points.colwise().reverse().eval();
+		return false;
 	}
-	cout << "yes" << endl;
 
 	return true;
 }

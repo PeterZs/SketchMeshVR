@@ -13,7 +13,6 @@ using namespace igl;
 using namespace std;
 
 std::chrono::steady_clock::time_point _time2, _time1;
-//Eigen::MatrixXi EV, FE, EF;
 
 Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::viewer::Viewer &v, int stroke_ID_) :
 	V(V_),
@@ -240,7 +239,6 @@ void Stroke::append_final_point() {
 
 	stroke_edges.conservativeResize(stroke_edges.rows() + 1, stroke_edges.cols());
 	stroke_edges.row(stroke_edges.rows() - 1) << stroke2DPoints.rows() - 2, stroke2DPoints.rows() - 1;
-
 }
 
 //For drawing extrusion base strokes. Need to be drawn entirely on the existing mesh
@@ -297,7 +295,8 @@ void Stroke::strokeAddSegmentExtrusionBase(int mouse_x, int mouse_y) {
 			stroke_edges.row(stroke_edges.rows() - 1) << stroke2DPoints.rows() - 2, stroke2DPoints.rows() - 1;
 		}
 	} else {
-		cout << "Extrusion stroke was drawn outside of mesh. Not allowed." << endl;
+		cout << "Extrusion stroke was drawn outside of mesh. Won't be added." << endl;
+		return;
 	}
 
 	//using set_stroke_points will remove all previous strokes, using add_stroke_points might create duplicates
@@ -349,7 +348,6 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(int mouse_x, int mouse_y) {
 
 	_time1 = std::chrono::high_resolution_clock::now(); //restart the "start" timer
 }
-
 
 void Stroke::strokeReset() {
 	stroke2DPoints.resize(1, 2);
@@ -495,17 +493,12 @@ Eigen::MatrixX2d Stroke::resample_stroke(Eigen::MatrixX2d & original_stroke2DPoi
 
 void Stroke::move_to_middle(Eigen::MatrixX2d &positions, Eigen::MatrixX2d &new_positions) {
 	int n = positions.rows();
-	//Do seperately for i=0, because modulo gives -1
-	Eigen::Vector2d prev = positions.row(n - 1);
-	Eigen::Vector2d cur = positions.row(0);
-	Eigen::Vector2d next = positions.row(1);
-	new_positions(0, 0) = (cur[0] * 2 + prev[0] + next[0]) / 4;
-	new_positions(0, 1) = (cur[1] * 2 + prev[1] + next[1]) / 4;
+	Eigen::Vector2d prev, cur, next;
 
-	for(int i = 1; i < n; i++) {
-		prev = positions.row((i - 1) % n);
-		cur = positions.row(i%n);
-		next = positions.row((i + 1) % n);
+	for(int i = 0; i < n; i++) {
+		prev = positions.row(((i - 1) + n) % n);
+		cur = positions.row(i % n);
+		next = positions.row(((i + 1) + n) % n);
 
 		new_positions(i, 0) = (cur[0] * 2 + prev[0] + next[0]) / 4;
 		new_positions(i, 1) = (cur[1] * 2 + prev[1] + next[1]) / 4;

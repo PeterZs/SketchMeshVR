@@ -107,12 +107,15 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 
 	//Create one of the two loops
 	Eigen::MatrixXd front_loop3D = silhouette_vertices;
+	cout << "number of sil vertices: " << silhouette_vertices.rows() << " most_left_vertex_idx: " << most_left_vertex_idx << "  most_right_vertex_idx: "<< most_right_vertex_idx << endl;
 	vector<int> front_loop_base_original_indices;
 	int idx = most_right_vertex_idx;
+	cout << "indices of vertices in front loop: ";
 	while(true) {
 		front_loop3D.conservativeResize(front_loop3D.rows() + 1, Eigen::NoChange);
 		front_loop3D.row(front_loop3D.rows() - 1) = m.V.row(boundary_vertices[idx]);
 		front_loop_base_original_indices.push_back(boundary_vertices[idx]);
+		cout << boundary_vertices[idx] << " ";
 		if(idx == most_left_vertex_idx) {
 			break;
 		}
@@ -121,7 +124,7 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 			idx = 0;
 		}
 	}
-
+	cout << endl;
 	//Create the second loop
 	Eigen::MatrixXd back_loop3D = silhouette_vertices.colwise().reverse();
 	vector<int> back_loop_base_original_indices;
@@ -176,6 +179,8 @@ void MeshExtrusion::generate_mesh(Mesh& m, Eigen::MatrixXd loop3D, Eigen::Vector
 	Eigen::MatrixXd V2;
 	Eigen::MatrixXi F2;
 	Eigen::MatrixXi vertex_markers, edge_markers;
+	cout << "3d input: " << loop3D << endl << endl;
+	cout << "input to triangle: " << endl << loop2D << endl << endl;
 	igl::triangle::triangulate(loop2D, loop_stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(loop2D.rows(), 1, 1), Eigen::MatrixXi::Constant(loop_stroke_edges.rows(), 1, 1), "S", V2, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
 																																																																	  
 	Eigen::RowVector3d vert;
