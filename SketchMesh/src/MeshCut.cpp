@@ -122,7 +122,7 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m, Stroke
 
 
 void MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke){
-	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_cut_remove_inside(m, surface_path);
+	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_cut_remove_inside(m, surface_path, stroke);
 	mesh_open_hole(boundary_vertices, m, stroke);
 }
 

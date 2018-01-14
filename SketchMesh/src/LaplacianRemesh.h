@@ -7,9 +7,9 @@
 class LaplacianRemesh {
 
 public:
-	static Eigen::VectorXi remesh_cut_remove_inside(Mesh& m, SurfacePath& surface_path);
-	static Eigen::VectorXi remesh_extrusion_remove_inside(Mesh& m, SurfacePath& surface_path);
-	static Eigen::VectorXi remesh(Mesh& m, SurfacePath& surface_path);
+	static Eigen::VectorXi remesh_cut_remove_inside(Mesh& m, SurfacePath& surface_path, Stroke & stroke);
+	static Eigen::VectorXi remesh_extrusion_remove_inside(Mesh & m, SurfacePath & surface_path, Stroke & stroke);
+	static Eigen::VectorXi remesh(Mesh& m, SurfacePath& surface_path, Stroke& stroke);
 
 
 private:
@@ -41,6 +41,8 @@ private:
 	static Eigen::MatrixX3d resample_stroke(Eigen::MatrixX3d & original_stroke3DPoints);
 
 	static void move_to_middle(Eigen::MatrixX3d & positions, Eigen::MatrixX3d & new_positions);
+
+	static bool is_counter_clockwise_boundaries(Eigen::MatrixXd boundary_points, Eigen::Matrix4f modelview, Eigen::Matrix4f proj, Eigen::Vector4f viewport);
 
 };
 

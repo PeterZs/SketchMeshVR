@@ -27,6 +27,7 @@ Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::viewer
 	closest_vert_bindings.clear();
 	has_points_on_mesh = false;
 	stroke_color = Eigen::RowVector3d(0.8*(rand() / (double)RAND_MAX), 0.8*(rand() / (double)RAND_MAX), 0.8*(rand() / (double)RAND_MAX));
+	has_been_reversed = false;
 }
 
 Stroke::Stroke(const Stroke& origin) :
@@ -39,6 +40,7 @@ Stroke::Stroke(const Stroke& origin) :
 	stroke_edges(origin.stroke_edges),
 	closest_vert_bindings(origin.closest_vert_bindings),
 	has_points_on_mesh(origin.has_points_on_mesh),
+	has_been_reversed(origin.has_been_reversed),
 	stroke_color(origin.stroke_color),
 	dep(origin.dep),
 	added_stroke_final_vertices(origin.added_stroke_final_vertices),
@@ -59,6 +61,7 @@ void Stroke::swap(Stroke & tmp) {//The pointers to V and F will always be the sa
 	std::swap(this->stroke_edges, tmp.stroke_edges);
 	std::swap(this->closest_vert_bindings, tmp.closest_vert_bindings);
 	std::swap(this->has_points_on_mesh, tmp.has_points_on_mesh);
+	std::swap(this->has_been_reversed, tmp.has_been_reversed);
 	std::swap(this->stroke_color, tmp.stroke_color);
 	std::swap(this->dep, tmp.dep);
 	std::swap(this->added_stroke_final_vertices, tmp.added_stroke_final_vertices);
@@ -227,7 +230,7 @@ void Stroke::strokeAddSegmentCut(int mouse_x, int mouse_y) {
 	return;
 }
 
-//Final point doesn't get drawn on screen but is somewhere of the mesh
+//Final point doesn't get drawn on screen but is somewhere off the mesh
 void Stroke::append_final_point() {
 	stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, stroke2DPoints.cols());
 	stroke2DPoints.row(stroke2DPoints.rows() - 1) << cut_stroke_final_point_2D[0], cut_stroke_final_point_2D[1];
@@ -298,7 +301,11 @@ void Stroke::strokeAddSegmentExtrusionBase(int mouse_x, int mouse_y) {
 	}
 
 	//using set_stroke_points will remove all previous strokes, using add_stroke_points might create duplicates
-	viewer.data.add_points(stroke3DPoints.row(stroke3DPoints.rows() - 1), Eigen::RowVector3d(0, 0, 1));
+	Eigen::RowVector3d color(0, 0, 1);
+	if(stroke2DPoints.rows() == 1) {
+		color.row(0) << 1, 1, 1;
+	}
+	viewer.data.add_points(stroke3DPoints.row(stroke3DPoints.rows() - 1), color);
 
 	_time1 = std::chrono::high_resolution_clock::now(); //restart the "start" timer
 }
@@ -354,6 +361,7 @@ void Stroke::strokeReset() {
 	dep = -1;
 	_time1 = std::chrono::high_resolution_clock::now();
 	closest_vert_bindings.clear();
+	has_been_reversed = false;
 }
 
 bool Stroke::toLoop() {
@@ -468,6 +476,9 @@ void Stroke::counter_clockwise() {
 
 	if(total_area > 0) { //reverse the vector
 		stroke2DPoints = stroke2DPoints.colwise().reverse().eval();
+		stroke3DPoints = stroke3DPoints.colwise().reverse().eval();
+		stroke_edges = stroke_edges.colwise().reverse().eval();
+		has_been_reversed = true;
 	}
 
 }

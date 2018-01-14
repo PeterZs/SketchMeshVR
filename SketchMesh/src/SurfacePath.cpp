@@ -25,7 +25,6 @@ void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 	int start_p = prev_p;
 	int next_p;
 	igl::unproject_onto_mesh(stroke.get_stroke2DPoints().row(prev_p).cast<float>(), modelview, stroke.viewer.core.proj, stroke.viewer.core.viewport, stroke.get_V(), stroke.get_F(), faceID, bc);
-
 	int start_face = faceID;
 	int n = 0;
 	Eigen::RowVector3d pt(0, 0, 0);
@@ -116,9 +115,11 @@ int SurfacePath::extend_path(int prev_p, int next_p, int faceID, bool& forward, 
 	Eigen::Vector3d source, dir;
 	Eigen::MatrixX2d stroke2DPoints = origin_stroke->get_stroke2DPoints();
 	Eigen::MatrixX3d stroke3DPoints = origin_stroke->get3DPoints();
+	int prev_p3D = origin_stroke->has_been_reversed ? prev_p+1 : prev_p; //These two are needed because when a CW stroke is reversed to a CCW stroke, it generates a discrepancy between the points in the 2DPoints and 3DPoints. 3DPoints is a loop and has vertex 0 also at the end, while 2DPoints doesn't. Fixing this would break many other things
+	int next_p3D = origin_stroke->has_been_reversed ? next_p + 1 : next_p;
 	Eigen::Vector2d tmp = stroke2DPoints.row(prev_p);
 	igl::unproject_ray(tmp, modelview, origin_stroke->viewer.core.proj, origin_stroke->viewer.core.viewport, source, dir);
-	Plane cutPlane(source, stroke3DPoints.row(prev_p), stroke3DPoints.row(next_p));
+	Plane cutPlane(source, stroke3DPoints.row(prev_p3D), stroke3DPoints.row(next_p3D));
 
 	int edge = -1;
 	pair<int, int> strokeEdge(prev_p, next_p);
@@ -175,7 +176,6 @@ int SurfacePath::find_next_edge(pair<int, int> strokeEdge, int prev_edge, int po
 	return -1;
 }
 
-
 //Follows principle from https://stackoverflow.com/questions/14176776/find-out-if-2-lines-intersect but slightly different
 bool SurfacePath::edges2D_cross(pair<Eigen::Vector2d, Eigen::Vector2d> edge1, pair<Eigen::Vector2d, Eigen::Vector2d> edge2) {
 	double a0, b0, c0, a1, b1, c1;
@@ -214,7 +214,6 @@ bool SurfacePath::is_counter_clockwise(int faceID) {
 	return true;
 
 }
-
 
 bool SurfacePath::is_projected_inside(Eigen::RowVector2d v, int face, Eigen::Matrix4f modelview) {
 	int sign = -1;

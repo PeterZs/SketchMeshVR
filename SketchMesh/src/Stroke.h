@@ -40,6 +40,7 @@ public:
 
 	bool is_loop;
 	bool has_points_on_mesh;
+	bool has_been_reversed;
 	Eigen::RowVector3d stroke_color;
 	igl::viewer::Viewer &viewer;
 	Eigen::MatrixXd get_V() const;
