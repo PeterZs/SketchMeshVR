@@ -28,10 +28,7 @@ void MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &verte
 	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, ID);
 	SurfacePath surface_path;
 	surface_path.create_from_stroke(stroke); //Prepares the drawn stroke (inserts extra points at the edges that it crosses)
-//	adjacency_list(m.F, VV);
-	cout << "So goo2" << endl;
 	cut_main(m, surface_path, stroke);
-	cout << "doing stuff" << endl;
 	
 	stroke.viewer.data.clear();
 	stroke.viewer.data.set_mesh(m.V, m.F);
@@ -122,7 +119,7 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m, Stroke
 
 
 void MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke){
-	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_cut_remove_inside(m, surface_path, stroke);
+	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_cut_remove_inside(m, surface_path, stroke.viewer.core.model, stroke.viewer.core.view, stroke.viewer.core.proj, stroke.viewer.core.viewport);
 	mesh_open_hole(boundary_vertices, m, stroke);
 }
 

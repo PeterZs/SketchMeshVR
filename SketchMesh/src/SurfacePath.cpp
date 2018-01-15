@@ -17,6 +17,7 @@ SurfacePath::SurfacePath() {
 
 void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 	origin_stroke = new Stroke(stroke);
+	path.clear();
 	Eigen::Matrix4f modelview = stroke.viewer.core.view * stroke.viewer.core.model;
 	int faceID = -1;
 	Eigen::Vector3f bc;

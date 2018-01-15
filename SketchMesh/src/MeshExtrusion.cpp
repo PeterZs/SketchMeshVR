@@ -19,7 +19,7 @@ void MeshExtrusion::extrude_prepare(Stroke& base, SurfacePath& surface_path) {
 	surface_path.create_from_stroke_extrude(base);
 }
 
-void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, SurfacePath& surface_path, Stroke& stroke) {
+void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, SurfacePath& surface_path, Stroke& stroke, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport) {
 	if(V.rows() != prev_vertex_count) {
 		ID++;
 		prev_vertex_count = V.rows();
@@ -27,7 +27,7 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 
 	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, ID);
 	stroke.counter_clockwise();
-	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_extrusion_remove_inside(m, surface_path, stroke);
+	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_extrusion_remove_inside(m, surface_path, model, view, proj, viewport);
 
 	//project points to 2D. TODO: for now following the example, should be able to work with libigl's project??
 	Eigen::RowVector3d center(0, 0, 0);
@@ -48,7 +48,6 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	Eigen::Vector3d camera_to_center = center.transpose() - stroke.viewer.core.camera_eye.cast<double>();
 	Eigen::Vector3d normal2 = normal.cross(camera_to_center);
 	normal2.normalize();
-	//Eigen::Vector3d normal2(1, 0, 0); //TODO: TEST THIS!! ABOVE IS WHAT TEDDY USES
 	Eigen::Vector3d center_to_vertex = m.V.row(boundary_vertices[0]) - center;
 	double dot_prod = normal2.dot(center_to_vertex);
 	double max = dot_prod, min = dot_prod;
@@ -71,7 +70,6 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	Plane pop_surface(m.V.row(boundary_vertices[most_left_vertex_idx]), norm_tmp);
 
 	Eigen::MatrixXd silhouette_vertices(0, 3);
-	//TODO: CHECK WHAT IS GOING ON HERE. PROBABLY WON'T WORK LIKE THIS. MAYBE CREATE A PLANE THAT IS PERPENDICULAR TO THE BASE STROKE PLANE AND PROJECT THE SILHOUETTE STROKE ONTO THAT
 	Eigen::RowVector3d v;
 	Eigen::Vector3d source, dir;
 	Eigen::Matrix4f modelview = stroke.viewer.core.view * stroke.viewer.core.model;
@@ -83,7 +81,7 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 		dot_prod = normal2.dot(center_to_vertex);
 		if(dot_prod > max || dot_prod < min) {
 			cout << "silhouette point is outside of range " << i << endl;
-			continue;
+		//	continue;
 		}
 		silhouette_vertices.conservativeResize(silhouette_vertices.rows() + 1, Eigen::NoChange);
 		silhouette_vertices.row(silhouette_vertices.rows() - 1) = v;
@@ -107,15 +105,12 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 
 	//Create one of the two loops
 	Eigen::MatrixXd front_loop3D = silhouette_vertices;
-	cout << "number of sil vertices: " << silhouette_vertices.rows() << " most_left_vertex_idx: " << most_left_vertex_idx << "  most_right_vertex_idx: "<< most_right_vertex_idx << endl;
 	vector<int> front_loop_base_original_indices;
 	int idx = most_right_vertex_idx;
-	cout << "indices of vertices in front loop: ";
 	while(true) {
 		front_loop3D.conservativeResize(front_loop3D.rows() + 1, Eigen::NoChange);
 		front_loop3D.row(front_loop3D.rows() - 1) = m.V.row(boundary_vertices[idx]);
 		front_loop_base_original_indices.push_back(boundary_vertices[idx]);
-		cout << boundary_vertices[idx] << " ";
 		if(idx == most_left_vertex_idx) {
 			break;
 		}
@@ -124,7 +119,7 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 			idx = 0;
 		}
 	}
-	cout << endl;
+
 	//Create the second loop
 	Eigen::MatrixXd back_loop3D = silhouette_vertices.colwise().reverse();
 	vector<int> back_loop_base_original_indices;
@@ -179,8 +174,6 @@ void MeshExtrusion::generate_mesh(Mesh& m, Eigen::MatrixXd loop3D, Eigen::Vector
 	Eigen::MatrixXd V2;
 	Eigen::MatrixXi F2;
 	Eigen::MatrixXi vertex_markers, edge_markers;
-	cout << "3d input: " << loop3D << endl << endl;
-	cout << "input to triangle: " << endl << loop2D << endl << endl;
 	igl::triangle::triangulate(loop2D, loop_stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(loop2D.rows(), 1, 1), Eigen::MatrixXi::Constant(loop_stroke_edges.rows(), 1, 1), "S", V2, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
 																																																																	  
 	Eigen::RowVector3d vert;

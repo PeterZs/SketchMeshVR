@@ -7,10 +7,9 @@
 class LaplacianRemesh {
 
 public:
-	static Eigen::VectorXi remesh_cut_remove_inside(Mesh& m, SurfacePath& surface_path, Stroke & stroke);
-	static Eigen::VectorXi remesh_extrusion_remove_inside(Mesh & m, SurfacePath & surface_path, Stroke & stroke);
-	static Eigen::VectorXi remesh(Mesh& m, SurfacePath& surface_path, Stroke& stroke);
-
+	static Eigen::VectorXi remesh_cut_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport);
+	static Eigen::VectorXi remesh_extrusion_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport);
+	static Eigen::VectorXi remesh(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport);
 
 private:
 	static bool is_front_loop;
@@ -42,7 +41,7 @@ private:
 
 	static void move_to_middle(Eigen::MatrixX3d & positions, Eigen::MatrixX3d & new_positions);
 
-	static bool is_counter_clockwise_boundaries(Eigen::MatrixXd boundary_points, Eigen::Matrix4f modelview, Eigen::Matrix4f proj, Eigen::Vector4f viewport);
+	static bool is_counter_clockwise_boundaries(Eigen::MatrixXd boundary_points, Eigen::Matrix4f modelview, Eigen::Matrix4f proj, Eigen::Vector4f viewport, Eigen::RowVector3d mean_viewpoint, bool cut);
 
 };
 

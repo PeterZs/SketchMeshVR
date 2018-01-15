@@ -72,6 +72,9 @@ bool extrusion_base_already_drawn = false;
 
 SurfacePath base_surface_path;
 
+Eigen::Matrix4f base_model, base_view, base_proj;
+Eigen::Vector4f base_viewport;
+
 
 bool callback_key_down(Viewer& viewer, unsigned char key, int modifiers) {
 	if (key == '1') {
@@ -434,6 +437,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 		if(cut_stroke_already_drawn) { //User has drawn the final stroke for removing the part
 			cout << "mouse released after stroke already drawn" << endl;
 			added_stroke->append_final_point();
+			added_stroke->toLoop();
 			MeshCut::cut(V, F, vertex_boundary_markers, part_of_original_stroke, *added_stroke);
 			cut_stroke_already_drawn = false; //Reset
 		} else { //We're finished drawing the cut stroke, prepare for when user draws the final stroke to remove the part
@@ -445,7 +449,9 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 		if(extrusion_base_already_drawn) { //User has drawn the silhouette stroke for extrusion
 			cout << "mouse released after extrusion silhouette drawn" << endl;
 			added_stroke->toLoop();
-			MeshExtrusion::extrude_main(V, F, vertex_boundary_markers, part_of_original_stroke, base_surface_path, *added_stroke);
+			V = viewer.data.V;
+			F = viewer.data.F;
+			MeshExtrusion::extrude_main(V, F, vertex_boundary_markers, part_of_original_stroke, base_surface_path, *added_stroke, base_model, base_view, base_proj, base_viewport);
 			extrusion_base_already_drawn = false; //Reset
 		} else {
 			if(!extrusion_base->has_points_on_mesh) {
@@ -455,6 +461,11 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			extrusion_base->toLoop();
 			extrusion_base_already_drawn = true;
 			MeshExtrusion::extrude_prepare(*extrusion_base, base_surface_path);
+			base_model = extrusion_base->viewer.core.model;
+			base_view = extrusion_base->viewer.core.view;
+			base_proj = extrusion_base->viewer.core.proj;
+			base_viewport = extrusion_base->viewer.core.viewport;
+
 			cout << "mouse released after extrusion base drawn" << endl;
 		}
 	}

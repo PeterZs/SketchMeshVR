@@ -18,23 +18,22 @@ Eigen::MatrixXi LaplacianRemesh::EV, LaplacianRemesh::FE, LaplacianRemesh::EF;
 vector<vector<int>> LaplacianRemesh::VV;
 
 
-Eigen::VectorXi LaplacianRemesh::remesh_cut_remove_inside(Mesh & m, SurfacePath & surface_path, Stroke& stroke) {
+Eigen::VectorXi LaplacianRemesh::remesh_cut_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport) {
 	is_front_loop = false;
 	remove_inside_faces = true;
 	adjacency_list(m.F, VV);
-	return remesh(m, surface_path, stroke);
+	return remesh(m, surface_path, model, view, proj, viewport);
 }
 
-Eigen::VectorXi LaplacianRemesh::remesh_extrusion_remove_inside(Mesh & m, SurfacePath & surface_path, Stroke& stroke) {
+Eigen::VectorXi LaplacianRemesh::remesh_extrusion_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport) {
 	is_front_loop = true;
 	remove_inside_faces = true;
 	adjacency_list(m.F, VV);
-	return remesh(m, surface_path, stroke);
+	return remesh(m, surface_path, model, view, proj, viewport);
 }
 
-Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Stroke& stroke) {
+Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport) {
 	Eigen::VectorXi result;
-
 	vector<bool> dirty_face(m.F.rows());
 	vector<int> dirty_vertices(m.V.rows());
 
@@ -45,6 +44,9 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Stro
 	int face = -1;
 	int edge = -1;
 	vector<PathElement> path = surface_path.get_path();
+	if(!is_front_loop) { //Append first element at the end in case of cutting, to make it a loop and compatible with extrusion's loop
+		path.push_back(path[0]);
+	}
 
 	//Find inside (+1) and outside (+1) vertices. TODO: check that this works and that +1 is inside and -1 is outside
 	for(int i = 0; i < path.size(); i++) {
@@ -74,7 +76,6 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Stro
 		}
 	}
 
-
 	//Collect faces along the path
 	for(int i = 0; i < path.size(); i++) {
 		if(path[i].get_type() == PathElement::EDGE) {
@@ -101,7 +102,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Stro
 	for(int i = 0; i < m.F.rows(); i++) {
 		if(!dirty_face[i]) {
 			clean_faces.push_back(i);
-		}
+		} 
 	}
 
 	Eigen::MatrixXi tmp_F;
@@ -160,13 +161,22 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Stro
 	Eigen::VectorXi row_idx2, col_idx2(3);
 	row_idx2 = Eigen::VectorXi::Map(outer_boundary_vertices.data(), outer_boundary_vertices.size()); //Create an Eigen::VectorXi from a std::vector
 	col_idx2.col(0) << 0, 1, 2;
-	 
 	igl::slice(m.V, row_idx2, col_idx2, tmp_V); //Keep only the boundary vertices in the mesh
-	
-	Eigen::Matrix4f modelview = stroke.viewer.core.view * stroke.viewer.core.model;
-	if(!is_counter_clockwise_boundaries(tmp_V, modelview, stroke.viewer.core.proj, stroke.viewer.core.viewport)) {
+
+	//Compute the mean of the boundary vertices on the side of the mesh that is removed
+	//In the case of CUT this is used as a viewpoint to determine the orientation of the boundary vertices that remain
+	Eigen::MatrixXd removed_V;
+	Eigen::VectorXi row_idx_removed = Eigen::VectorXi::Map(inner_boundary_vertices.data(), inner_boundary_vertices.size());
+	Eigen::VectorXi col_idx_removed(3);
+	col_idx_removed.col(0) << 0, 1, 2;
+	igl::slice(m.V, row_idx_removed, col_idx_removed, removed_V);
+	Eigen::RowVector3d mean_viewpoint = removed_V.colwise().mean();
+
+
+	Eigen::Matrix4f modelview = view * model;
+	if(!is_counter_clockwise_boundaries(tmp_V, modelview, proj, viewport, mean_viewpoint, !is_front_loop)) {
 		reverse(outer_boundary_vertices.begin(), outer_boundary_vertices.end());
-	}
+	} 
 
 
 	stitch(path_vertices, outer_boundary_vertices, m);
@@ -186,6 +196,7 @@ void LaplacianRemesh::propagate_dirty_faces(int face, vector<bool>& dirty_face) 
 	for(int i = 0; i < 3; i++) {
 		int next_face = (EF(FE(face, i), 0) == face) ? EF(FE(face, i), 1) : EF(FE(face, i), 0); //get an adjacent polygon
 		if(!dirty_face[next_face]) {
+			cout << "doing recursion" << endl;
 			propagate_dirty_faces(next_face, dirty_face);
 		}
 	}
@@ -261,9 +272,6 @@ void LaplacianRemesh::stitch(std::vector<int> path_vertices, std::vector<int> bo
 	int outer_idx = 0;
 
 	boundary_vertices = reorder(boundary_vertices, m.V.row(path_vertices[0]), m);
-	for(int i = 0; i < boundary_vertices.size(); i++) {
-		cout << boundary_vertices[i] << endl;
-	}
 
 	Eigen::RowVector3d start_path_v = m.V.row(path_vertices[0]);
 	Eigen::RowVector3d start_outer_v = m.V.row(boundary_vertices[0]);
@@ -344,7 +352,6 @@ double LaplacianRemesh::compute_average_length_of_crossing_edges(vector<PathElem
 	int count = 0;
 	for(int i = 0; i < path.size(); i++) {
 		if(path[i].get_type() == PathElement::EDGE) {
-			cout << EV.row(path[i].get_ID()) << endl;
 			total += (m.V.row(EV(path[i].get_ID(), 0)) - m.V.row(EV(path[i].get_ID(), 1))).norm();
 			count++;
 		}
@@ -407,26 +414,67 @@ void LaplacianRemesh::move_to_middle(Eigen::MatrixX3d &positions, Eigen::MatrixX
 	}
 }
 
-bool LaplacianRemesh::is_counter_clockwise_boundaries(Eigen::MatrixXd boundary_points, Eigen::Matrix4f modelview, Eigen::Matrix4f proj, Eigen::Vector4f viewport) {
-	double total_area = 0; //TODO: if this doesn't work, then zero-mean the boundary_points by subtracting the center
+bool LaplacianRemesh::is_counter_clockwise_boundaries(Eigen::MatrixXd boundary_points, Eigen::Matrix4f modelview, Eigen::Matrix4f proj, Eigen::Vector4f viewport, Eigen::RowVector3d mean_viewpoint, bool cut) {
+	//First project the points to 2D
 	Eigen::RowVector3d center = boundary_points.colwise().mean();
+	Eigen::Vector3d normal(0, 0, 0);
+	Eigen::Vector3d vec0, vec1;
+	for(int i = 0; i < boundary_points.rows(); i++) {
+		vec0 = boundary_points.row(i) - center;
+		vec1 = boundary_points.row((i + 1) % boundary_points.rows()) - center;
+		normal += vec1.cross(vec0);
+	}
+	normal.normalize();
+
+	
+	if(cut) {
+		if(normal.dot(center - mean_viewpoint) < 0) {
+			return false;
+		} else {
+			return true;
+		}
+	}
+
+	/*Eigen::Vector3d x_vec = boundary_points.row(0) - center;
+	x_vec.normalize();
+	Eigen::Vector3d y_vec = normal.cross(x_vec);
+
+	cout << "test proj vecs" << x_vec << endl << endl << y_vec << endl << endl << normal << endl;
+
+	Eigen::MatrixXd boundary_vertices_2D(boundary_points.rows(), 2);
+	Eigen::Vector3d vec;
+	for(int i = 0; i < boundary_points.rows(); i++) {
+		vec = boundary_points.row(i) - center;
+		boundary_vertices_2D.row(i) << vec.dot(x_vec), vec.dot(y_vec);
+	}
+	
+	double total_area = 0.0;
+	Eigen::RowVector2d prev, next;
+	prev = boundary_vertices_2D.row(0);
+	cout << boundary_vertices_2D << endl;
+	for(int i = 1; i <= boundary_vertices_2D.rows(); i++) {
+		next = boundary_vertices_2D.row((i + boundary_points.rows()) % boundary_points.rows());
+		total_area += (prev[1] + next[1]) * (next[0] - prev[0]);
+		prev = next;
+	}*/
+
+	
+	double total_area = 0;
 	boundary_points = boundary_points.rowwise() - center;
 	Eigen::RowVector3d pt, vert;
 	Eigen::Vector2d prev, next;
 	vert = boundary_points.row(boundary_points.rows() - 1);
 	igl::project(vert, modelview, proj, viewport, pt); //project the boundary vertex and store in pt
-	//prev = pt.leftCols(2).transpose(); //TODO: FIX THIS
 	prev = vert.leftCols(2).transpose();
 	for(int i = 0; i < boundary_points.rows(); i++) {
 		vert = boundary_points.row(i);
 		igl::project(vert, modelview, proj, viewport, pt); //project the boundary vertex and store in pt
-		//next = pt.leftCols(2).transpose();
 		next = vert.leftCols(2).transpose();
 		total_area += (prev[1] + next[1]) * (next[0] - prev[0]);
 		prev = next;
 	}
 
-	if(total_area > 0) { //reverse the vector
+	if(total_area > 0) { //points are clockwise
 		return false;
 	}
 
