@@ -6,8 +6,6 @@
 #include <igl/adjacency_list.h>
 #include <igl/slice.h>
 #include <igl/triangle/triangulate.h>
-//#include "Mesh.h"
-//#include "SurfacePath.h"
 #include <string>
 #include <sstream>
 #include "LaplacianRemesh.h"
@@ -69,10 +67,6 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m, Stroke
 		stroke_edges.row(i) << i, ((i + 1) % boundary_vertices.size());
 	}
 
-	//Eigen::Matrix4f modelview = stroke.viewer.core.view * stroke.viewer.core.model;
-	//Eigen::MatrixXd points_to_project;
-//	igl::slice(m.V, boundary_vertices, 1, points_to_project);
-	//igl::project(points_to_project, modelview, stroke.viewer.core.proj, stroke.viewer.core.viewport, boundary_vertices_2D);
 	Eigen::MatrixXd V2;
 	Eigen::MatrixXi F2;
 	Eigen::MatrixXi vertex_markers, edge_markers;
@@ -88,11 +82,8 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m, Stroke
 			Eigen::Vector3d v_tmp = center.transpose();
 			v_tmp += x_vec*V2(i, 0);
 			v_tmp += y_vec*V2(i, 1);
-		//	m.V.row(original_v_size+i) = v_tmp.transpose();
 			m.V.row(boundary_vertices[i]) = v_tmp.transpose();
 		}
-
-
 		else {
 			Eigen::Vector3d v_tmp = center.transpose();
 			v_tmp += x_vec*V2(i, 0);
