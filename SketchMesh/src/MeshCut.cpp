@@ -70,7 +70,7 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m, Stroke
 	Eigen::MatrixXd V2;
 	Eigen::MatrixXi F2;
 	Eigen::MatrixXi vertex_markers, edge_markers;
-	igl::triangle::triangulate(boundary_vertices_2D.leftCols(2), stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(boundary_vertices_2D.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "q25", V2, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
+	igl::triangle::triangulate(boundary_vertices_2D.leftCols(2), stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(boundary_vertices_2D.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "Yq25", V2, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
 
 	int original_v_size = m.V.rows()-boundary_vertices.rows();		
 	m.V.conservativeResize(original_v_size + V2.rows(), Eigen::NoChange);
@@ -92,16 +92,16 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m, Stroke
 		}
 	}
 
-	int vert_idx_in_mesh;
+	int vert_idx_in_mesh, size_before = m.F.rows();
+	m.F.conservativeResize(m.F.rows() + F2.rows(), Eigen::NoChange);
 	for (int i = 0; i < F2.rows(); i++) {
-		m.F.conservativeResize(m.F.rows() + 1, Eigen::NoChange);
 		for (int j = 0; j < 3; j++) { //Go over the face vertices
 			if (F2(i, j) < boundary_vertices.rows()) { //Original boundary vertex
 				vert_idx_in_mesh = boundary_vertices[F2(i, j)];
 			} else { //Interior to cut plane
 				vert_idx_in_mesh = F2(i, j) + original_v_size; //Add index to the currently existing number of mesh vertices (which already includes the boundary vertices on the cut stroke)
 			}
-			m.F(m.F.rows() - 1, 2-j) = vert_idx_in_mesh; //To ensure right face orientation after implementing extrusion
+			m.F(size_before + i, 2 - j) = vert_idx_in_mesh; //To ensure right face orientation after implementing extrusion
 		}
 	}
 	

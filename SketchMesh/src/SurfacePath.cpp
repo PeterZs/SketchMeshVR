@@ -1,6 +1,6 @@
 #include <igl/unproject_onto_mesh.h>
 #include <igl/edge_topology.h>
-#include <igl/raytri.c>
+#include <igl/project.h>
 #include "SurfacePath.h"
 #include "Plane.h"
 #include "Stroke.h"
@@ -19,12 +19,13 @@ void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 	origin_stroke = new Stroke(stroke);
 	path.clear();
 	Eigen::Matrix4f modelview = stroke.viewer.core.view * stroke.viewer.core.model;
-	int faceID = -1;
+	
 	Eigen::Vector3f bc;
-
-	int prev_p = stroke.get_stroke2DPoints().rows()-1; //Start at end-1
+	int faceID = -1;
+	int prev_p = stroke.get_stroke2DPoints().rows() - 1; //Start at end-1
 	int start_p = prev_p;
 	int next_p;
+
 	igl::unproject_onto_mesh(stroke.get_stroke2DPoints().row(prev_p).cast<float>(), modelview, stroke.viewer.core.proj, stroke.viewer.core.viewport, stroke.get_V(), stroke.get_F(), faceID, bc);
 	int start_face = faceID;
 	int n = 0;
@@ -41,7 +42,7 @@ void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 		path.push_back(newElement);
 
 		bool forward;
-		faceID = extend_path(prev_p, next_p, faceID, forward, false, modelview);
+		faceID = extend_path(prev_p, next_p, faceID, forward, modelview);
 
 		if(!forward) {
 			next_p = prev_p;
@@ -70,9 +71,9 @@ void SurfacePath::create_from_stroke(const Stroke & stroke) {
 	origin_stroke = new Stroke(stroke);
 	path.clear();
 	Eigen::Matrix4f modelview = stroke.viewer.core.view * stroke.viewer.core.model;
-	int faceID = -1;
-	Eigen::Vector3f bc;
 
+	Eigen::Vector3f bc;
+	int faceID = -1;
 	int prev_p = 1; //Start at 1, because point 0 is defined to be the last point at the beginning of the stroke to lie outside of the mesh
 	int start_p = prev_p;
 	int next_p;
@@ -87,14 +88,14 @@ void SurfacePath::create_from_stroke(const Stroke & stroke) {
 
 	while(true) {
 		next_p = n;
-	
+
 		pt = unproject_onto_polygon(stroke.get_stroke2DPoints().row(prev_p), faceID, modelview);
 		PathElement newElement(faceID, PathElement::FACE, pt);
 		path.push_back(newElement);
 
 		bool forward;
-		faceID = extend_path(prev_p, next_p, faceID, forward, false, modelview);
-		
+		faceID = extend_path(prev_p, next_p, faceID, forward, modelview);
+
 		if(!forward) {
 			next_p = prev_p;
 		}
@@ -113,26 +114,24 @@ void SurfacePath::create_from_stroke(const Stroke & stroke) {
 
 }
 
-int SurfacePath::extend_path(int prev_p, int next_p, int faceID, bool& forward, bool front_facing_only, Eigen::Matrix4f modelview) {
+int SurfacePath::extend_path(int prev_p, int next_p, int faceID, bool& forward, Eigen::Matrix4f modelview) {
 	Eigen::Vector3d source, dir;
 	Eigen::MatrixX2d stroke2DPoints = origin_stroke->get_stroke2DPoints();
 	Eigen::MatrixX3d stroke3DPoints = origin_stroke->get3DPoints();
-	int prev_p3D = origin_stroke->has_been_reversed ? prev_p+1 : prev_p; //These two are needed because when a CW stroke is reversed to a CCW stroke, it generates a discrepancy between the points in the 2DPoints and 3DPoints. 3DPoints is a loop and has vertex 0 also at the end, while 2DPoints doesn't. Fixing this would break many other things
+	int prev_p3D = origin_stroke->has_been_reversed ? prev_p + 1 : prev_p; //These two are needed because when a CW stroke is reversed to a CCW stroke, it generates a discrepancy between the points in the 2DPoints and 3DPoints. 3DPoints is a loop and has vertex 0 also at the end, while 2DPoints doesn't. Fixing this would break many other things
 	int next_p3D = origin_stroke->has_been_reversed ? next_p + 1 : next_p;
 	Eigen::Vector2d tmp = stroke2DPoints.row(prev_p);
 	igl::unproject_ray(tmp, modelview, origin_stroke->viewer.core.proj, origin_stroke->viewer.core.viewport, source, dir);
 	Plane cutPlane(source, stroke3DPoints.row(prev_p3D), stroke3DPoints.row(next_p3D));
 
-	int edge = -1;
+	int edge = -1, proj_faceID = -1;
 	pair<int, int> strokeEdge(prev_p, next_p);
-
-	int proj_faceID = -1;
 	Eigen::Vector3f bc;
-	
+
 	while(true) {
-		if(is_projected_inside(stroke2DPoints.row(next_p), faceID, modelview)){
-				forward = true;
-				return faceID;
+		if(is_projected_inside(stroke2DPoints.row(next_p), faceID, modelview)) {
+			forward = true;
+			return faceID;
 		}
 
 		edge = find_next_edge(strokeEdge, edge, faceID, modelview);
@@ -147,17 +146,18 @@ int SurfacePath::extend_path(int prev_p, int next_p, int faceID, bool& forward, 
 
 		faceID = (EF(edge, 0) == faceID) ? EF(edge, 1) : EF(edge, 0); //get the polygon on the other side of the edge
 		//This means that the current stroke point is projected into both "its own" polygon and into the polygon of the next point, WHILE the next point's polygon is across an edge. MUST MEAN that the next point's polygon is on the backside
-		if(is_projected_inside(stroke2DPoints.row(prev_p), faceID, modelview)){
-				forward = false;
-				return faceID;
+		if(is_projected_inside(stroke2DPoints.row(prev_p), faceID, modelview)) {
+			forward = false;
+			return faceID;
 		}
 	}
 }
 
 int SurfacePath::find_next_edge(pair<int, int> strokeEdge, int prev_edge, int polygon, Eigen::Matrix4f modelview) {
-	Eigen::RowVector2d stroke_start, stroke_end;
-	Eigen::RowVector3d start, end;
 	Eigen::MatrixX2d stroke2DPoints = origin_stroke->get_stroke2DPoints();
+	Eigen::RowVector2d stroke_start = stroke2DPoints.row(strokeEdge.first).transpose();
+	Eigen::RowVector2d stroke_end = stroke2DPoints.row(strokeEdge.second).transpose();
+	Eigen::RowVector3d start, end;
 	Eigen::RowVector3d tmp;
 	for(int i = 0; i < 3; i++) {
 		int edge = FE(polygon, i);
@@ -168,8 +168,6 @@ int SurfacePath::find_next_edge(pair<int, int> strokeEdge, int prev_edge, int po
 			tmp = origin_stroke->get_V().row(EV(edge, 1));
 			igl::project(tmp, modelview, origin_stroke->viewer.core.proj, origin_stroke->viewer.core.viewport, end);
 
-			stroke_start = stroke2DPoints.row(strokeEdge.first).transpose();
-			stroke_end = stroke2DPoints.row(strokeEdge.second).transpose();
 			if(edges2D_cross({stroke_start, stroke_end}, {start.block(0,0,1,2).transpose(), end.block(0,0,1,2).transpose()})) {
 				return edge;
 			}
@@ -201,16 +199,28 @@ bool SurfacePath::front_facing(int faceID) {
 }
 
 bool SurfacePath::is_counter_clockwise(int faceID) {
-	double total_area = 0;
-	Eigen::Vector3d prev, next;
-	prev = origin_stroke->get_V().row(origin_stroke->get_F()(faceID,2));
+	//TODO: Not sure if we should zero-mean the face vertices first
+	Eigen::Matrix4f modelview = origin_stroke->viewer.core.view * origin_stroke->viewer.core.model;
+	double total_area = 0.0;
+	Eigen::RowVector3d prev, next, pt, center(0, 0, 0);
+	Eigen::Vector2d prev2D, next2D;
 	for(int i = 0; i < 3; i++) {
-		next = origin_stroke->get_V().row(origin_stroke->get_F()(faceID, i));
-		total_area += (prev[1] + next[1]) * (next[0] - prev[0]);
-		prev = next;
+		center += origin_stroke->get_V().row(origin_stroke->get_F()(faceID, i));
+	}
+	center /= 3;
+
+	prev = origin_stroke->get_V().row(origin_stroke->get_F()(faceID, 2)) - center;
+	igl::project(prev, modelview, origin_stroke->viewer.core.proj, origin_stroke->viewer.core.viewport, pt);
+	prev2D = pt.leftCols(2).transpose();
+	for(int i = 0; i < 3; i++) {
+		next = origin_stroke->get_V().row(origin_stroke->get_F()(faceID, i)) - center;
+		igl::project(next, modelview, origin_stroke->viewer.core.proj, origin_stroke->viewer.core.viewport, pt);
+		next2D = pt.leftCols(2).transpose();
+		total_area += (prev2D[1] + next2D[1]) * (next2D[0] - prev2D[0]);
+		prev2D = next2D;
 	}
 
-	if(total_area > 0) { //reverse the vector
+	if(total_area > 0) {
 		return false;
 	}
 	return true;
@@ -223,15 +233,16 @@ bool SurfacePath::is_projected_inside(Eigen::RowVector2d v, int face, Eigen::Mat
 		sign = 1;
 	}
 
+	Eigen::RowVector3d start, end, tmp;
+	Eigen::Vector2d vec0, vec1;
 	for(int i = 0; i < 3; i++) {
-		Eigen::RowVector3d start, end;
-		Eigen::RowVector3d tmp = origin_stroke->get_V().row((origin_stroke->get_F()(face, i)));
+		tmp = origin_stroke->get_V().row((origin_stroke->get_F()(face, i)));
 		igl::project(tmp, modelview, origin_stroke->viewer.core.proj, origin_stroke->viewer.core.viewport, start);
 		tmp = origin_stroke->get_V().row((origin_stroke->get_F()(face, (i + 1) % 3)));
 		igl::project(tmp, modelview, origin_stroke->viewer.core.proj, origin_stroke->viewer.core.viewport, end);
 
-		Eigen::Vector2d vec0 = (v - start.block(0,0,1,2)).transpose();
-		Eigen::Vector2d vec1 = (end.block(0, 0, 1, 2) - start.block(0,0,1,2)).transpose();
+		vec0 = (v - start.block(0, 0, 1, 2)).transpose();
+		vec1 = (end.block(0, 0, 1, 2) - start.block(0, 0, 1, 2)).transpose();
 
 		if(cross_prod2D(vec0, vec1)*sign < 0) {
 			return false;
@@ -252,7 +263,7 @@ Eigen::Vector3d SurfacePath::unproject_onto_polygon(Eigen::Vector2d point, int f
 	igl::unproject_ray(point, modelview, origin_stroke->viewer.core.proj, origin_stroke->viewer.core.viewport, source, dir);
 	intersect_triangle1(source.data(), dir.data(), tmp1.data(), tmp2.data(), tmp3.data(), &t, &u, &v);
 
-	return source+t*dir;
+	return source + t*dir;
 }
 
 int SurfacePath::cross_prod2D(Eigen::Vector2d vec0, Eigen::Vector2d vec1) {

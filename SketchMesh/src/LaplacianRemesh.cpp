@@ -185,7 +185,6 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		stitch(path_vertices, inner_boundary_vertices, m);
 	}
 
-
 	//TODO: check if 708-728 in laplacianremesh is needed here
 
 	return Eigen::VectorXi::Map(path_vertices.data(), path_vertices.size()); //Create an Eigen::VectorXi from a std::vector
@@ -196,7 +195,6 @@ void LaplacianRemesh::propagate_dirty_faces(int face, vector<bool>& dirty_face) 
 	for(int i = 0; i < 3; i++) {
 		int next_face = (EF(FE(face, i), 0) == face) ? EF(FE(face, i), 1) : EF(FE(face, i), 0); //get an adjacent polygon
 		if(!dirty_face[next_face]) {
-			cout << "doing recursion" << endl;
 			propagate_dirty_faces(next_face, dirty_face);
 		}
 	}
@@ -435,41 +433,19 @@ bool LaplacianRemesh::is_counter_clockwise_boundaries(Eigen::MatrixXd boundary_p
 		}
 	}
 
-	/*Eigen::Vector3d x_vec = boundary_points.row(0) - center;
-	x_vec.normalize();
-	Eigen::Vector3d y_vec = normal.cross(x_vec);
-
-	cout << "test proj vecs" << x_vec << endl << endl << y_vec << endl << endl << normal << endl;
-
-	Eigen::MatrixXd boundary_vertices_2D(boundary_points.rows(), 2);
-	Eigen::Vector3d vec;
-	for(int i = 0; i < boundary_points.rows(); i++) {
-		vec = boundary_points.row(i) - center;
-		boundary_vertices_2D.row(i) << vec.dot(x_vec), vec.dot(y_vec);
-	}
-	
 	double total_area = 0.0;
-	Eigen::RowVector2d prev, next;
-	prev = boundary_vertices_2D.row(0);
-	cout << boundary_vertices_2D << endl;
-	for(int i = 1; i <= boundary_vertices_2D.rows(); i++) {
-		next = boundary_vertices_2D.row((i + boundary_points.rows()) % boundary_points.rows());
-		total_area += (prev[1] + next[1]) * (next[0] - prev[0]);
-		prev = next;
-	}*/
-
-	
-	double total_area = 0;
 	boundary_points = boundary_points.rowwise() - center;
 	Eigen::RowVector3d pt, vert;
 	Eigen::Vector2d prev, next;
 	vert = boundary_points.row(boundary_points.rows() - 1);
 	igl::project(vert, modelview, proj, viewport, pt); //project the boundary vertex and store in pt
-	prev = vert.leftCols(2).transpose();
+//	prev = vert.leftCols(2).transpose();
+	prev = pt.leftCols(2).transpose();
 	for(int i = 0; i < boundary_points.rows(); i++) {
 		vert = boundary_points.row(i);
 		igl::project(vert, modelview, proj, viewport, pt); //project the boundary vertex and store in pt
-		next = vert.leftCols(2).transpose();
+		//next = vert.leftCols(2).transpose();
+		next = pt.leftCols(2).transpose();
 		total_area += (prev[1] + next[1]) * (next[0] - prev[0]);
 		prev = next;
 	}
