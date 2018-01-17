@@ -6,7 +6,6 @@
 #include "Stroke.h"
 
 Eigen::MatrixXi EV, FE, EF;
-Eigen::MatrixXd N_faces;
 Stroke* origin_stroke;
 
 using namespace std;
@@ -32,7 +31,6 @@ void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 	Eigen::RowVector3d pt(0, 0, 0);
 
 	igl::edge_topology(stroke.get_V(), stroke.get_F(), EV, FE, EF);
-	igl::per_face_normals(stroke.get_V(), stroke.get_F(), N_faces);
 
 	while(true) {
 		next_p = n;
@@ -84,7 +82,6 @@ void SurfacePath::create_from_stroke(const Stroke & stroke) {
 	Eigen::RowVector3d pt(0, 0, 0);
 
 	igl::edge_topology(stroke.get_V(), stroke.get_F(), EV, FE, EF);
-	igl::per_face_normals(stroke.get_V(), stroke.get_F(), N_faces);
 
 	while(true) {
 		next_p = n;

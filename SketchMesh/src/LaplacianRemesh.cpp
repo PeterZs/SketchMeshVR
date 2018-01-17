@@ -87,7 +87,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	if(remove_inside_faces) {
 		//Collect all inside faces via recursive floodfill
 		for(int i = 0; i < m.V.rows(); i++) {
-			if(dirty_vertices[i] < 0){
+			if(dirty_vertices[i] < 0) {
 				for(int j = 0; j < VF[i].size(); j++) {
 					if(!dirty_face[VF[i][j]]) {
 						propagate_dirty_faces(VF[i][j], dirty_face);
@@ -102,7 +102,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	for(int i = 0; i < m.F.rows(); i++) {
 		if(!dirty_face[i]) {
 			clean_faces.push_back(i);
-		} 
+		}
 	}
 
 	Eigen::MatrixXi tmp_F;
@@ -111,9 +111,9 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	col_idx.col(0) << 0, 1, 2;
 	igl::slice(m.F, row_idx, col_idx, tmp_F); //Keep only the clean faces in the mesh
 	m.F = tmp_F;
-	
+
 	Eigen::MatrixXi EV_new;
-	igl::edge_topology(m.V, m.F, EV_new, FE, EF);
+	igl::edge_topology(m.V, m.F, EV, FE, EF); //TODO: NOTE: might need to save the EV that is outputted here in a new variable since maybe some methods might need the old EV
 	igl::vertex_triangle_adjacency(m.V.rows(), m.F, VF, VI);
 
 
@@ -125,9 +125,9 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 
 	//Do not use the last path vertex, as it is a copy of the first and creates unwanted behaviour
 	vector<int> path_vertices;
-	Eigen::MatrixX3d path_vert_positions(path.size()-1, 3);
+	Eigen::MatrixX3d path_vert_positions(path.size() - 1, 3);
 	int original_V_size = m.V.rows();
-	for(int i = 0; i < path.size()-1; i++) {
+	for(int i = 0; i < path.size() - 1; i++) {
 		path_vertices.push_back(original_V_size + i);
 		path_vert_positions.row(i) << path[i].get_vertex().transpose();
 	}
@@ -148,9 +148,9 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	Eigen::MatrixX3d tmp_path = resample_stroke(path_vert_positions); //Resamples the stroke by moving vertices to the middle of their neigbors --> implicitly results in smoothing/round stroke. not what we want
 	*/
 	int size_before = m.V.rows();
-	m.V.conservativeResize(m.V.rows() + path.size()-1, Eigen::NoChange);
+	m.V.conservativeResize(m.V.rows() + path.size() - 1, Eigen::NoChange);
 	//TODO NOTE: NEED TO CHAGNE THIS TO USE THE OUTCOME OF RESAMPLE_BY_LENGTH...
-	for(int i = 0; i < path.size()-1; i++) {
+	for(int i = 0; i < path.size() - 1; i++) {
 		m.V.row(size_before + i) << path[i].get_vertex().transpose();
 		//m.V.row(size_before + i) << tmp_path.row(i); //this version uses the smoothing but results in a roundish stroke.
 	}
@@ -176,7 +176,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	Eigen::Matrix4f modelview = view * model;
 	if(!is_counter_clockwise_boundaries(tmp_V, modelview, proj, viewport, mean_viewpoint, !is_front_loop)) {
 		reverse(outer_boundary_vertices.begin(), outer_boundary_vertices.end());
-	} 
+	}
 
 
 	stitch(path_vertices, outer_boundary_vertices, m);
@@ -200,7 +200,58 @@ void LaplacianRemesh::propagate_dirty_faces(int face, vector<bool>& dirty_face) 
 	}
 }
 
-vector<int> LaplacianRemesh::sort_boundary_vertices(Eigen::Vector3d start_vertex, std::vector<int> boundary_vertices, Mesh& m) {
+vector<int> LaplacianRemesh::sort_boundary_vertices(Eigen::Vector3d start_vertex, vector<int> boundary_vertices, Mesh& m) {
+	vector<int> sorted_boundary_vertices;
+	int start_v = find_closest(boundary_vertices, start_vertex, m);
+	int v = start_v;
+	int prev = start_v;
+
+	Eigen::VectorXi tmp1, tmp2;
+	int min_idx, max_idx, equal_pos, v_pos, max_val, only_option_idx;
+	bool have_one_option = false;
+	while(true) {
+		sorted_boundary_vertices.push_back(v);
+		for(int i = 0; i < VV[v].size(); i++) {
+			if(std::find(boundary_vertices.begin(), boundary_vertices.end(), VV[v][i]) != boundary_vertices.end()) { //Only continue if the adjacent vertex is also a boundary vertex
+				if(v < VV[v][i]) {
+					min_idx = v;
+					v_pos = 0;
+					max_idx = VV[v][i];
+				} else {
+					min_idx = VV[v][i];
+					v_pos = 1;
+					max_idx = v;
+				}
+				tmp1 = EV.col(0).cwiseEqual(min_idx).cast<int>();
+				tmp2 = EV.col(1).cwiseEqual(max_idx).cast<int>();
+				max_val = (tmp1 + tmp2).maxCoeff(&equal_pos); //Tmp1 and tmp2 will contain a 1 on the positions where they equal the min and max_idx. When adding them, we'll get 2 on the row that contains both of them
+				if((max_val != 2 && VV[v][i] != prev) || (max_val == 2 && EF(equal_pos, v_pos) == -1)) { //The first condition means that both vertices were only connected to faces that have been removed, so it is a valid move. The second condition means that the edge has a NULL face on the correct side of the edge, so proceed to adjacent vertex
+					prev = v;
+					v = VV[v][i];
+					have_one_option = false; //Remove our backtracking option
+					break;
+				} else if(max_val != 2 && VV[v][i] == prev) { //Check if we have any other options before we start backtracking over a boundary
+					only_option_idx = VV[v][i]; //Remember the vertex that we could backtrack to
+					have_one_option = true;
+					continue;
+				}
+			}
+		}
+
+		if(have_one_option) { //If we still have the backtracking vertex buffered, use it.
+			prev = v;
+			v = only_option_idx;
+			have_one_option = false;
+		}
+
+		if(v == start_v) {
+			break;
+		}
+	}
+	return sorted_boundary_vertices;
+}
+
+/*vector<int> LaplacianRemesh::sort_boundary_vertices(Eigen::Vector3d start_vertex, std::vector<int> boundary_vertices, Mesh& m) {
 	vector<int> sorted_boundary_vertices;
 	int start_v = find_closest(boundary_vertices, start_vertex, m);
 	int v = start_v;
@@ -213,7 +264,6 @@ vector<int> LaplacianRemesh::sort_boundary_vertices(Eigen::Vector3d start_vertex
 			if((std::find(boundary_vertices.begin(), boundary_vertices.end(), VV[v][i]) != boundary_vertices.end()) && !visited[VV[v][i]]) { //Find a neighboring vertex that's also on the boundary, and hasn't been visited before (original boundary vertices are never set as visited, check in next line)
 				if(VV[v][i] == prev) {
 					if(m.part_of_original_stroke(VV[v][i])) {//The found vertex is on the original boundary and the previously visited vertex. First check if there's any more vertices available that are not on the original boundary, as the boundary vertex is the last point before wrapping around (has to do with loops)
-															 //do stuff
 						found_another_one = false;
 						for(int j = i + 1; j < VV[v].size(); j++) {
 							if((std::find(boundary_vertices.begin(), boundary_vertices.end(), VV[v][j]) != boundary_vertices.end()) && !visited[VV[v][j]] && VV[v][j] != prev) { //Another suitable vertex that ISN'T the previous one
@@ -249,13 +299,13 @@ vector<int> LaplacianRemesh::sort_boundary_vertices(Eigen::Vector3d start_vertex
 
 	return sorted_boundary_vertices;
 }
-
+*/
 int LaplacianRemesh::find_closest(vector<int> vertices, Eigen::Vector3d base, Mesh& m) {
 	int closest = vertices[0];
 	double min = (m.V.row(vertices[0]) - base.transpose()).norm();
 	double d;
 
-	for(int i = 1; i<vertices.size(); i++) {
+	for(int i = 1; i < vertices.size(); i++) {
 		d = (m.V.row(vertices[i]) - base.transpose()).norm();
 		if(d < min) {
 			min = d;
@@ -340,7 +390,7 @@ vector<int> LaplacianRemesh::reorder(vector<int> boundary_vertices, Eigen::Vecto
 //TODO: check this or remove if not necessary
 void LaplacianRemesh::reverse_path(vector<int> path_vertices) {
 	reverse(path_vertices.begin(), path_vertices.end());
-	int v = path_vertices[path_vertices.size()-1];
+	int v = path_vertices[path_vertices.size() - 1];
 	path_vertices.insert(path_vertices.begin() + 1, path_vertices.begin(), path_vertices.end() - 1);
 	path_vertices[0] = v;
 }
@@ -424,7 +474,7 @@ bool LaplacianRemesh::is_counter_clockwise_boundaries(Eigen::MatrixXd boundary_p
 	}
 	normal.normalize();
 
-	
+
 	if(cut) {
 		if(normal.dot(center - mean_viewpoint) < 0) {
 			return false;

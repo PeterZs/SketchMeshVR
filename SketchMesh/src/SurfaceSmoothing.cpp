@@ -336,7 +336,7 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 	Eigen::VectorXd Vnewz = solver2.solve(AT*bz);
 
 	for(int i = 0; i < m.V.rows(); i++) {
-        if(m.part_of_original_stroke[i]==0){ //Don't update the original stroke points (will likely shrink the shape)
+        if(m.part_of_original_stroke[i]==0){ //Only update the non-original stroke points (otherwise it will likely shrink the shape)
 			m.V.row(i) << Vnewx[i], Vnewy[i], Vnewz[i];
 		}
 	}
