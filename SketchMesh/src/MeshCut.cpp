@@ -27,12 +27,16 @@ void MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &verte
 	SurfacePath surface_path;
 	surface_path.create_from_stroke(stroke); //Prepares the drawn stroke (inserts extra points at the edges that it crosses)
 	cut_main(m, surface_path, stroke);
+
+	post_cut_update_points(stroke, surface_path);
 	
-	stroke.viewer.data.clear();
+	/*stroke.viewer.data.clear();
 	stroke.viewer.data.set_mesh(m.V, m.F);
+	cout << "test values:  " << endl << m.V - V << endl << endl;
+	cout << m.F - F << endl;
 	Eigen::MatrixXd N_Faces;
 	igl::per_face_normals(m.V, m.F, N_Faces);
-	stroke.viewer.data.set_normals(N_Faces);
+	stroke.viewer.data.set_normals(N_Faces);*/
 	return;
 }
 
@@ -132,3 +136,12 @@ Eigen::MatrixXd MeshCut::resample_by_length_with_fixes(vector<int> path_vertices
 	}
 }
 
+void MeshCut::post_cut_update_points(Stroke& stroke, SurfacePath& surface_path) {
+	vector<PathElement> path = surface_path.get_path();
+	Eigen::MatrixX3d new_3DPoints(path.size(), 3);
+	for(int i = 0; i < path.size(); i++) {
+		new_3DPoints.row(i) = path[i].get_vertex().transpose();
+	}
+		
+	stroke.set3DPoints(new_3DPoints);
+}

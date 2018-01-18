@@ -34,6 +34,9 @@ using Viewer = igl::viewer::Viewer;
 Eigen::MatrixXd V;
 // Face array, #F x3
 Eigen::MatrixXi F;
+// Per face normals, #F x3
+Eigen::MatrixXd N_Faces;
+
 
 // Per vertex indicator of whether vertex is on boundary (on boundary if == 1)
 Eigen::VectorXi vertex_boundary_markers;
@@ -140,14 +143,15 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 	} else if(tool_mode == REMOVE) {
 		double closest_dist = INFINITY;
 		double current_closest = closest_dist;
-		int tmp_handleID;
+		int tmp_handleID, closest_stroke_idx;
 		handleID = -1;
 		for(int i = 0; i < stroke_collection.size(); i++) {
 			tmp_handleID = stroke_collection[i].selectClosestVertex(down_mouse_x, down_mouse_y, closest_dist);
 			if((closest_dist < current_closest) && (tmp_handleID != -1)) {
 				current_closest = closest_dist;
 				handleID = tmp_handleID;
-				closest_stroke_ID = i;
+				closest_stroke_ID = stroke_collection[i].get_ID();
+				closest_stroke_idx = i;
 			}
 		}
 
@@ -164,10 +168,10 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 		//Redraw the original stroke and all added strokes, where the selected stroke is drawn in black.
 		Eigen::MatrixXd init_points = initial_stroke->get3DPoints();
 		viewer.data.set_points(init_points.topRows(init_points.rows() - 1), Eigen::RowVector3d(1, 0, 0));
-		Eigen::MatrixXd added_points = stroke_collection[closest_stroke_ID].get3DPoints();
+		Eigen::MatrixXd added_points = stroke_collection[closest_stroke_idx].get3DPoints();
 		viewer.data.add_points(added_points.topRows(added_points.rows() - 1), Eigen::RowVector3d(0, 0, 0));
 		for(int i = 0; i < stroke_collection.size(); i++) {
-			if(i == closest_stroke_ID) {
+			if(stroke_collection[i].get_ID() == closest_stroke_ID) {
 				continue;
 			}
 			added_points = stroke_collection[i].get3DPoints();
@@ -177,7 +181,7 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 	
 		if(remove_stroke_clicked == 2) { //Mechanism to force the user to click twice on the same stroke before removing it (safeguard)
 			stroke_was_removed = true;
-			stroke_collection.erase(stroke_collection.begin() + closest_stroke_ID);
+			stroke_collection.erase(stroke_collection.begin() + closest_stroke_idx);
 			remove_stroke_clicked = 0; //Reset
 		}
 
@@ -212,23 +216,23 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 		skip_standardcallback = false; //We do want to use the navigation functionality
 	}
 	else if(tool_mode == CUT) {
-		if(cut_stroke_already_drawn) {
-			cout << "clicked while cut stroke already drawn" << endl;
+		if(cut_stroke_already_drawn) { //clicked while cut stroke already drawn
 			return true;
 		}
-		cout << "clicked with no cut stroke drawn yet" << endl;
-		added_stroke = new Stroke(V, F, viewer, -1); //Use ID -1 to indicate that it is a cut stroke
+		//clicked with no cut stroke drawn yet
+		added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID);
+		next_added_stroke_ID++;
 		added_stroke->strokeAddSegmentCut(down_mouse_x, down_mouse_y);
 		skip_standardcallback = true;
 	}
 	else if(tool_mode == EXTRUDE) {
-		if(extrusion_base_already_drawn) {
-			cout << "clicked while the extrude base was already drawn" << endl;
-			added_stroke = new Stroke(V, F, viewer, -3); //Use ID -3 to indicate that is is a extrusion silhouette stroke
+		if(extrusion_base_already_drawn) { //clicked while the extrude base was already drawn
+			added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID); 
+			next_added_stroke_ID++;
 			added_stroke->strokeAddSegmentExtrusionSilhouette(down_mouse_x, down_mouse_y);
-		} else {
-			cout << "clicked with no extrude base yet" << endl;
-			extrusion_base = new Stroke(V, F, viewer, -2); //Use ID -2 to indicate that it is a extrude base stroke
+		} else { //clicked with no extrude base yet
+			extrusion_base = new Stroke(V, F, viewer, next_added_stroke_ID); 
+			next_added_stroke_ID++;
 			extrusion_base->strokeAddSegmentExtrusionBase(down_mouse_x, down_mouse_y);
 		}
 		skip_standardcallback = true;
@@ -300,11 +304,10 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 		viewer.data.set_mesh(V, F);
 		viewer.data.compute_normals();
 
-		Eigen::MatrixXd init_points = initial_stroke->get3DPoints();
-		viewer.data.set_points(init_points.topRows(init_points.rows()-1), Eigen::RowVector3d(1, 0, 0));
-		viewer.data.set_stroke_points(init_points);
-
-		viewer.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0, 0, 1));
+		viewer.data.set_points((Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), Eigen::RowVector3d(1, 0, 0)); //Display the original stroke points and clear all the rest
+		viewer.data.set_stroke_points(igl::cat(1, (Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), (Eigen::MatrixXd) initial_stroke->get3DPoints().row(0)));
+		viewer.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0, 0, 1)); //Clear the edges
+		
 		Eigen::MatrixXd added_points;
 		int points_to_hold_back;
 		for(int i = 0; i < stroke_collection.size(); i++) {
@@ -331,6 +334,8 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 		return true;
 	}
 	mouse_is_down = false;
+
+	cout << "test: " << initial_stroke->get3DPoints() << endl << endl; 
 
 	if(tool_mode == DRAW) {
 		if(initial_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
@@ -376,7 +381,10 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 		}
 		stroke_collection.push_back(*added_stroke);
 
-		viewer.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0,0,1));
+		viewer.data.set_points((Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), Eigen::RowVector3d(1, 0, 0)); //Display the original stroke points and clear all the rest
+		viewer.data.set_stroke_points(igl::cat(1, (Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), (Eigen::MatrixXd) initial_stroke->get3DPoints().row(0)));
+		viewer.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0, 0, 1)); //Clear the edges
+
 		Eigen::MatrixXd added_points;
 		int points_to_hold_back;
 		for(int i = 0; i < stroke_collection.size(); i++) {
@@ -389,9 +397,10 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 	else if(tool_mode == REMOVE && stroke_was_removed) { //Only redraw if we actually removed a stroke (otherwise we draw unnecessary)
 		stroke_was_removed = false; //Reset
 
-		Eigen::MatrixXd init_points = initial_stroke->get3DPoints();
-		viewer.data.set_points(init_points.topRows(init_points.rows() - 1), Eigen::RowVector3d(1, 0, 0));
-		viewer.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0, 0, 1));
+		viewer.data.set_points((Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), Eigen::RowVector3d(1, 0, 0)); //Display the original stroke points and clear all the rest
+		viewer.data.set_stroke_points(igl::cat(1, (Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), (Eigen::MatrixXd) initial_stroke->get3DPoints().row(0)));
+		viewer.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0, 0, 1)); //Clear the edges
+
 		Eigen::MatrixXd added_points;
 		int points_to_hold_back;
 		for(int i = 0; i < stroke_collection.size(); i++) {
@@ -411,14 +420,12 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 		}
 
 		viewer.data.set_mesh(V, F);
-		viewer.data.compute_normals();
+		viewer.data.compute_normals(); //TODO: might need to use igl::per_face_normals(V, F, N_Faces); viewer.data.set_normals(N_Faces);
 
-		//Overlay the updated stroke
-		Eigen::MatrixXd init_points = initial_stroke->get3DPoints();
-		viewer.data.set_points(init_points.topRows(init_points.rows() - 1), Eigen::RowVector3d(1, 0, 0));
-		viewer.data.set_stroke_points(init_points);
+		viewer.data.set_points((Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), Eigen::RowVector3d(1, 0, 0)); //Display the original stroke points and clear all the rest
+		viewer.data.set_stroke_points(igl::cat(1, (Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), (Eigen::MatrixXd) initial_stroke->get3DPoints().row(0)));
+		viewer.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0, 0, 1)); //Clear the edges
 
-		viewer.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0, 0, 1));
 		Eigen::MatrixXd added_points;
 		int points_to_hold_back;
 		for(int i = 0; i < stroke_collection.size(); i++) {
@@ -434,14 +441,33 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			mouse_has_moved = false;
 			return true;
 		}
-		if(cut_stroke_already_drawn) { //User has drawn the final stroke for removing the part
-			cout << "mouse released after stroke already drawn" << endl;
+		if(cut_stroke_already_drawn) { //User had already drawn the cut stroke and has now drawn the final stroke for removing the part
 			added_stroke->append_final_point();
 			added_stroke->toLoop();
 			MeshCut::cut(V, F, vertex_boundary_markers, part_of_original_stroke, *added_stroke);
+			stroke_collection.push_back(*added_stroke);
+			viewer.data.clear();
+			viewer.data.set_mesh(V, F);
+			igl::per_face_normals(V, F, N_Faces);
+			viewer.data.set_normals(N_Faces);
+			viewer.core.align_camera_center(V, F);
+
 			cut_stroke_already_drawn = false; //Reset
+
+			viewer.data.set_points((Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), Eigen::RowVector3d(1, 0, 0)); //Display the original stroke points and clear all the rest
+			viewer.data.set_stroke_points(igl::cat(1, (Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), (Eigen::MatrixXd) initial_stroke->get3DPoints().row(0)));
+			viewer.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0, 0, 1)); //Clear the edges
+
+			Eigen::MatrixXd added_points;
+			int points_to_hold_back;
+			for(int i = 0; i < stroke_collection.size(); i++) {
+				added_points = stroke_collection[i].get3DPoints();
+				points_to_hold_back = 1 + !stroke_collection[i].is_loop;
+				viewer.data.add_points(added_points, stroke_collection[i].stroke_color);
+				viewer.data.add_edges(added_points.block(0, 0, added_points.rows() - points_to_hold_back, 3), added_points.block(1, 0, added_points.rows() - points_to_hold_back, 3), stroke_collection[i].stroke_color);
+			}
+
 		} else { //We're finished drawing the cut stroke, prepare for when user draws the final stroke to remove the part
-			cout << "mouse released with new cut stroke" << endl;
 			cut_stroke_already_drawn = true;
 		}
 	}
@@ -449,24 +475,56 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 		if(extrusion_base_already_drawn) { //User has drawn the silhouette stroke for extrusion
 			cout << "mouse released after extrusion silhouette drawn" << endl;
 			added_stroke->toLoop();
-			V = viewer.data.V;
-			F = viewer.data.F;
 			MeshExtrusion::extrude_main(V, F, vertex_boundary_markers, part_of_original_stroke, base_surface_path, *added_stroke, base_model, base_view, base_proj, base_viewport);
+			stroke_collection.push_back(*added_stroke);
+
+			viewer.data.clear();
+			viewer.data.set_mesh(V, F);
+			igl::per_face_normals(V, F, N_Faces);
+			viewer.data.set_normals(N_Faces);
+			viewer.core.align_camera_center(V, F);
+
 			extrusion_base_already_drawn = false; //Reset
-		} else {
+
+			viewer.data.set_points((Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), Eigen::RowVector3d(1, 0, 0)); //Display the original stroke points and clear all the rest
+			viewer.data.set_stroke_points(igl::cat(1, (Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), (Eigen::MatrixXd) initial_stroke->get3DPoints().row(0)));
+			viewer.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0, 0, 1)); //Clear the edges
+
+			Eigen::MatrixXd added_points;
+			int points_to_hold_back;
+			for(int i = 0; i < stroke_collection.size(); i++) {
+				added_points = stroke_collection[i].get3DPoints();
+				points_to_hold_back = 1 + !stroke_collection[i].is_loop;
+				viewer.data.add_points(added_points, stroke_collection[i].stroke_color);
+				viewer.data.add_edges(added_points.block(0, 0, added_points.rows() - points_to_hold_back, 3), added_points.block(1, 0, added_points.rows() - points_to_hold_back, 3), stroke_collection[i].stroke_color);
+			}
+		} else { //mouse released after extrusion base drawn
 			if(!extrusion_base->has_points_on_mesh) {
 				mouse_has_moved = false;
 				return true;
 			}
+			//extrusion_base->resample_all(); //This will shrink the drawn stroke. Might result in no face being contained inside the stroke
 			extrusion_base->toLoop();
 			extrusion_base_already_drawn = true;
 			MeshExtrusion::extrude_prepare(*extrusion_base, base_surface_path);
+			stroke_collection.push_back(*extrusion_base);
 			base_model = extrusion_base->viewer.core.model;
 			base_view = extrusion_base->viewer.core.view;
 			base_proj = extrusion_base->viewer.core.proj;
 			base_viewport = extrusion_base->viewer.core.viewport;
 
-			cout << "mouse released after extrusion base drawn" << endl;
+			viewer.data.set_points((Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), Eigen::RowVector3d(1, 0, 0)); //Display the original stroke points and clear all the rest. Don't take the last point
+			viewer.data.set_stroke_points(igl::cat(1, (Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), (Eigen::MatrixXd) initial_stroke->get3DPoints().row(0))); //Create a loop and draw edges
+			viewer.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0, 0, 1)); //Clear the non-original stroke edges
+
+			Eigen::MatrixXd added_points;
+			int points_to_hold_back;
+			for(int i = 0; i < stroke_collection.size(); i++) {
+				added_points = stroke_collection[i].get3DPoints();
+				points_to_hold_back = 1 + !stroke_collection[i].is_loop;
+				viewer.data.add_points(added_points, stroke_collection[i].stroke_color);
+				viewer.data.add_edges(added_points.block(0, 0, added_points.rows() - points_to_hold_back, 3), added_points.block(1, 0, added_points.rows() - points_to_hold_back, 3), stroke_collection[i].stroke_color);
+			}
 		}
 	}
 

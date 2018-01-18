@@ -26,6 +26,7 @@ public:
     std::unordered_map<int, int> generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke);
 	//double total_stroke_length();
 	Eigen::MatrixX3d get3DPoints();
+	void set3DPoints(Eigen::MatrixX3d new_3DPoints);
 	int get_vertex_idx_for_point(int i);
 	int get_ID();
 	//void prepare_for_cut();
@@ -47,7 +48,9 @@ public:
 
 	Eigen::MatrixXi get_F() const;
 
-	Eigen::MatrixX2d get_stroke2DPoints() const;
+	Eigen::MatrixXd get_stroke2DPoints() const;
+
+	void resample_all();
 
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
@@ -57,9 +60,9 @@ private:
 	int stroke_ID; //Non-const for the sake of copy assignment operator 
 
 	Eigen::MatrixX3d stroke3DPoints; //Used for screen output
-	Eigen::MatrixX2d stroke2DPoints; //Used for early checking if point is new (in screen coordinates)
+	Eigen::MatrixXd stroke2DPoints; //Used for early checking if point is new (in screen coordinates)
 	Eigen::RowVector3d cut_stroke_final_point; //Only used for cutting strokes, in order to facilitate a final point that is the first point outside of the mesh after we finish the part of the stroke that's on the mesh
-	Eigen::RowVector2d cut_stroke_final_point_2D;
+	Eigen::RowVectorXd cut_stroke_final_point_2D;
 	bool just_came_from_mesh; //Used for cutting strokes only. Indicates whether this is the first point outside of the mesh after we've been drawing on the mesh
 	Eigen::MatrixXi stroke_edges;
 	double dep = -1;
@@ -67,8 +70,9 @@ private:
 	std::vector<int> closest_vert_bindings;
 	std::vector<int> added_stroke_final_vertices;
 
-	static Eigen::MatrixX2d resample_stroke(Eigen::MatrixX2d & original_stroke2DPoints);
-	static void move_to_middle(Eigen::MatrixX2d &positions, Eigen::MatrixX2d &new_positions);
+	static Eigen::MatrixXd resample_stroke2D(Eigen::MatrixXd & original_stroke2DPoints);
+	static void move_to_middle(Eigen::MatrixXd &positions, Eigen::MatrixXd &new_positions);
+	//static void move_to_middle3D(Eigen::MatrixX3d & positions, Eigen::MatrixX3d & new_positions);
 	static void generate_backfaces(Eigen::MatrixXi &faces, Eigen::MatrixXi &back_faces);
 
 //	int extend_path(int prev_p, int next_p, int faceID, Eigen::VectorXi forward, bool front_facing_only, Eigen::Matrix4f modelview);

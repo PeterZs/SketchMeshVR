@@ -21,14 +21,14 @@ Eigen::SparseMatrix<double> A_L1_T;
 Eigen::VectorXd B;
 Eigen::SparseMatrix<double> B_L1;
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solverL1; //Solver for final vertex positions (with L1)
-Eigen::SparseLU<Eigen::SparseMatrix<double>> solverPosRot; 
+Eigen::SparseLU<Eigen::SparseMatrix<double>> solverPosRot;
 //Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solverPosRot;
 Eigen::VectorXd PosRot;
 vector<Eigen::Matrix3d> Rot;
 vector<int> vert_bindings;
 Eigen::MatrixXd original_L0, original_L1;
 int CONSTRAINT_WEIGHT = 10000;
-Eigen::VectorXi is_fixed;
+Eigen::VectorXi is_fixed; //Indicates for every vertex on the pulled curve whether or not it is fixed (aka it is 0 when it is in the ROI and 1 when it is not)
 bool stroke_is_loop, prev_loop_type;
 int stroke_ID;
 
@@ -82,7 +82,7 @@ bool CurveDeformation::update_ROI(double drag_size) {
 	if(smooth_deform_mode) {
 		no_ROI_vert_tmp = max(round(0.17*no_vertices) + 1, min(round(drag_size * no_vertices) + 1, ceil(((no_vertices - 1) / 2) - 1))); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side, always at least 1/6th of the number of vertices + 1 vertex fixed, to take care of thin meshes with many vertices)
 	} else {
-		no_ROI_vert_tmp = max(0.0, min(round(drag_size/4.0 * no_vertices), ceil(((no_vertices - 1) / 2) - 1))); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side)
+		no_ROI_vert_tmp = max(0.0, min(round(drag_size / 4.0 * no_vertices), ceil(((no_vertices - 1) / 2) - 1))); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side)
 	}
 
 	if(((no_ROI_vert == no_ROI_vert_tmp) && prev_loop_type == stroke_is_loop) || no_ROI_vert_tmp == 0) { //number of vertices in ROI didn't change
@@ -98,7 +98,7 @@ bool CurveDeformation::update_ROI(double drag_size) {
 		ROI_2 = (((handle_ID + no_ROI_vert) + no_vertices) % no_vertices);
 	} else {
 		ROI_1 = max(0, handle_ID - no_ROI_vert); //For non-loop strokes (e.g. added strokes), don't wrap around but instead cap at the first and last vertex of the stroke
-		ROI_2 = min(no_vertices-1, handle_ID + no_ROI_vert);
+		ROI_2 = min(no_vertices - 1, handle_ID + no_ROI_vert);
 	}
 
 	vector<int> fixed;
@@ -118,7 +118,7 @@ bool CurveDeformation::update_ROI(double drag_size) {
 				}
 			}
 
-		} 
+		}
 		else {
 			if(handle_ID < ROI_2_original) { //Handle_ID is between 0 and ROI_2
 				for(int i = ROI_1_original; i < no_vertices; i++) {
@@ -153,7 +153,7 @@ bool CurveDeformation::update_ROI(double drag_size) {
 					}
 				}
 			}
-		}	
+		}
 	}*/
 
 
@@ -163,13 +163,13 @@ bool CurveDeformation::update_ROI(double drag_size) {
 			fixed.push_back(vert_bindings[i]);
 			fixed_local.push_back(i);
 		}
-		for(int i = ROI_2+1; i < no_vertices; i++) {
+		for(int i = ROI_2 + 1; i < no_vertices; i++) {
 			is_fixed[i] = 1;
 			fixed.push_back(vert_bindings[i]);
 			fixed_local.push_back(i);
 		}
 	} else {
-		for(int i = ROI_2+1; i < ROI_1; i++) {
+		for(int i = ROI_2 + 1; i < ROI_1; i++) {
 			is_fixed[i] = 1;
 			fixed.push_back(vert_bindings[i]);
 			fixed_local.push_back(i);
@@ -187,8 +187,8 @@ bool CurveDeformation::update_ROI(double drag_size) {
 }
 
 void CurveDeformation::setup_for_update_curve(Eigen::MatrixXd& V) {
-	A.resize(no_vertices*3 + no_vertices * 9 + fixed_indices.size()*3 + fixed_indices.size()*3, no_vertices*3 + no_vertices*3); //Solve for x,y,z simultaneously since we cannot reuse A anyway
-	B.resize(no_vertices*3 + no_vertices * 9 + fixed_indices.size()*3 + fixed_indices.size()*3);
+	A.resize(no_vertices * 3 + no_vertices * 9 + fixed_indices.size() * 3 + fixed_indices.size() * 3, no_vertices * 3 + no_vertices * 3); //Solve for x,y,z simultaneously since we cannot reuse A anyway
+	B.resize(no_vertices * 3 + no_vertices * 9 + fixed_indices.size() * 3 + fixed_indices.size() * 3);
 	original_L0.resize(no_vertices, 3);
 
 	if(stroke_is_loop) {
@@ -263,7 +263,7 @@ void CurveDeformation::update_curve(Eigen::MatrixXd& V) {
 	final_L1_pos(V);
 }
 
-void CurveDeformation::solve_for_pos_and_rot(Eigen::MatrixXd& V){
+void CurveDeformation::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
 	A.setZero();
 	B.setZero();
 
@@ -279,7 +279,7 @@ void CurveDeformation::solve_for_pos_and_rot(Eigen::MatrixXd& V){
 		A.insert(i * 3, no_vertices * 3 + cur * 3) = 0;
 		A.insert(i * 3, no_vertices * 3 + cur * 3 + 1) = -(Rot[i].row(2).dot(original_L0.row(i)));
 		A.insert(i * 3, no_vertices * 3 + cur * 3 + 2) = Rot[i].row(1).dot(original_L0.row(i));
-		B[i*3] = Rot[i].row(0).dot(original_L0.row(i)); //constant
+		B[i * 3] = Rot[i].row(0).dot(original_L0.row(i)); //constant
 
 		if(i > 0 || stroke_is_loop) {
 			A.insert(i * 3 + 1, prev * 3 + 1) = -1; //L0
@@ -307,21 +307,21 @@ void CurveDeformation::solve_for_pos_and_rot(Eigen::MatrixXd& V){
 		prev_rot = (((i - 1) + no_vertices) % no_vertices);
 		for(int j = 0; j < 3; j++) {
 			A.insert(no_vertices * 3 + i * 9 + j, no_vertices * 3 + prev * 3) = 0;
-			A.insert(no_vertices * 3 + i * 9 + j, no_vertices * 3 + prev * 3 + 1) = -1 * Rot[prev_rot](2,j);
-			A.insert(no_vertices * 3 + i * 9 + j, no_vertices * 3 + prev * 3 + 2) = -1 * -Rot[prev_rot](1,j);
+			A.insert(no_vertices * 3 + i * 9 + j, no_vertices * 3 + prev * 3 + 1) = -1 * Rot[prev_rot](2, j);
+			A.insert(no_vertices * 3 + i * 9 + j, no_vertices * 3 + prev * 3 + 2) = -1 * -Rot[prev_rot](1, j);
 			A.insert(no_vertices * 3 + i * 9 + j, no_vertices * 3 + i * 3) = 0;
-			A.insert(no_vertices * 3 + i * 9 + j, no_vertices * 3 + i * 3 + 1) = 1 * Rot[i](2,j);
-			A.insert(no_vertices * 3 + i * 9 + j, no_vertices * 3 + i * 3 + 2) = 1 * -Rot[i](1,j);
+			A.insert(no_vertices * 3 + i * 9 + j, no_vertices * 3 + i * 3 + 1) = 1 * Rot[i](2, j);
+			A.insert(no_vertices * 3 + i * 9 + j, no_vertices * 3 + i * 3 + 2) = 1 * -Rot[i](1, j);
 			B[no_vertices * 3 + i * 9 + j] = -1 * Rot[i](0, j) + 1 * Rot[prev_rot](0, j);
 
 			A.insert(no_vertices * 3 + i * 9 + 3 + j, no_vertices * 3 + prev * 3) = -1 * -Rot[prev_rot](2, j);
 			A.insert(no_vertices * 3 + i * 9 + 3 + j, no_vertices * 3 + prev * 3 + 1) = 0;
 			A.insert(no_vertices * 3 + i * 9 + 3 + j, no_vertices * 3 + prev * 3 + 2) = -1 * Rot[prev_rot](0, j);
 			A.insert(no_vertices * 3 + i * 9 + 3 + j, no_vertices * 3 + i * 3) = 1 * -Rot[i](2, j);
-			A.insert(no_vertices * 3 + i * 9 + 3 + j, no_vertices * 3 + i * 3+1) = 0;
-			A.insert(no_vertices * 3 + i * 9 + 3 + j, no_vertices * 3 + i * 3+2) = 1 * Rot[i](0, j);
+			A.insert(no_vertices * 3 + i * 9 + 3 + j, no_vertices * 3 + i * 3 + 1) = 0;
+			A.insert(no_vertices * 3 + i * 9 + 3 + j, no_vertices * 3 + i * 3 + 2) = 1 * Rot[i](0, j);
 			B[no_vertices * 3 + i * 9 + 3 + j] = -1 * Rot[i](1, j) + 1 * Rot[prev_rot](1, j);
-			
+
 			A.insert(no_vertices * 3 + i * 9 + 6 + j, no_vertices * 3 + prev * 3) = -1 * Rot[prev_rot](1, j);
 			A.insert(no_vertices * 3 + i * 9 + 6 + j, no_vertices * 3 + prev * 3 + 1) = -1 * -Rot[prev_rot](0, j);
 			A.insert(no_vertices * 3 + i * 9 + 6 + j, no_vertices * 3 + prev * 3 + 2) = 0;
@@ -380,7 +380,7 @@ Eigen::Matrix3d CurveDeformation::compute_orthonormal(Eigen::Matrix3d& rot) {
 }
 
 void CurveDeformation::final_L1_pos(Eigen::MatrixXd &V) {
-	Eigen::VectorXd Bx(no_vertices+fixed_indices.size()), By(no_vertices + fixed_indices.size()), Bz(no_vertices + fixed_indices.size());
+	Eigen::VectorXd Bx(no_vertices + fixed_indices.size()), By(no_vertices + fixed_indices.size()), Bz(no_vertices + fixed_indices.size());
 	Eigen::Vector3d Rl;
 	for(int i = 0; i < no_vertices; i++) {
 		Rl = Rot[i] * original_L1.row(i).transpose();
@@ -399,8 +399,8 @@ void CurveDeformation::final_L1_pos(Eigen::MatrixXd &V) {
 	Eigen::VectorXd ypos = solverL1.solve(A_L1_T*By);
 	Eigen::VectorXd zpos = solverL1.solve(A_L1_T*Bz);
 
-	if(stroke_ID==0){ //We're pulling on the original stroke
-		for(int i = 0; i < no_vertices; i++) { //update the position of non-fixed stroke vertices
+	if(stroke_ID == 0) { //We're pulling on the original stroke
+		for(int i = 0; i < no_vertices; i++) { //update the position of non-fixed vertices of the stroke that is being pulled on
 			if(!is_fixed[i]) {
 				V.row(vert_bindings[i]) << xpos[i], ypos[i], zpos[i];
 			}

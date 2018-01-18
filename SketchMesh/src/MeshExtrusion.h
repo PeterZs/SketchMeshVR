@@ -16,6 +16,9 @@ private:
 	static int ID;
 
 	static void generate_mesh(Mesh & m, Eigen::MatrixXd front_loop3D, Eigen::Vector3d center, Eigen::Vector3d x_vec, Eigen::Vector3d y_vec, Eigen::Vector3d offset, int nr_silhouette_vert, std::vector<int> loop_base_original_indices, std::vector<int> sil_original_indices);
+	static void post_extrude_prepare_update_points(Stroke& stroke, SurfacePath& surface_path);
+
+	static void post_extrude_main_update_points(Stroke & stroke, Eigen::MatrixXd new_positions);
 
 };
 

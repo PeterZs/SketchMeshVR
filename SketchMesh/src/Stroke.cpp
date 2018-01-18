@@ -19,7 +19,7 @@ Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::viewer
 	F(F_),
 	viewer(v),
 	stroke_ID(stroke_ID_) {
-	stroke2DPoints = Eigen::MatrixX2d::Zero(1, 2);
+	stroke2DPoints = Eigen::MatrixXd::Zero(1, 2);
 	stroke3DPoints = Eigen::MatrixX3d::Zero(1, 3);
 	stroke_edges = Eigen::MatrixXi::Zero(0, 2);
 	_time1 = std::chrono::high_resolution_clock::now();
@@ -164,8 +164,9 @@ bool Stroke::strokeAddSegmentAdd(int mouse_x, int mouse_y) {
 			stroke_edges.conservativeResize(stroke_edges.rows() + 1, stroke_edges.cols());
 			stroke_edges.row(stroke_edges.rows() - 1) << stroke2DPoints.rows() - 2, stroke2DPoints.rows() - 1;
 		}
-		//using set_stroke_points will remove all previous strokes, using add_stroke_points might create duplicates
-		viewer.data.add_edges(stroke3DPoints.block(0, 0, stroke3DPoints.rows() - 1, 3), stroke3DPoints.block(1, 0, stroke3DPoints.rows() - 1, 3), Eigen::RowVector3d(0, 1, 0));
+		if(stroke3DPoints.rows() > 1) {
+			viewer.data.add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0, 1, 0));
+		}
 		result = true;
 	}
 
@@ -200,7 +201,7 @@ void Stroke::strokeAddSegmentCut(int mouse_x, int mouse_y) {
 
 		//Only add point when it's on the mesh
 		if(stroke2DPoints.rows() == 1 && empty2D()) { //Add first point
-			cout << "this shouldn't happen. Draw the first point outside of the mesh" << endl;
+			cout << "This shouldn't happen. Draw the first point outside of the mesh" << endl;
 			return;
 		} else {
 			stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, stroke2DPoints.cols());
@@ -212,17 +213,21 @@ void Stroke::strokeAddSegmentCut(int mouse_x, int mouse_y) {
 			stroke_edges.conservativeResize(stroke_edges.rows() + 1, stroke_edges.cols());
 			stroke_edges.row(stroke_edges.rows() - 1) << stroke2DPoints.rows() - 2, stroke2DPoints.rows() - 1;
 		}
-		//using set_stroke_points will remove all previous strokes, using add_stroke_points might create duplicates
 		viewer.data.add_points(stroke3DPoints.row(stroke3DPoints.rows() - 1), Eigen::RowVector3d(1, 0, 1));
+		if(stroke3DPoints.rows() > 2) {
+			viewer.data.add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(1, 0, 1));
+		}
 		just_came_from_mesh = true;
 	} else if(stroke2DPoints.rows() > 1 && just_came_from_mesh) { //We need to add the final point of the stroke, even though it is off the mesh (needed in order to wrap around to the backside)
 		cut_stroke_final_point = igl::unproject(Eigen::Vector3f(x, y, 0.95*dep), modelview, viewer.core.proj, viewer.core.viewport).transpose().cast<double>();
-		cut_stroke_final_point_2D = Eigen::RowVector2d(x, y);
+		cut_stroke_final_point_2D = Eigen::RowVectorXd::Zero(1, 2);
+		cut_stroke_final_point_2D << x, y;
 		just_came_from_mesh = false;
 	} else if(stroke2DPoints.rows() == 1) { //Add the first point, which should be outside the mesh. Refresh the "first" point until we get to the last one before we enter the mesh
 		Eigen::RowVector3d tmp = igl::unproject(Eigen::Vector3f(x, y, 0.95*dep), modelview, viewer.core.proj, viewer.core.viewport).cast<double>();
 		stroke2DPoints.row(0) << x, y;
 		stroke3DPoints.row(0) = tmp;
+		stroke_color = Eigen::RowVector3d(1, 0, 0);
 	}
 
 	_time1 = std::chrono::high_resolution_clock::now(); //restart the "start" timer
@@ -253,7 +258,7 @@ void Stroke::strokeAddSegmentExtrusionBase(int mouse_x, int mouse_y) {
 	if(!empty2D()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if(timePast < 100000000) { //Don't add another segment before x nanoseconds
+		if(timePast < 50000000) { //Don't add another segment before x nanoseconds
 			return;
 		}
 	}
@@ -299,12 +304,9 @@ void Stroke::strokeAddSegmentExtrusionBase(int mouse_x, int mouse_y) {
 		return;
 	}
 
-	//using set_stroke_points will remove all previous strokes, using add_stroke_points might create duplicates
-	Eigen::RowVector3d color(0, 0, 1);
-	if(stroke2DPoints.rows() == 1) {
-		color.row(0) << 1, 1, 1;
+	if(stroke3DPoints.rows() > 1) {
+		viewer.data.add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0, 0, 1));
 	}
-	viewer.data.add_points(stroke3DPoints.row(stroke3DPoints.rows() - 1), color);
 
 	_time1 = std::chrono::high_resolution_clock::now(); //restart the "start" timer
 }
@@ -321,7 +323,7 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(int mouse_x, int mouse_y) {
 	if(!empty2D()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if(timePast < 100000000) { //Don't add another segment before x nanoseconds
+		if(timePast < 50000000) { //Don't add another segment before x nanoseconds
 			return;
 		}
 	}
@@ -343,8 +345,10 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(int mouse_x, int mouse_y) {
 		stroke_edges.conservativeResize(stroke_edges.rows() + 1, stroke_edges.cols());
 		stroke_edges.row(stroke_edges.rows() - 1) << stroke2DPoints.rows() - 2, stroke2DPoints.rows() - 1;
 	}
-	//using set_stroke_points will remove all previous strokes, using add_stroke_points might create duplicates
-	viewer.data.add_points(stroke3DPoints.row(stroke3DPoints.rows() - 1), Eigen::RowVector3d(0, 0, 1));
+
+	if(stroke3DPoints.rows() > 1) {
+		viewer.data.add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0.2, 0.6, 1));
+	}
 
 	_time1 = std::chrono::high_resolution_clock::now(); //restart the "start" timer
 }
@@ -369,8 +373,9 @@ bool Stroke::toLoop() {
 
 		stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
 		stroke3DPoints.row(stroke3DPoints.rows() - 1) << stroke3DPoints.row(0);
-		closest_vert_bindings.push_back(0);
-		viewer.data.set_stroke_points(stroke3DPoints);
+		if(closest_vert_bindings.size() > 0) {
+			closest_vert_bindings.push_back(closest_vert_bindings[0]);
+		}
 		is_loop = true;
 		return true;
 	}
@@ -381,8 +386,8 @@ bool Stroke::toLoop() {
 unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke) {
 	counter_clockwise(); //Ensure the stroke is counter-clockwise, handy later
 
-	Eigen::MatrixX2d original_stroke2DPoints = stroke2DPoints;
-	stroke2DPoints = resample_stroke(original_stroke2DPoints);
+	Eigen::MatrixXd original_stroke2DPoints = stroke2DPoints;
+	stroke2DPoints = resample_stroke2D(original_stroke2DPoints);
 
 	Eigen::MatrixXd V2_tmp, V2;
 	Eigen::MatrixXi F2, F2_back, vertex_markers, edge_markers;
@@ -455,9 +460,10 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 
 	viewer.data.clear();
 	viewer.data.set_mesh(V2, F2);
+	
 	igl::per_face_normals(V2, F2, N_Faces);
-
 	viewer.data.set_normals(N_Faces);
+
 	viewer.core.align_camera_center(viewer.data.V);
 	return backside_vertex_map;
 }
@@ -481,8 +487,8 @@ void Stroke::counter_clockwise() {
 
 }
 
-Eigen::MatrixX2d Stroke::resample_stroke(Eigen::MatrixX2d & original_stroke2DPoints) {
-	Eigen::MatrixX2d new_stroke2DPoints = Eigen::MatrixX2d::Zero(original_stroke2DPoints.rows(), 2);
+Eigen::MatrixXd Stroke::resample_stroke2D(Eigen::MatrixXd & original_stroke2DPoints) {
+	Eigen::MatrixXd new_stroke2DPoints = Eigen::MatrixXd::Zero(original_stroke2DPoints.rows(), 2);
 	int nr_iterations = max(5.0, original_stroke2DPoints.rows() / 4.0);
 	for(int i = 0; i < nr_iterations; i++) {
 		move_to_middle(original_stroke2DPoints, new_stroke2DPoints);
@@ -491,7 +497,7 @@ Eigen::MatrixX2d Stroke::resample_stroke(Eigen::MatrixX2d & original_stroke2DPoi
 	return new_stroke2DPoints;
 }
 
-void Stroke::move_to_middle(Eigen::MatrixX2d &positions, Eigen::MatrixX2d &new_positions) {
+void Stroke::move_to_middle(Eigen::MatrixXd &positions, Eigen::MatrixXd &new_positions) {
 	int n = positions.rows();
 	Eigen::Vector2d prev, cur, next;
 
@@ -519,6 +525,11 @@ void Stroke::generate_backfaces(Eigen::MatrixXi &faces, Eigen::MatrixXi &back_fa
 
 Eigen::MatrixX3d Stroke::get3DPoints() {
 	return stroke3DPoints;
+}
+
+void Stroke::set3DPoints(Eigen::MatrixX3d new_3DPoints) {
+	stroke3DPoints.resize(new_3DPoints.rows(), 3);
+	stroke3DPoints = new_3DPoints;
 }
 
 int Stroke::get_vertex_idx_for_point(int pt_idx) {
@@ -566,7 +577,7 @@ void Stroke::update_Positions(Eigen::MatrixXd V) {
 	for(int i = 0; i < stroke3DPoints.rows() - 1; i++) {
 		stroke3DPoints.row(i) = V.row(closest_vert_bindings[i]);
 	}
-	stroke3DPoints.row(stroke3DPoints.rows() - 1) = stroke3DPoints.row(0); //The last vertex in the stroke is the first point again (and not the first inside mesh vertex)
+	stroke3DPoints.row(stroke3DPoints.rows() - 1) = stroke3DPoints.row(0); //The last vertex in the stroke is the first point again
 }
 
 void Stroke::snap_to_vertices(Eigen::VectorXi &vertex_boundary_markers) {
@@ -607,6 +618,7 @@ void Stroke::snap_to_vertices(Eigen::VectorXi &vertex_boundary_markers) {
 
 }
 
+//TODO: Consider removing this or fixing it. Because right now this only works for adding strokes right after the original stroke is drawn (using backside_vertex_map), and will break when there has been extrusions or cuts
 void Stroke::mirror_on_backside(Eigen::VectorXi &vertex_boundary_markers, unordered_map<int, int> backside_vertex_map) {
 	int original_added_stroke_size = added_stroke_final_vertices.size();
 	stroke3DPoints.conservativeResize(stroke3DPoints.rows() - 1, 3); //Should remove the last point, which is a duplicate of the first, to keep consistency with original strokes
@@ -639,6 +651,28 @@ Eigen::MatrixXi Stroke::get_F() const {
 	return F;
 }
 
-Eigen::MatrixX2d Stroke::get_stroke2DPoints() const {
+Eigen::MatrixXd Stroke::get_stroke2DPoints() const {
 	return stroke2DPoints;
+}
+
+//Does not take care of closest_vert_bindings
+void Stroke::resample_all() {
+	Eigen::MatrixXd new_stroke2DPoints = Eigen::MatrixXd::Zero(stroke2DPoints.rows(), 2);
+	Eigen::MatrixX3d new_stroke3DPoints = Eigen::MatrixX3d::Zero(stroke3DPoints.rows(), 3);
+	//int nr_iterations = max(5.0, stroke2DPoints.rows() / 4.0);
+	int nr_iterations = 1;
+	for(int i = 0; i < nr_iterations; i++) {
+		move_to_middle(stroke2DPoints, new_stroke2DPoints);
+		move_to_middle(new_stroke2DPoints, stroke2DPoints); //TODO: is this to save us a copy? basically performing an extra move_to_middle step
+	}
+
+	Eigen::Matrix4f modelview = viewer.core.view * viewer.core.model;
+	Eigen::RowVector3d pt(0, 0, 0);
+	Eigen::Vector3f bc;
+	int faceID = -1;
+	for(int i = 0; i < stroke2DPoints.rows(); i++) { //unproject to get the corresponding 3D points
+		igl::unproject_onto_mesh(Eigen::Vector2f(stroke2DPoints(i, 0), stroke2DPoints(i, 1)), modelview, viewer.core.proj, viewer.core.viewport, V, F, faceID, bc);
+		pt = V.row(F(faceID, 0))*bc(0) + V.row(F(faceID, 1))*bc(1) + V.row(F(faceID, 2))*bc(2);
+		stroke3DPoints.row(i) << pt[0], pt[1], pt[2];
+	}
 }

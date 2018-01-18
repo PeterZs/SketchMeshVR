@@ -16,7 +16,10 @@ void MeshExtrusion::extrude_prepare(Stroke& base, SurfacePath& surface_path) {
 	base.counter_clockwise();
 
 	//TODO: maybe need to do teddy.cleanstroke.clean like in Model line 1020 (ON BOTH BASE AND SILHOUETTE)
+	
 	surface_path.create_from_stroke_extrude(base);
+	post_extrude_prepare_update_points(base, surface_path);
+
 }
 
 void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, SurfacePath& surface_path, Stroke& stroke, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport) {
@@ -148,15 +151,7 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	reverse(sil_original_indices.begin(), sil_original_indices.end());
 	generate_mesh(m, back_loop3D, center, x_vec*-1, y_vec, offset*-1, silhouette_vertices.rows(), back_loop_base_original_indices, sil_original_indices);
 
-
-	stroke.viewer.data.clear();
-	stroke.viewer.data.set_mesh(m.V, m.F);
-	Eigen::MatrixXd N_Faces;
-	igl::per_face_normals(m.V, m.F, N_Faces);
-	stroke.viewer.data.set_normals(N_Faces);
-
-	cout << m.F << endl;
-
+	post_extrude_main_update_points(stroke, silhouette_vertices);
 }
 
 void MeshExtrusion::generate_mesh(Mesh& m, Eigen::MatrixXd loop3D, Eigen::Vector3d center, Eigen::Vector3d x_vec, Eigen::Vector3d y_vec, Eigen::Vector3d offset, int nr_silhouette_vert, vector<int> loop_base_original_indices, vector<int> sil_original_indices) {
@@ -207,4 +202,48 @@ void MeshExtrusion::generate_mesh(Mesh& m, Eigen::MatrixXd loop3D, Eigen::Vector
 			m.F(original_F_size + i, j) = vert_idx_in_mesh;
 		}
 	}
+}
+
+/*Eigen::MatrixX3d MeshExtrusion::resample_stroke(Stroke& stroke) {
+	Eigen::MatrixX3d new_stroke3DPoints = Eigen::MatrixX3d::Zero(original_stroke3DPoints.rows(), 3);
+	int nr_iterations = max(5.0, original_stroke3DPoints.rows() / 4.0);
+	for(int i = 0; i < nr_iterations; i++) {
+		move_to_middle(original_stroke3DPoints, new_stroke3DPoints);
+		move_to_middle(new_stroke3DPoints, original_stroke3DPoints); //TODO: is this to save us a copy? basically performing an extra move_to_middle step
+	}
+	return new_stroke3DPoints;
+}
+
+void MeshExtrusion::move_to_middle(Eigen::MatrixX3d &positions, Eigen::MatrixX3d &new_positions) {
+	int n = positions.rows();
+	Eigen::Vector3d prev, cur, next;
+
+	for(int i = 0; i < n; i++) {
+		prev = positions.row(((i - 1) + n) % n);
+		cur = positions.row(i % n);
+		next = positions.row(((i + 1) + n) % n);
+
+		new_positions(i, 0) = (cur[0] * 2 + prev[0] + next[0]) / 4;
+		new_positions(i, 1) = (cur[1] * 2 + prev[1] + next[1]) / 4;
+		new_positions(i, 2) = (cur[2] * 2 + prev[2] + next[2]) / 4;
+	}
+}*/
+
+void MeshExtrusion::post_extrude_prepare_update_points(Stroke& stroke, SurfacePath& surface_path) {
+	vector<PathElement> path = surface_path.get_path();
+	Eigen::MatrixX3d new_3DPoints(path.size(), 3);
+	for(int i = 0; i < path.size(); i++) {
+		new_3DPoints.row(i) = path[i].get_vertex().transpose();
+	}
+
+	stroke.set3DPoints(new_3DPoints);
+}
+
+void MeshExtrusion::post_extrude_main_update_points(Stroke &stroke, Eigen::MatrixXd new_positions) {
+	Eigen::MatrixX3d new_3DPoints(new_positions.rows(), 3);
+	for(int i = 0; i < new_positions.rows(); i++) {
+		new_3DPoints.row(i) = new_positions.row(i);
+	}
+
+	stroke.set3DPoints(new_3DPoints);
 }
