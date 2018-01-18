@@ -37,44 +37,54 @@ Eigen::MatrixXi F;
 // Per face normals, #F x3
 Eigen::MatrixXd N_Faces;
 
-
 // Per vertex indicator of whether vertex is on boundary (on boundary if == 1)
 Eigen::VectorXi vertex_boundary_markers;
 //Per vertex indicator of whether vertex is on original stroke (outline of shape) (on OG stroke if ==1)
 Eigen::VectorXi part_of_original_stroke;
 
-//Mouse interaction
-enum ToolMode{DRAW, ADD, CUT, EXTRUDE, PULL, REMOVE, CHANGE, SMOOTH, NAVIGATE, NONE};
+//General
+enum ToolMode { DRAW, ADD, CUT, EXTRUDE, PULL, REMOVE, CHANGE, SMOOTH, NAVIGATE, NONE };
 ToolMode tool_mode = NAVIGATE;
-bool skip_standardcallback = false;
-int down_mouse_x = -1, down_mouse_y = -1;
-
-double vertex_weights;
-int initial_smooth_iter = 8;
-bool mouse_is_down = false; //We need this due to mouse_down not working in the nanogui menu, whilst mouse_up does work there
-bool mouse_has_moved = false;
-
-//For selecting vertices
 Stroke* initial_stroke;
 Stroke* added_stroke;
 Stroke* extrusion_base;
 vector<Stroke> stroke_collection;
+
+//Mouse interaction
+bool skip_standardcallback = false;
+int down_mouse_x = -1, down_mouse_y = -1;
+bool mouse_is_down = false; //We need this due to mouse_down not working in the nanogui menu, whilst mouse_up does work there
+bool mouse_has_moved = false;
+
+//double vertex_weights;
+//For smoothing
+int initial_smooth_iter = 8;
+
+//For selecting vertices
 int handleID = -1;
 
+//Variables for pulling a curve (and removing added control curves)
 int turnNr = 0;
 bool dirty_boundary = false;
 int closest_stroke_ID, prev_closest_stroke_ID;
-int next_added_stroke_ID = 2;
+
+//Keeps track of the stroke IDs
+int next_added_stroke_ID = 1;
+
+//Variables for adding control curves
 bool last_add_on_mesh = false;
 unordered_map<int, int> backside_vertex_map;
 
+//Variables for removing a control curve
 bool stroke_was_removed = false;
 int remove_stroke_clicked = 0;
+
+//Variables for cutting
 bool cut_stroke_already_drawn = false;
+
+//Variables for extrusion
 bool extrusion_base_already_drawn = false;
-
 SurfacePath base_surface_path;
-
 Eigen::Matrix4f base_model, base_view, base_proj;
 Eigen::Vector4f base_viewport;
 
@@ -103,16 +113,19 @@ bool callback_key_down(Viewer& viewer, unsigned char key, int modifiers) {
 		if(stroke_collection.size() == 0) { //Don't go into "remove curve mode" if there is no additional curves
 			return true;
 		}
+		remove_stroke_clicked = 0; //Reset because we might be left with a single click from the last round
 		tool_mode = REMOVE;
 	} else if(key == 'C') {
 		if(initial_stroke->empty2D()) { //Don't go into "cut mode" if there is no mesh yet
 			return true;
 		}
+		cut_stroke_already_drawn = false; //Reset because we might have stopped before finishing the cut last time
 		tool_mode = CUT;
 	} else if(key == 'E') {
 		if(initial_stroke->empty2D()) { //Don't go into "extrude mode" if there is no mesh yet
 			return true;
 		}
+		extrusion_base_already_drawn = false; //Reset because we might have quit before drawing the silhouette stroke last time
 		tool_mode = EXTRUDE;
 	}
 
@@ -132,6 +145,7 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 	if (tool_mode == DRAW) { //Creating the first curve/mesh
 		viewer.data.clear();
 		stroke_collection.clear();
+		next_added_stroke_ID = 1;
 		initial_stroke->strokeReset();
 		initial_stroke->strokeAddSegment(down_mouse_x, down_mouse_y);
 		skip_standardcallback = true;

@@ -29,14 +29,7 @@ void MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &verte
 	cut_main(m, surface_path, stroke);
 
 	post_cut_update_points(stroke, surface_path);
-	
-	/*stroke.viewer.data.clear();
-	stroke.viewer.data.set_mesh(m.V, m.F);
-	cout << "test values:  " << endl << m.V - V << endl << endl;
-	cout << m.F - F << endl;
-	Eigen::MatrixXd N_Faces;
-	igl::per_face_normals(m.V, m.F, N_Faces);
-	stroke.viewer.data.set_normals(N_Faces);*/
+
 	return;
 }
 
@@ -76,23 +69,27 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m, Stroke
 	Eigen::MatrixXi vertex_markers, edge_markers;
 	igl::triangle::triangulate(boundary_vertices_2D.leftCols(2), stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(boundary_vertices_2D.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "Yq25", V2, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
 
-	int original_v_size = m.V.rows()-boundary_vertices.rows();		
+	int original_v_size = m.V.rows() - boundary_vertices.rows();		
 	m.V.conservativeResize(original_v_size + V2.rows(), Eigen::NoChange);
+	m.part_of_original_stroke.conservativeResize(original_v_size + V2.rows());
 	//project back to 3D
 	//TODO: Additional Steiner points may be added between boundary vertices. These HAVE to be unprojected to 3D because we don't have an original 3D position. However, if we don't do the same with the original boundary vertices, we will get holes in the mesh. Applying the same unprojection to the original
 	//boundary vertices results in loss of the drawn stroke shape
 	for (int i = 0; i < V2.rows(); i++) {
 		if (i < boundary_vertices.rows()) {//Original boundary 
-			Eigen::Vector3d v_tmp = center.transpose();
-			v_tmp += x_vec*V2(i, 0);
-			v_tmp += y_vec*V2(i, 1);
-			m.V.row(boundary_vertices[i]) = v_tmp.transpose();
+			//Do nothing. Use the 3D points that were projected and inputted to triangulate
+
+			//Eigen::Vector3d v_tmp = center.transpose();
+			//v_tmp += x_vec*V2(i, 0);
+			//v_tmp += y_vec*V2(i, 1);
+			//m.V.row(boundary_vertices[i]) = v_tmp.transpose();
 		}
 		else {
 			Eigen::Vector3d v_tmp = center.transpose();
 			v_tmp += x_vec*V2(i, 0);
 			v_tmp += y_vec*V2(i, 1);
-			m.V.row(original_v_size+i) << v_tmp.transpose(); //Add interior vertex of the cut plane to mesh
+			m.V.row(original_v_size + i) << v_tmp.transpose(); //Add interior vertex of the cut plane to mesh
+			m.part_of_original_stroke[original_v_size + i] = 0;
 		}
 	}
 

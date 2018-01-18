@@ -98,9 +98,11 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	//TODO: FOR NOW SKIPPING OVER RESAMPLING IN LAPLACIANEXTRUSION LINE 311-315 (SEEMS TO BE A SIMPLE RESAMPLE THOUGH)
 	int size_before_silhouette = m.V.rows();
 	m.V.conservativeResize(m.V.rows() + silhouette_vertices.rows(), Eigen::NoChange);
+	m.part_of_original_stroke(m.part_of_original_stroke.rows() + silhouette_vertices.rows());
 	vector<int> sil_original_indices;
 	for(int i = 0; i < silhouette_vertices.rows(); i++) {
 		m.V.row(size_before_silhouette + i) = silhouette_vertices.row(i);
+		m.part_of_original_stroke[size_before_silhouette + i] = 0;
 		sil_original_indices.push_back(size_before_silhouette + i);
 	}
 
@@ -184,6 +186,8 @@ void MeshExtrusion::generate_mesh(Mesh& m, Eigen::MatrixXd loop3D, Eigen::Vector
 			vert += offset.transpose();
 			m.V.conservativeResize(m.V.rows() + 1, Eigen::NoChange);
 			m.V.row(m.V.rows() - 1) = vert;
+			m.part_of_original_stroke.conservativeResize(m.part_of_original_stroke.rows() + 1);
+			m.part_of_original_stroke(m.part_of_original_stroke.rows() - 1) = 0;
 		}
 	}
 

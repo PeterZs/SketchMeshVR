@@ -48,7 +48,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		path.push_back(path[0]);
 	}
 
-	//Find inside (+1) and outside (+1) vertices. TODO: check that this works and that +1 is inside and -1 is outside
+	//Find outside (+1) and inside (+1) vertices. +1 means that the vertex will stay, -1 means it will be destroyed
 	for(int i = 0; i < path.size(); i++) {
 		if(path[i].get_type() == PathElement::FACE) {
 			face = path[i].get_ID();
@@ -69,12 +69,14 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	vector<int> outer_boundary_vertices;
 	vector<int> inner_boundary_vertices;
 	for(int i = 0; i < m.V.rows(); i++) {
-		if(dirty_vertices[i] < 0) {
+		if(dirty_vertices[i] < 0) { //vertices that are removed
 			inner_boundary_vertices.push_back(i);
-		} else if(dirty_vertices[i] > 0) {
+		} else if(dirty_vertices[i] > 0) { //vertices that stay
 			outer_boundary_vertices.push_back(i);
 		}
 	}
+
+	vector<int> removed_vertices = inner_boundary_vertices;
 
 	//Collect faces along the path
 	for(int i = 0; i < path.size(); i++) {
@@ -95,6 +97,19 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 				}
 			}
 		}
+
+		//Collect all inside vertices (vertices to be removed)
+		/*for(int i = 0; i < m.V.rows(); i++) {
+			if(dirty_vertices[i] == 0) { //Vertices with a - value are already known to be removed and vertices with a + value are already known to stay
+				for(int j = 0; j < VF[i].size(); j++) {
+					if(dirty_face[VF[i][j]]) {
+						removed_vertices.push_back(i);
+						cout << i << " ";
+						break; //We've found confirmation that the vertex is removed, don't need to search further
+					}
+				}
+			}
+		}*/
 	}
 
 	//Remove dirty faces
@@ -105,6 +120,23 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		}
 	}
 
+	//Determine which vertices are clean
+	Eigen::VectorXi vertex_is_clean(m.V.rows());
+	vertex_is_clean.setZero();
+	for(int i = 0; i < m.V.rows(); i++) {
+		if(dirty_vertices[i] == 0) { //Vertices with a - value are already known to be removed and vertices with a + value are already known to stay
+			for(int j = 0; j < VF[i].size(); j++) {
+				if(!dirty_face[VF[i][j]]) { //If the vertex is adjacent to a clean face, then the vertex has to be clean
+					vertex_is_clean(i) = 1;
+					break; //Can skip checking all other adjacent faces
+				}
+			}
+		} else if(dirty_vertices[i] > 0) {
+			vertex_is_clean(i) = 1;
+		}
+	}
+
+
 	Eigen::MatrixXi tmp_F;
 	Eigen::VectorXi row_idx, col_idx(3);
 	row_idx = Eigen::VectorXi::Map(clean_faces.data(), clean_faces.size()); //Create an Eigen::VectorXi from a std::vector
@@ -112,7 +144,6 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	igl::slice(m.F, row_idx, col_idx, tmp_F); //Keep only the clean faces in the mesh
 	m.F = tmp_F;
 
-	Eigen::MatrixXi EV_new;
 	igl::edge_topology(m.V, m.F, EV, FE, EF); //TODO: NOTE: might need to save the EV that is outputted here in a new variable since maybe some methods might need the old EV
 	igl::vertex_triangle_adjacency(m.V.rows(), m.F, VF, VI);
 
@@ -123,13 +154,12 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		inner_boundary_vertices = sort_boundary_vertices(path[0].get_vertex(), inner_boundary_vertices, m);
 	}
 
-	//Do not use the last path vertex, as it is a copy of the first and creates unwanted behaviour
 	vector<int> path_vertices;
-	Eigen::MatrixX3d path_vert_positions(path.size() - 1, 3);
+//	Eigen::MatrixX3d path_vert_positions(path.size() - 1, 3);
 	int original_V_size = m.V.rows();
-	for(int i = 0; i < path.size() - 1; i++) {
-		path_vertices.push_back(original_V_size + i);
-		path_vert_positions.row(i) << path[i].get_vertex().transpose();
+	for(int i = 0; i < path.size() - 1; i++) { //Do not use the last path vertex, as it is a copy of the first and creates unwanted behaviour
+		path_vertices.push_back(original_V_size + i); //Store the vertex indices (in m.V) of the path vertices
+		//path_vert_positions.row(i) << path[i].get_vertex().transpose();
 	}
 
 	//TODO: check in laplacianremesh line 650-656 if that's needed
@@ -149,22 +179,22 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	*/
 	int size_before = m.V.rows();
 	m.V.conservativeResize(m.V.rows() + path.size() - 1, Eigen::NoChange);
+	m.part_of_original_stroke.conservativeResize(m.part_of_original_stroke.rows() + path.size() - 1);
 	//TODO NOTE: NEED TO CHAGNE THIS TO USE THE OUTCOME OF RESAMPLE_BY_LENGTH...
 	for(int i = 0; i < path.size() - 1; i++) {
 		m.V.row(size_before + i) << path[i].get_vertex().transpose();
+		m.part_of_original_stroke[size_before + i] = 0;
 		//m.V.row(size_before + i) << tmp_path.row(i); //this version uses the smoothing but results in a roundish stroke.
 	}
-
-
 
 	Eigen::MatrixXd tmp_V;
 	Eigen::VectorXi row_idx2, col_idx2(3);
 	row_idx2 = Eigen::VectorXi::Map(outer_boundary_vertices.data(), outer_boundary_vertices.size()); //Create an Eigen::VectorXi from a std::vector
 	col_idx2.col(0) << 0, 1, 2;
-	igl::slice(m.V, row_idx2, col_idx2, tmp_V); //Keep only the boundary vertices in the mesh
+	igl::slice(m.V, row_idx2, col_idx2, tmp_V); //Keep only the "boundary" vertices in the mesh (on the "clean" side, so the ones that will stay)
 
 	//Compute the mean of the boundary vertices on the side of the mesh that is removed
-	//In the case of CUT this is used as a viewpoint to determine the orientation of the boundary vertices that remain
+	//In the case of CUT this is used as a viewpoint to determine the orientation (CW or CCW) of the boundary vertices that remain
 	Eigen::MatrixXd removed_V;
 	Eigen::VectorXi row_idx_removed = Eigen::VectorXi::Map(inner_boundary_vertices.data(), inner_boundary_vertices.size());
 	Eigen::VectorXi col_idx_removed(3);
@@ -395,6 +425,7 @@ void LaplacianRemesh::reverse_path(vector<int> path_vertices) {
 	path_vertices[0] = v;
 }
 
+//TODO: NOTE: this will need a copy of EV from BEFORE when the dirty vertices are removed
 double LaplacianRemesh::compute_average_length_of_crossing_edges(vector<PathElement> path, Mesh& m) {
 	double total = 0.0;
 	int count = 0;

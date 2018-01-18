@@ -4,15 +4,15 @@
 #include <Eigen/Geometry>
 
 class Mesh {
-	//Contains (a part of) the vertices and faces that are visible on the screen. TODO: this is because what is displayed might consist of several separate "meshes" that are individually optimized
+
 public:
 
-    Mesh(Eigen::MatrixXd &V, Eigen::MatrixXi &F, const Eigen::VectorXi &vertex_boundary_markers, const Eigen::VectorXi &part_of_original_stroke, int ID);
+    Mesh(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, int ID);
 	~Mesh();
 	Eigen::MatrixXd &V;
 	Eigen::MatrixXi &F;
-	const Eigen::VectorXi &vertex_boundary_markers;
-    const Eigen::VectorXi &part_of_original_stroke;
+	Eigen::VectorXi &vertex_boundary_markers;
+    Eigen::VectorXi &part_of_original_stroke;
 	const int ID;
 };
 
