@@ -34,7 +34,7 @@ void MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &verte
 }
 
 
-void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m, Stroke& stroke) {
+void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 	//project points to 2D. TODO: for now following the example, should be able to work with libigl's project??
 	Eigen::RowVector3d center(0,0,0);
 	for (int i = 0; i < boundary_vertices.rows(); i++) {
@@ -72,6 +72,7 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m, Stroke
 	int original_v_size = m.V.rows() - boundary_vertices.rows();		
 	m.V.conservativeResize(original_v_size + V2.rows(), Eigen::NoChange);
 	m.part_of_original_stroke.conservativeResize(original_v_size + V2.rows());
+	m.vertex_boundary_markers.conservativeResize(original_v_size + V2.rows());
 	//project back to 3D
 	//TODO: Additional Steiner points may be added between boundary vertices. These HAVE to be unprojected to 3D because we don't have an original 3D position. However, if we don't do the same with the original boundary vertices, we will get holes in the mesh. Applying the same unprojection to the original
 	//boundary vertices results in loss of the drawn stroke shape
@@ -90,6 +91,7 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m, Stroke
 			v_tmp += y_vec*V2(i, 1);
 			m.V.row(original_v_size + i) << v_tmp.transpose(); //Add interior vertex of the cut plane to mesh
 			m.part_of_original_stroke[original_v_size + i] = 0;
+			m.vertex_boundary_markers[original_v_size + i] = 0;
 		}
 	}
 
@@ -112,7 +114,7 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m, Stroke
 
 void MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke){
 	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_cut_remove_inside(m, surface_path, stroke.viewer.core.model, stroke.viewer.core.view, stroke.viewer.core.proj, stroke.viewer.core.viewport);
-	mesh_open_hole(boundary_vertices, m, stroke);
+	mesh_open_hole(boundary_vertices, m);
 }
 
 
@@ -133,12 +135,19 @@ Eigen::MatrixXd MeshCut::resample_by_length_with_fixes(vector<int> path_vertices
 	}
 }
 
+//Updates the stroke's 3DPoints and closest_vert_bindings with the new vertices
 void MeshCut::post_cut_update_points(Stroke& stroke, SurfacePath& surface_path) {
 	vector<PathElement> path = surface_path.get_path();
-	Eigen::MatrixX3d new_3DPoints(path.size(), 3);
+	Eigen::MatrixX3d new_3DPoints(path.size() + 1, 3); //Increase size by 1 because we want it to become a loop again
+	vector<int> new_closest_vertex_indices(path.size() + 1);
+
 	for(int i = 0; i < path.size(); i++) {
 		new_3DPoints.row(i) = path[i].get_vertex().transpose();
+		new_closest_vertex_indices[i] = path[i].get_v_idx();
 	}
-		
+	new_3DPoints.row(new_3DPoints.rows() - 1) = new_3DPoints.row(0);
+	new_closest_vertex_indices[new_closest_vertex_indices.size() - 1] = new_closest_vertex_indices[0];
+
 	stroke.set3DPoints(new_3DPoints);
+	stroke.set_closest_vert_bindings(new_closest_vertex_indices);
 }

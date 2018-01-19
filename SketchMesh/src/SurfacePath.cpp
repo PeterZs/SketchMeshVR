@@ -270,3 +270,11 @@ int SurfacePath::cross_prod2D(Eigen::Vector2d vec0, Eigen::Vector2d vec1) {
 vector<PathElement> SurfacePath::get_path() {
 	return path;
 }
+
+int SurfacePath::get_origin_stroke_ID() {
+	return origin_stroke->get_ID();
+}
+
+PathElement & SurfacePath::get_path_element(int i) {
+	return path[i];
+}

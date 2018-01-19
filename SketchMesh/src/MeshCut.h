@@ -10,6 +10,7 @@ class MeshCut {
 public:
 	static void cut(Eigen::MatrixXd & V, Eigen::MatrixXi & F, Eigen::VectorXi & vertex_boundary_markers, Eigen::VectorXi & part_of_original_stroke, Stroke & stroke);
 
+
 private:
 	static int prev_vertex_count;
 	static int ID;
@@ -32,7 +33,7 @@ private:
 	static Eigen::MatrixXd resample_by_length_with_fixes(std::vector<int> path_vertices, Mesh & m, double unit_length);
 	//static Eigen::MatrixX3d resample_stroke(Eigen::MatrixX3d & original_stroke3DPoints);
 	//static void move_to_middle(Eigen::MatrixX3d & positions, Eigen::MatrixX3d & new_positions);
-	static void mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m, Stroke& stroke);
+	static void mesh_open_hole(Eigen::VectorXi & boundary_vertices, Mesh & m);
 
 
 	static void post_cut_update_points(Stroke& stroke, SurfacePath& surface_path);

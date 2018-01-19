@@ -124,8 +124,8 @@ bool callback_key_down(Viewer& viewer, unsigned char key, int modifiers) {
 	} else if(key == 'E') {
 		if(initial_stroke->empty2D()) { //Don't go into "extrude mode" if there is no mesh yet
 			return true;
-		}
-		extrusion_base_already_drawn = false; //Reset because we might have quit before drawing the silhouette stroke last time
+		} 
+		//We need to switch to NAVIGATE in order to draw the silhouette stroke, so we cannot reset extrusion_base_already_drawn here
 		tool_mode = EXTRUDE;
 	}
 
@@ -195,6 +195,7 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 	
 		if(remove_stroke_clicked == 2) { //Mechanism to force the user to click twice on the same stroke before removing it (safeguard)
 			stroke_was_removed = true;
+			stroke_collection[closest_stroke_idx].undo_stroke_add(vertex_boundary_markers); //Sets the vertex_boundary_markers for the vertices of this stroke to 0 again
 			stroke_collection.erase(stroke_collection.begin() + closest_stroke_idx);
 			remove_stroke_clicked = 0; //Reset
 		}
@@ -349,8 +350,6 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 	}
 	mouse_is_down = false;
 
-	cout << "test: " << initial_stroke->get3DPoints() << endl << endl; 
-
 	if(tool_mode == DRAW) {
 		if(initial_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
             //Give some time to show the stroke
@@ -389,10 +388,10 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			return true;
 		}
 		added_stroke->snap_to_vertices(vertex_boundary_markers);
-		if(!last_add_on_mesh) {
+	/*	if(!last_add_on_mesh) { //TODO: either remove or fix this. might not be necessary at all
 			//mirror stroke on backside
 			added_stroke->mirror_on_backside(vertex_boundary_markers, backside_vertex_map);
-		}
+		}*/
 		stroke_collection.push_back(*added_stroke);
 
 		viewer.data.set_points((Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), Eigen::RowVector3d(1, 0, 0)); //Display the original stroke points and clear all the rest
@@ -410,6 +409,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 	}
 	else if(tool_mode == REMOVE && stroke_was_removed) { //Only redraw if we actually removed a stroke (otherwise we draw unnecessary)
 		stroke_was_removed = false; //Reset
+		dirty_boundary = true;
 
 		viewer.data.set_points((Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), Eigen::RowVector3d(1, 0, 0)); //Display the original stroke points and clear all the rest
 		viewer.data.set_stroke_points(igl::cat(1, (Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), (Eigen::MatrixXd) initial_stroke->get3DPoints().row(0)));
@@ -456,6 +456,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			return true;
 		}
 		if(cut_stroke_already_drawn) { //User had already drawn the cut stroke and has now drawn the final stroke for removing the part
+			dirty_boundary = true;
 			added_stroke->append_final_point();
 			added_stroke->toLoop();
 			MeshCut::cut(V, F, vertex_boundary_markers, part_of_original_stroke, *added_stroke);
@@ -487,9 +488,10 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 	}
 	else if(tool_mode == EXTRUDE) {
 		if(extrusion_base_already_drawn) { //User has drawn the silhouette stroke for extrusion
+			dirty_boundary = true;
 			cout << "mouse released after extrusion silhouette drawn" << endl;
 			added_stroke->toLoop();
-			MeshExtrusion::extrude_main(V, F, vertex_boundary_markers, part_of_original_stroke, base_surface_path, *added_stroke, base_model, base_view, base_proj, base_viewport);
+			MeshExtrusion::extrude_main(V, F, vertex_boundary_markers, part_of_original_stroke, base_surface_path, *added_stroke, *extrusion_base, base_model, base_view, base_proj, base_viewport);
 			stroke_collection.push_back(*added_stroke);
 
 			viewer.data.clear();
@@ -518,6 +520,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 				return true;
 			}
 			//extrusion_base->resample_all(); //This will shrink the drawn stroke. Might result in no face being contained inside the stroke
+			dirty_boundary = true;
 			extrusion_base->toLoop();
 			extrusion_base_already_drawn = true;
 			MeshExtrusion::extrude_prepare(*extrusion_base, base_surface_path);

@@ -14,6 +14,8 @@ public:
 	void create_from_stroke_extrude(const Stroke & stroke);
 	void create_from_stroke(const Stroke& stroke);
 	std::vector<PathElement> get_path();
+	int get_origin_stroke_ID();
+	PathElement& get_path_element(int i);
 
 private:
 	int extend_path(int prev_p, int next_p, int faceID, bool& forward, Eigen::Matrix4f modelview);
@@ -36,17 +38,21 @@ public:
 	PathElement(int ID_, ElementType type_, Eigen::Vector3d vertex_) :
 		ID(ID_),
 		type(type_),
-		vertex(vertex_){
+		vertex(vertex_), 
+		corresponding_vertex_idx(){
 	};
 
 	Eigen::Vector3d get_vertex() { return vertex; };
 	ElementType get_type() { return type; };
 	int get_ID() { return ID; };
+	int get_v_idx() { return corresponding_vertex_idx; };
+	void set_v_idx(int idx) { corresponding_vertex_idx = idx; };
 
 private:
 	int ID;
 	ElementType type;
 	Eigen::Vector3d vertex;
+	int corresponding_vertex_idx;
 };
 
 #endif

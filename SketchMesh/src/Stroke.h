@@ -27,6 +27,7 @@ public:
 	//double total_stroke_length();
 	Eigen::MatrixX3d get3DPoints();
 	void set3DPoints(Eigen::MatrixX3d new_3DPoints);
+	void set_closest_vert_bindings(std::vector<int> new_vert_bindings);
 	int get_vertex_idx_for_point(int i);
 	int get_ID();
 	//void prepare_for_cut();
@@ -36,7 +37,9 @@ public:
 	void update_Positions(Eigen::MatrixXd V);
 	void snap_to_vertices(Eigen::VectorXi & vertex_boundary_markers);
 
-	void mirror_on_backside(Eigen::VectorXi & vertex_boundary_markers, std::unordered_map<int, int> backside_vertex_map);
+	void undo_stroke_add(Eigen::VectorXi & vertex_boundary_markers);
+
+	//void mirror_on_backside(Eigen::VectorXi & vertex_boundary_markers, std::unordered_map<int, int> backside_vertex_map);
 	void counter_clockwise();
 
 	bool is_loop;
@@ -64,7 +67,6 @@ private:
 	Eigen::RowVector3d cut_stroke_final_point; //Only used for cutting strokes, in order to facilitate a final point that is the first point outside of the mesh after we finish the part of the stroke that's on the mesh
 	Eigen::RowVectorXd cut_stroke_final_point_2D;
 	bool just_came_from_mesh; //Used for cutting strokes only. Indicates whether this is the first point outside of the mesh after we've been drawing on the mesh
-	Eigen::MatrixXi stroke_edges;
 	double dep = -1;
 
 	std::vector<int> closest_vert_bindings;

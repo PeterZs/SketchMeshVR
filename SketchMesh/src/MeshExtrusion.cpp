@@ -22,7 +22,7 @@ void MeshExtrusion::extrude_prepare(Stroke& base, SurfacePath& surface_path) {
 
 }
 
-void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, SurfacePath& surface_path, Stroke& stroke, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport) {
+void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, SurfacePath& surface_path, Stroke& stroke, Stroke& base, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport) {
 	if(V.rows() != prev_vertex_count) {
 		ID++;
 		prev_vertex_count = V.rows();
@@ -76,6 +76,7 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	Eigen::RowVector3d v;
 	Eigen::Vector3d source, dir;
 	Eigen::Matrix4f modelview = stroke.viewer.core.view * stroke.viewer.core.model;
+	cout << stroke.get_stroke2DPoints() << endl;
 	for(int i = 0; i < stroke.get_stroke2DPoints().rows(); i++) {
 		Eigen::Vector2d tmp = stroke.get_stroke2DPoints().row(i);
 		unproject_ray(tmp, modelview, stroke.viewer.core.proj, stroke.viewer.core.viewport, source, dir);
@@ -97,13 +98,22 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 
 	//TODO: FOR NOW SKIPPING OVER RESAMPLING IN LAPLACIANEXTRUSION LINE 311-315 (SEEMS TO BE A SIMPLE RESAMPLE THOUGH)
 	int size_before_silhouette = m.V.rows();
+	int stroke_ID = stroke.get_ID(); //The stroke ID of the silhouette stroke
 	m.V.conservativeResize(m.V.rows() + silhouette_vertices.rows(), Eigen::NoChange);
-	m.part_of_original_stroke(m.part_of_original_stroke.rows() + silhouette_vertices.rows());
+	m.part_of_original_stroke.conservativeResize(m.part_of_original_stroke.rows() + silhouette_vertices.rows());
+	m.vertex_boundary_markers.conservativeResize(m.vertex_boundary_markers.rows() + silhouette_vertices.rows());
 	vector<int> sil_original_indices;
 	for(int i = 0; i < silhouette_vertices.rows(); i++) {
 		m.V.row(size_before_silhouette + i) = silhouette_vertices.row(i);
+		cout << m.V.row(size_before_silhouette + i) << endl;
 		m.part_of_original_stroke[size_before_silhouette + i] = 0;
+		m.vertex_boundary_markers[size_before_silhouette + i] = stroke_ID;
 		sil_original_indices.push_back(size_before_silhouette + i);
+	}
+	stroke.set_closest_vert_bindings(sil_original_indices);
+	cout << "Stroke" << endl;
+	for(int i = 0; i < stroke.get_closest_vert_bindings().size(); i++) {
+		cout << stroke.get_closest_vert_bindings()[i] << endl;
 	}
 
 	//TODO: FOR NOW SKIPPING LINE 324-328 OF LAPLACIANEXTRUSION
@@ -154,6 +164,7 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	generate_mesh(m, back_loop3D, center, x_vec*-1, y_vec, offset*-1, silhouette_vertices.rows(), back_loop_base_original_indices, sil_original_indices);
 
 	post_extrude_main_update_points(stroke, silhouette_vertices);
+	post_extrude_main_update_bindings(base, surface_path);
 }
 
 void MeshExtrusion::generate_mesh(Mesh& m, Eigen::MatrixXd loop3D, Eigen::Vector3d center, Eigen::Vector3d x_vec, Eigen::Vector3d y_vec, Eigen::Vector3d offset, int nr_silhouette_vert, vector<int> loop_base_original_indices, vector<int> sil_original_indices) {
@@ -187,7 +198,10 @@ void MeshExtrusion::generate_mesh(Mesh& m, Eigen::MatrixXd loop3D, Eigen::Vector
 			m.V.conservativeResize(m.V.rows() + 1, Eigen::NoChange);
 			m.V.row(m.V.rows() - 1) = vert;
 			m.part_of_original_stroke.conservativeResize(m.part_of_original_stroke.rows() + 1);
+			m.vertex_boundary_markers.conservativeResize(m.vertex_boundary_markers.rows() + 1);
 			m.part_of_original_stroke(m.part_of_original_stroke.rows() - 1) = 0;
+			m.vertex_boundary_markers(m.vertex_boundary_markers.rows() - 1) = 0; //Interior mesh vertex, so non-boundary
+
 		}
 	}
 
@@ -233,9 +247,12 @@ void MeshExtrusion::move_to_middle(Eigen::MatrixX3d &positions, Eigen::MatrixX3d
 	}
 }*/
 
+//Updates the stroke's 3DPoints and closest_vert_bindings with the new vertices
 void MeshExtrusion::post_extrude_prepare_update_points(Stroke& stroke, SurfacePath& surface_path) {
 	vector<PathElement> path = surface_path.get_path();
 	Eigen::MatrixX3d new_3DPoints(path.size(), 3);
+	vector<int> new_closest_vertex_indices(path.size());
+
 	for(int i = 0; i < path.size(); i++) {
 		new_3DPoints.row(i) = path[i].get_vertex().transpose();
 	}
@@ -249,5 +266,18 @@ void MeshExtrusion::post_extrude_main_update_points(Stroke &stroke, Eigen::Matri
 		new_3DPoints.row(i) = new_positions.row(i);
 	}
 
-	stroke.set3DPoints(new_3DPoints);
+	stroke.set3DPoints(new_3DPoints); //updates the silhouette stroke points
+}
+
+//Update the vertex bindings for the extrusion base stroke
+void MeshExtrusion::post_extrude_main_update_bindings(Stroke& base, SurfacePath& surface_path) {
+	vector<PathElement> path = surface_path.get_path();
+	vector<int> new_closest_vertex_indices(path.size());
+
+	for(int i = 0; i < path.size() - 1; i++) {
+		new_closest_vertex_indices[i] = path[i].get_v_idx();
+	}
+	new_closest_vertex_indices[path.size() - 1] = new_closest_vertex_indices[0]; //In laplacianRemesh, the last path vertex is skipped because it is a duplicate of the first one. So need to set it manually
+
+	base.set_closest_vert_bindings(new_closest_vertex_indices);
 }
