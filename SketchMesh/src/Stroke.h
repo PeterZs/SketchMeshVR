@@ -35,6 +35,7 @@ public:
 	int selectClosestVertex(int mouse_x, int mouse_y, double& closest_distance);
 	double compute_stroke_diag();
 	void update_Positions(Eigen::MatrixXd V);
+	void update_vert_bindings(Eigen::VectorXi & new_mapped_indices);
 	void snap_to_vertices(Eigen::VectorXi & vertex_boundary_markers);
 
 	void undo_stroke_add(Eigen::VectorXi & vertex_boundary_markers);

@@ -57,12 +57,15 @@ void CurveDeformation::pullCurve(Eigen::RowVector3d& pos, Eigen::MatrixXd& V) {
 	drag_size /= curve_diag_length;
 	bool ROI_is_updated = false;
 	if(!current_ROI_size || (fabs(drag_size - current_ROI_size) > 0.01)) { //Take the deformation and roi size as percentages
+		cout << "going into update_ROI" << endl;
 		ROI_is_updated = update_ROI(drag_size);
 	}
 	if(no_ROI_vert == 0 || current_ROI_size == 0) { //If we have no other "free" vertices other than the handle vertex, we simply move it to the target position
 		V.row(moving_vertex_ID) = pos;
+		cout << "just moving:" << moving_vertex_ID << endl;
 	} else {
 		if(ROI_is_updated) {
+			cout << " updatign " << endl;
 			setup_for_update_curve(V);
 		}
 		V.row(moving_vertex_ID) = pos;
@@ -84,8 +87,9 @@ bool CurveDeformation::update_ROI(double drag_size) {
 	} else {
 		no_ROI_vert_tmp = max(0.0, min(round(drag_size / 4.0 * no_vertices), ceil(((no_vertices - 1) / 2) - 1))); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side)
 	}
-
+	cout << "test" << no_ROI_vert << "  " << no_ROI_vert_tmp << "  " << endl;
 	if(((no_ROI_vert == no_ROI_vert_tmp) && prev_loop_type == stroke_is_loop) || no_ROI_vert_tmp == 0) { //number of vertices in ROI didn't change
+		cout << "false" << endl;
 		return false;
 	}
 
@@ -398,16 +402,20 @@ void CurveDeformation::final_L1_pos(Eigen::MatrixXd &V) {
 	Eigen::VectorXd xpos = solverL1.solve(A_L1_T*Bx);
 	Eigen::VectorXd ypos = solverL1.solve(A_L1_T*By);
 	Eigen::VectorXd zpos = solverL1.solve(A_L1_T*Bz);
-
 	if(stroke_ID == 0) { //We're pulling on the original stroke
+		cout << "testing deform" << endl;
 		for(int i = 0; i < no_vertices; i++) { //update the position of non-fixed vertices of the stroke that is being pulled on
 			if(!is_fixed[i]) {
+				cout << vert_bindings[i] << endl;
 				V.row(vert_bindings[i]) << xpos[i], ypos[i], zpos[i];
 			}
 		}
 	} else { //We're pulling on an added stroke, and we want to avoid deforming the original curve, so don't update positions of the original stroke
+		cout << "testing deform added" << endl;
 		for(int i = 0; i < no_vertices; i++) { //update the position of non-fixed stroke vertices
-			if(!is_fixed[i] && !part_of_original_stroke[i]) {
+			cout << is_fixed[i] << "  " << part_of_original_stroke[vert_bindings[i]] << endl;
+			if(!is_fixed[i] && !part_of_original_stroke[vert_bindings[i]]) {
+				cout << vert_bindings[i] << endl;
 				V.row(vert_bindings[i]) << xpos[i], ypos[i], zpos[i];
 			}
 		}

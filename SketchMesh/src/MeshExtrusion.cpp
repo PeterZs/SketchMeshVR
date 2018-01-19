@@ -22,13 +22,13 @@ void MeshExtrusion::extrude_prepare(Stroke& base, SurfacePath& surface_path) {
 
 }
 
-void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, SurfacePath& surface_path, Stroke& stroke, Stroke& base, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport) {
+void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::VectorXi &new_mapped_indices, SurfacePath& surface_path, Stroke& stroke, Stroke& base, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport) {
 	if(V.rows() != prev_vertex_count) {
 		ID++;
 		prev_vertex_count = V.rows();
 	}
 
-	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, ID);
+	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, ID);
 	stroke.counter_clockwise();
 	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_extrusion_remove_inside(m, surface_path, model, view, proj, viewport);
 

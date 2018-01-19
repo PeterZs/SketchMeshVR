@@ -37,6 +37,8 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	Eigen::VectorXi result;
 	vector<bool> dirty_face(m.F.rows());
 	vector<int> dirty_vertices(m.V.rows());
+	m.new_mapped_indices.resize(m.V.rows()); //Resize the map from old to new (clean) vertex indices to allow it to contain the number of vertices that are in the mesh at the start
+
 
 	vector<vector<int>> VF, VI;
 	igl::edge_topology(m.V, m.F, EV, FE, EF);
@@ -186,11 +188,10 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	m.vertex_boundary_markers = tmp_markers; //Compact vertex_boundary_markers by removing the values for vertices that are now removed
 	
 	int count = 0;
-	Eigen::VectorXi clean_vertex_map(vertex_is_clean.rows());
-	clean_vertex_map.setConstant(clean_vertex_map.rows(), -1); //Initialize all values to -1
+	m.new_mapped_indices.setConstant(m.new_mapped_indices.rows(), -1); //Initialize all values to -1
 	for(int i = 0; i < vertex_is_clean.rows(); i++) {
 		if(vertex_is_clean[i]) {
-			clean_vertex_map[i] = count;
+			m.new_mapped_indices[i] = count; //Maps indices in m.V at the start of remeshing to indices in m.V after remeshing
 			count++;
 		}
 	}
@@ -198,7 +199,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	//Update the vertex indices in faces
 	for(int i = 0; i < m.F.rows(); i++) {
 		for(int j = 0; j < 3; j++) {
-			m.F(i,j) = clean_vertex_map[m.F(i,j)];
+			m.F(i,j) = m.new_mapped_indices[m.F(i,j)];
 		}
 	}
 
@@ -245,7 +246,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	
 	//Update the outer_boundary_vertices (which are indices into V before it was sliced to keep only the clean vertices)
 	for(int i = 0; i < outer_boundary_vertices.size(); i++) {
-		outer_boundary_vertices[i] = clean_vertex_map[outer_boundary_vertices[i]];
+		outer_boundary_vertices[i] = m.new_mapped_indices[outer_boundary_vertices[i]];
 	}
 
 	Eigen::VectorXi row_idx2, col_idx2(3);

@@ -224,15 +224,6 @@ void Stroke::strokeAddSegmentCut(int mouse_x, int mouse_y) {
 	return;
 }
 
-//Used for cutting. Final point doesn't get drawn on screen but is somewhere off the mesh
-void Stroke::append_final_point() {
-	stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
-	stroke2DPoints.row(stroke2DPoints.rows() - 1) << cut_stroke_final_point_2D[0], cut_stroke_final_point_2D[1];
-
-	stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
-	stroke3DPoints.row(stroke3DPoints.rows() - 1) << cut_stroke_final_point[0], cut_stroke_final_point[1], cut_stroke_final_point[2];
-}
-
 //For drawing extrusion base strokes. Need to be drawn entirely on the existing mesh
 void Stroke::strokeAddSegmentExtrusionBase(int mouse_x, int mouse_y) {
 	//OpenGL has origin at left bottom, window(s) has origin at left top
@@ -332,6 +323,15 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(int mouse_x, int mouse_y) {
 	}
 
 	_time1 = std::chrono::high_resolution_clock::now(); //restart the "start" timer
+}
+
+//Used for cutting. Final point doesn't get drawn on screen but is somewhere off the mesh
+void Stroke::append_final_point() {
+	stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
+	stroke2DPoints.row(stroke2DPoints.rows() - 1) << cut_stroke_final_point_2D[0], cut_stroke_final_point_2D[1];
+
+	stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
+	stroke3DPoints.row(stroke3DPoints.rows() - 1) << cut_stroke_final_point[0], cut_stroke_final_point[1], cut_stroke_final_point[2];
 }
 
 void Stroke::strokeReset() {
@@ -502,28 +502,6 @@ void Stroke::generate_backfaces(Eigen::MatrixXi &faces, Eigen::MatrixXi &back_fa
 	back_faces = faces.rowwise().reverse().eval();
 }
 
-Eigen::MatrixX3d Stroke::get3DPoints() {
-	return stroke3DPoints;
-}
-
-void Stroke::set3DPoints(Eigen::MatrixX3d new_3DPoints) {
-	stroke3DPoints.resize(new_3DPoints.rows(), 3);
-	stroke3DPoints = new_3DPoints;
-}
-
-void Stroke::set_closest_vert_bindings(vector<int> new_vert_bindings) {
-	closest_vert_bindings.clear();
-	closest_vert_bindings = new_vert_bindings;
-}
-
-int Stroke::get_vertex_idx_for_point(int pt_idx) {
-	return closest_vert_bindings[pt_idx];
-}
-
-vector<int> Stroke::get_closest_vert_bindings() {
-	return closest_vert_bindings;
-}
-
 int Stroke::selectClosestVertex(int mouse_x, int mouse_y, double& closest_distance) {
 	double x = mouse_x;
 	double y = viewer.core.viewport(3) - mouse_y;
@@ -558,10 +536,25 @@ double Stroke::compute_stroke_diag() {
 }
 
 void Stroke::update_Positions(Eigen::MatrixXd V) {
-	for(int i = 0; i < stroke3DPoints.rows() - 1; i++) {
+	stroke3DPoints.resize(closest_vert_bindings.size(), Eigen::NoChange);
+	for(int i = 0; i < closest_vert_bindings.size(); i++) { //iterate over closest_vert_bindings instead of over stroke3DPoints, because the vertex bindings might have been updated and shrunken
 		stroke3DPoints.row(i) = V.row(closest_vert_bindings[i]);
 	}
-	stroke3DPoints.row(stroke3DPoints.rows() - 1) = stroke3DPoints.row(0); //The last vertex in the stroke is the first point again
+
+	//In the case of extrusion silhouette strokes, closest_vert_bindings isn't looped. Don't make stroke3DPoints looped, because we already account for it not being a loop when drawing the curves
+	
+}
+
+//Takes care of the vertex binding indices only. In order to also remove the stroke3DPoints corresponding to removed vertices, call update_Positions().
+void Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices) {
+	vector<int> new_bindings;
+	for(int i = 0; i < closest_vert_bindings.size(); i++) {
+		if(new_mapped_indices[closest_vert_bindings[i]] == -1) { //vertex has been removed. Clean up from closest_vert_bindings
+			continue;
+		}
+		new_bindings.push_back(new_mapped_indices[closest_vert_bindings[i]]); //Get the new index of the vertex that we previously pointed to
+	}
+	set_closest_vert_bindings(new_bindings);
 }
 
 void Stroke::snap_to_vertices(Eigen::VectorXi &vertex_boundary_markers) {
@@ -644,6 +637,29 @@ Eigen::MatrixXi Stroke::get_F() const {
 Eigen::MatrixXd Stroke::get_stroke2DPoints() const {
 	return stroke2DPoints;
 }
+
+Eigen::MatrixX3d Stroke::get3DPoints() {
+	return stroke3DPoints;
+}
+
+int Stroke::get_vertex_idx_for_point(int pt_idx) {
+	return closest_vert_bindings[pt_idx];
+}
+
+vector<int> Stroke::get_closest_vert_bindings() {
+	return closest_vert_bindings;
+}
+
+void Stroke::set3DPoints(Eigen::MatrixX3d new_3DPoints) {
+	stroke3DPoints.resize(new_3DPoints.rows(), 3);
+	stroke3DPoints = new_3DPoints;
+}
+
+void Stroke::set_closest_vert_bindings(vector<int> new_vert_bindings) {
+	closest_vert_bindings.clear();
+	closest_vert_bindings = new_vert_bindings;
+}
+
 
 //Does not take care of closest_vert_bindings
 /*void Stroke::resample_all() {

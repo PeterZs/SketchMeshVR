@@ -18,12 +18,12 @@ int MeshCut::ID = -1;
 Eigen::MatrixXi MeshCut::EV, MeshCut::FE, MeshCut::EF;
 vector<vector<int>> VV;
 
-void MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Stroke& stroke) {
+void MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::VectorXi &new_mapped_indices, Stroke& stroke) {
 	if(V.rows() != prev_vertex_count) {
 		ID++;
 		prev_vertex_count = V.rows();
 	}
-	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, ID);
+	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, ID);
 	SurfacePath surface_path;
 	surface_path.create_from_stroke(stroke); //Prepares the drawn stroke (inserts extra points at the edges that it crosses)
 	cut_main(m, surface_path, stroke);
@@ -32,7 +32,6 @@ void MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &verte
 
 	return;
 }
-
 
 void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 	//project points to 2D. TODO: for now following the example, should be able to work with libigl's project??
@@ -111,12 +110,10 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 	//TODO: see laplacianCut::cut lines 93-104 about sharp boundaries
 }
 
-
 void MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke){
 	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_cut_remove_inside(m, surface_path, stroke.viewer.core.model, stroke.viewer.core.view, stroke.viewer.core.proj, stroke.viewer.core.viewport);
 	mesh_open_hole(boundary_vertices, m);
 }
-
 
 Eigen::MatrixXd MeshCut::resample_by_length_with_fixes(vector<int> path_vertices, Mesh& m, double unit_length) {
 	if(path_vertices.size() <= 1) {
