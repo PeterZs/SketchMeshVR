@@ -1,6 +1,4 @@
 #include <iostream>
-#include <igl/unproject.h>
-
 #include "CurveDeformation.h"
 
 using namespace std;
@@ -403,19 +401,14 @@ void CurveDeformation::final_L1_pos(Eigen::MatrixXd &V) {
 	Eigen::VectorXd ypos = solverL1.solve(A_L1_T*By);
 	Eigen::VectorXd zpos = solverL1.solve(A_L1_T*Bz);
 	if(stroke_ID == 0) { //We're pulling on the original stroke
-		cout << "testing deform" << endl;
 		for(int i = 0; i < no_vertices; i++) { //update the position of non-fixed vertices of the stroke that is being pulled on
 			if(!is_fixed[i]) {
-				cout << vert_bindings[i] << endl;
 				V.row(vert_bindings[i]) << xpos[i], ypos[i], zpos[i];
 			}
 		}
 	} else { //We're pulling on an added stroke, and we want to avoid deforming the original curve, so don't update positions of the original stroke
-		cout << "testing deform added" << endl;
 		for(int i = 0; i < no_vertices; i++) { //update the position of non-fixed stroke vertices
-			cout << is_fixed[i] << "  " << part_of_original_stroke[vert_bindings[i]] << endl;
 			if(!is_fixed[i] && !part_of_original_stroke[vert_bindings[i]]) {
-				cout << vert_bindings[i] << endl;
 				V.row(vert_bindings[i]) << xpos[i], ypos[i], zpos[i];
 			}
 		}

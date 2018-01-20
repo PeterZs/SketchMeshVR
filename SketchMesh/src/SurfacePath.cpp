@@ -3,7 +3,6 @@
 #include <igl/project.h>
 #include "SurfacePath.h"
 #include "Plane.h"
-#include "Stroke.h"
 
 Eigen::MatrixXi EV, FE, EF;
 Stroke* origin_stroke;

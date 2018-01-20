@@ -1,13 +1,11 @@
 #include "Stroke.h"
 #include <igl/unproject_onto_mesh.h>
 #include <igl/unproject.h>
-#include <igl/unproject_ray.h>
 #include <igl/triangle/triangulate.h>
 #include <algorithm> 
 #include <igl/per_face_normals.h>
 #include <igl/per_vertex_normals.h>
 #include <igl/dijkstra.h>
-#include <igl/edge_topology.h>
 #include "Plane.h"
 using namespace igl;
 using namespace std;
@@ -258,9 +256,9 @@ void Stroke::strokeAddSegmentExtrusionBase(int mouse_x, int mouse_y) {
 			}
 		}
 
-		if(closest_vert_bindings.size() == 0 || closest_vert_idx != closest_vert_bindings.back()) { //Add binding to closest mesh vertex. TODO: might be able to remove
+		/*if(closest_vert_bindings.size() == 0 || closest_vert_idx != closest_vert_bindings.back()) { //Add binding to closest mesh vertex. TODO: might be able to remove
 			closest_vert_bindings.push_back(closest_vert_idx);
-		}
+		}*/
 
 		has_points_on_mesh = true; 
 
@@ -415,7 +413,6 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	}
 
 	Eigen::MatrixXd N_Faces, N_Vertices;
-	igl::per_face_normals(V2, F2, N_Faces);
 	igl::per_vertex_normals(V2, F2, PER_VERTEX_NORMALS_WEIGHTING_TYPE_UNIFORM, N_Vertices);
 
 	vertex_boundary_markers.resize(V2.rows());
@@ -542,19 +539,43 @@ void Stroke::update_Positions(Eigen::MatrixXd V) {
 	}
 
 	//In the case of extrusion silhouette strokes, closest_vert_bindings isn't looped. Don't make stroke3DPoints looped, because we already account for it not being a loop when drawing the curves
-	
 }
 
 //Takes care of the vertex binding indices only. In order to also remove the stroke3DPoints corresponding to removed vertices, call update_Positions().
-void Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices) {
+bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices) {
 	vector<int> new_bindings;
-	for(int i = 0; i < closest_vert_bindings.size(); i++) {
+	int last_included = -1;
+	bool points_were_removed = false, no_tracked_point_yet = true;
+	//Closest_vert_bindings is always a loop, so skip over the last element and then after it is (optionally) rotated, add it back again.
+
+	for(int i = 0; i < closest_vert_bindings.size() - 1; i++) {
 		if(new_mapped_indices[closest_vert_bindings[i]] == -1) { //vertex has been removed. Clean up from closest_vert_bindings
+			is_loop = false; //Since one of the vertices is removed, if the stroke used to be a loop, it can impossibly still be a loop (and if it already wasn't a loop, it stays a non-loop)
+			points_were_removed = true;
 			continue;
 		}
 		new_bindings.push_back(new_mapped_indices[closest_vert_bindings[i]]); //Get the new index of the vertex that we previously pointed to
+		if(points_were_removed && no_tracked_point_yet) {
+			last_included = new_bindings.size() - 1; //track the most recent point index that has been added after any vertex was removed
+			no_tracked_point_yet = false;
+		}
 	}
+
+	//If last_included == -1, this means that either no points were removed, or the last point in the loop was removed while point 0 stayed. If point 0 would've been removed, then last_included would have been set to 1 (or whatever first point wasn't removed)
+	if(new_bindings.size() != 0 && last_included != -1) {	//Check that we didn't remove ALL points in the stroke and that we actually need to reorder
+		rotate(new_bindings.begin(), new_bindings.begin() + last_included, new_bindings.end()); //Makes the stroke "continuous" again
+	}
+	if(new_bindings.size() == 0) {
+		return false; //Stroke ceases to exist.
+	}
+	new_bindings.push_back(new_bindings[0]);
+	cout << "yeah usher" << endl;
+	for(int i = 0; i < new_bindings.size(); i++) {
+		cout << new_bindings[i] << endl;
+	}
+
 	set_closest_vert_bindings(new_bindings);
+	return true;
 }
 
 void Stroke::snap_to_vertices(Eigen::VectorXi &vertex_boundary_markers) {

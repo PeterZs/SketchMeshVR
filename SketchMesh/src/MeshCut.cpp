@@ -1,13 +1,6 @@
 #include "MeshCut.h"
 #include <iostream>
-#include <igl/unproject.h>
-#include <igl/edge_topology.h>
-#include <igl/vertex_triangle_adjacency.h>
-#include <igl/adjacency_list.h>
-#include <igl/slice.h>
 #include <igl/triangle/triangulate.h>
-#include <string>
-#include <sstream>
 #include "LaplacianRemesh.h"
 
 using namespace std;

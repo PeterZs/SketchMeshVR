@@ -31,7 +31,7 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, ID);
 	stroke.counter_clockwise();
 	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_extrusion_remove_inside(m, surface_path, model, view, proj, viewport);
-
+	
 	//project points to 2D. TODO: for now following the example, should be able to work with libigl's project??
 	Eigen::RowVector3d center(0, 0, 0);
 	for(int i = 0; i < boundary_vertices.rows(); i++) {
@@ -76,7 +76,7 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	Eigen::RowVector3d v;
 	Eigen::Vector3d source, dir;
 	Eigen::Matrix4f modelview = stroke.viewer.core.view * stroke.viewer.core.model;
-	cout << stroke.get_stroke2DPoints() << endl;
+
 	for(int i = 0; i < stroke.get_stroke2DPoints().rows(); i++) {
 		Eigen::Vector2d tmp = stroke.get_stroke2DPoints().row(i);
 		unproject_ray(tmp, modelview, stroke.viewer.core.proj, stroke.viewer.core.viewport, source, dir);
@@ -105,16 +105,11 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	vector<int> sil_original_indices;
 	for(int i = 0; i < silhouette_vertices.rows(); i++) {
 		m.V.row(size_before_silhouette + i) = silhouette_vertices.row(i);
-		cout << m.V.row(size_before_silhouette + i) << endl;
 		m.part_of_original_stroke[size_before_silhouette + i] = 0;
 		m.vertex_boundary_markers[size_before_silhouette + i] = stroke_ID;
 		sil_original_indices.push_back(size_before_silhouette + i);
 	}
 	stroke.set_closest_vert_bindings(sil_original_indices);
-	cout << "Stroke" << endl;
-	for(int i = 0; i < stroke.get_closest_vert_bindings().size(); i++) {
-		cout << stroke.get_closest_vert_bindings()[i] << endl;
-	}
 
 	//TODO: FOR NOW SKIPPING LINE 324-328 OF LAPLACIANEXTRUSION
 
@@ -247,11 +242,10 @@ void MeshExtrusion::move_to_middle(Eigen::MatrixX3d &positions, Eigen::MatrixX3d
 	}
 }*/
 
-//Updates the stroke's 3DPoints and closest_vert_bindings with the new vertices
+//Updates the stroke's 3DPoints with the new vertices
 void MeshExtrusion::post_extrude_prepare_update_points(Stroke& stroke, SurfacePath& surface_path) {
 	vector<PathElement> path = surface_path.get_path();
 	Eigen::MatrixX3d new_3DPoints(path.size(), 3);
-	vector<int> new_closest_vertex_indices(path.size());
 
 	for(int i = 0; i < path.size(); i++) {
 		new_3DPoints.row(i) = path[i].get_vertex().transpose();
@@ -269,11 +263,10 @@ void MeshExtrusion::post_extrude_main_update_points(Stroke &stroke, Eigen::Matri
 	stroke.set3DPoints(new_3DPoints); //updates the silhouette stroke points
 }
 
-//Update the vertex bindings for the extrusion base stroke
+//Update the vertex bindings for the extrusion base stroke. Assumes indexing in m.V before any vertices are removed, so it will become the correct indexing after stroke.update_vert_bindings() is called
 void MeshExtrusion::post_extrude_main_update_bindings(Stroke& base, SurfacePath& surface_path) {
 	vector<PathElement> path = surface_path.get_path();
 	vector<int> new_closest_vertex_indices(path.size());
-
 	for(int i = 0; i < path.size() - 1; i++) {
 		new_closest_vertex_indices[i] = path[i].get_v_idx();
 	}

@@ -6,15 +6,13 @@
 #include <igl/diag.h>
 #include <igl/per_vertex_normals.h>
 #include <igl/adjacency_list.h>
-#include <igl/vertex_triangle_adjacency.h>
-#include <numeric>
 #include "SurfaceSmoothing.h"
 
 using namespace std;
 using namespace igl;
 
 int SurfaceSmoothing::prev_vertex_count = -1;
-Eigen::MatrixX3d SurfaceSmoothing::vertex_normals(0,3);
+Eigen::MatrixX3d SurfaceSmoothing::vertex_normals(0, 3);
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solver1;
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solver2;
 

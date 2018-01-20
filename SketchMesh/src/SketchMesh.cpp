@@ -3,21 +3,11 @@
 #else
 #include <unistd.h>
 #endif
-#include <stdlib.h>
 #include <iostream>
 #include <igl/readOFF.h>
 #include <igl/viewer/Viewer.h>
-#include <igl/vertex_triangle_adjacency.h>
-#include <igl/adjacency_list.h>
 #include <igl/per_face_normals.h>
-#include <igl/per_vertex_normals.h>
-#include <igl/per_corner_normals.h>
-#include <igl/facet_components.h>
-#include <igl/jet.h>
-#include <igl/barycenter.h>
 #include <igl/cat.h>
-#include <cmath>
-#include <igl/triangle_triangle_adjacency.h>
 #include "SketchMesh.h"
 #include "Stroke.h"
 #include "SurfaceSmoothing.h"
@@ -58,7 +48,6 @@ int down_mouse_x = -1, down_mouse_y = -1;
 bool mouse_is_down = false; //We need this due to mouse_down not working in the nanogui menu, whilst mouse_up does work there
 bool mouse_has_moved = false;
 
-//double vertex_weights;
 //For smoothing
 int initial_smooth_iter = 8;
 
@@ -91,11 +80,17 @@ Eigen::Matrix4f base_model, base_view, base_proj;
 Eigen::Vector4f base_viewport;
 
 void draw_all_strokes(Viewer& viewer) {
-	viewer.data.set_points((Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), Eigen::RowVector3d(1, 0, 0)); //Display the original stroke points and clear all the rest. Don't take the last point
-	viewer.data.set_stroke_points(igl::cat(1, (Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), (Eigen::MatrixXd) initial_stroke->get3DPoints().row(0))); //Create a loop and draw edges
-	viewer.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0, 0, 1)); //Clear the non-original stroke edges
-
 	Eigen::MatrixXd added_points;
+	viewer.data.set_points((Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), Eigen::RowVector3d(1, 0, 0)); //Display the original stroke points and clear all the rest. Don't take the last point
+	viewer.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0, 0, 1)); //Clear the non-original stroke edges
+	
+	if(initial_stroke->is_loop) {
+		viewer.data.set_stroke_points(igl::cat(1, (Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), (Eigen::MatrixXd) initial_stroke->get3DPoints().row(0))); //Create a loop and draw edges
+	} else { //set_stroke_points always makes a loop, so don't use that when our stroke ain't a loop (anymore)
+		added_points = initial_stroke->get3DPoints();
+		viewer.data.add_edges(added_points.block(0, 0, added_points.rows() - 2, 3), added_points.block(1, 0, added_points.rows() - 2, 3), Eigen::RowVector3d(1, 0, 0));
+	}
+
 	int points_to_hold_back;
 	for(int i = 0; i < stroke_collection.size(); i++) {
 		added_points = stroke_collection[i].get3DPoints();
@@ -105,24 +100,47 @@ void draw_all_strokes(Viewer& viewer) {
 	}
 }
 
+void draw_extrusion_base(Viewer& viewer) {
+	int points_to_hold_back;
+	Eigen::MatrixXd added_points = extrusion_base->get3DPoints();
+	points_to_hold_back = 1 + extrusion_base->is_loop;
+	viewer.data.add_points(added_points, extrusion_base->stroke_color);
+	viewer.data.add_edges(added_points.block(0, 0, added_points.rows() - points_to_hold_back, 3), added_points.block(1, 0, added_points.rows() - points_to_hold_back, 3), extrusion_base->stroke_color);
+}
+
+void select_dragging_handle(int down_mouse_x, int down_mouse_y) {
+	double closest_dist = INFINITY;
+	handleID = initial_stroke->selectClosestVertex(down_mouse_x, down_mouse_y, closest_dist);
+	double current_closest = closest_dist;
+	closest_stroke_ID = -1;
+	int tmp_handleID;
+	for(int i = 0; i < stroke_collection.size(); i++) { //Additional strokes that cross the original stroke will never be selected as the pulled curve when the user clicks a vertex that also belongs to the original boundary, since their vertex positions are the same and we check for SMALLER distances
+		tmp_handleID = stroke_collection[i].selectClosestVertex(down_mouse_x, down_mouse_y, closest_dist); //Returns the index into stroke3DPoints of the closest point
+		if((closest_dist < current_closest) && (tmp_handleID != -1)) {
+			current_closest = closest_dist;
+			handleID = tmp_handleID;
+			closest_stroke_ID = i;
+		}
+	}
+}
 
 bool callback_key_down(Viewer& viewer, unsigned char key, int modifiers) {
-	if (key == '1') {
+	if(key == '1') {
 		viewer.data.clear();
-	}else if (key == 'D') { //use capital letters
+	} else if(key == 'D') { //use capital letters
 		//Draw initial curve/mesh
 		tool_mode = DRAW;
-	}else if (key == 'P') {
+	} else if(key == 'P') {
 		if(initial_stroke->empty2D()) { //Don't go into "pull mode" if there is no mesh yet
 			return true;
 		}
 		tool_mode = PULL;
-	}else if (key == 'N') {
+	} else if(key == 'N') {
 		//Use navigation
 		tool_mode = NAVIGATE;
 	} else if(key == 'A') {
 		//Add an extra control curve to an existing mesh
-		if(initial_stroke->empty2D()){ //Don't go into "additional curve mode" if there is no mesh yet
+		if(initial_stroke->empty2D()) { //Don't go into "additional curve mode" if there is no mesh yet
 			return true;
 		}
 		tool_mode = ADD;
@@ -141,7 +159,7 @@ bool callback_key_down(Viewer& viewer, unsigned char key, int modifiers) {
 	} else if(key == 'E') {
 		if(initial_stroke->empty2D()) { //Don't go into "extrude mode" if there is no mesh yet
 			return true;
-		} 
+		}
 		//We need to switch to NAVIGATE in order to draw the silhouette stroke, so we cannot reset extrusion_base_already_drawn here
 		tool_mode = EXTRUDE;
 	}
@@ -151,7 +169,7 @@ bool callback_key_down(Viewer& viewer, unsigned char key, int modifiers) {
 }
 
 bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
-	if (button == (int)Viewer::MouseButton::Right) {
+	if(button == (int)Viewer::MouseButton::Right) {
 		return false;
 	}
 	mouse_is_down = true;
@@ -159,19 +177,21 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 	down_mouse_x = viewer.current_mouse_x;
 	down_mouse_y = viewer.current_mouse_y;
 
-	if (tool_mode == DRAW) { //Creating the first curve/mesh
+	if(tool_mode == DRAW) { //Creating the first curve/mesh
 		viewer.data.clear();
 		stroke_collection.clear();
 		next_added_stroke_ID = 1;
 		initial_stroke->strokeReset();
 		initial_stroke->strokeAddSegment(down_mouse_x, down_mouse_y);
 		skip_standardcallback = true;
-	} else if(tool_mode == ADD) { //Adding a new control curve onto an existing mesh
+	} 
+	else if(tool_mode == ADD) { //Adding a new control curve onto an existing mesh
 		added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID);
 		next_added_stroke_ID++;
 		added_stroke->strokeAddSegmentAdd(down_mouse_x, down_mouse_y); //If the user starts outside of the mesh, consider the movement as navigation
 		skip_standardcallback = true;
-	} else if(tool_mode == REMOVE) {
+	} 
+	else if(tool_mode == REMOVE) {
 		double closest_dist = INFINITY;
 		double current_closest = closest_dist;
 		int tmp_handleID, closest_stroke_idx;
@@ -195,7 +215,7 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 			remove_stroke_clicked = 1; //Start from 1
 			prev_closest_stroke_ID = closest_stroke_ID;
 		}
-	
+
 		//Redraw the original stroke and all added strokes, where the selected stroke is drawn in black.
 		Eigen::MatrixXd init_points = initial_stroke->get3DPoints();
 		viewer.data.set_points(init_points.topRows(init_points.rows() - 1), Eigen::RowVector3d(1, 0, 0));
@@ -209,7 +229,7 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 			viewer.data.add_points(added_points.topRows(added_points.rows() - 1), stroke_collection[i].stroke_color);
 		}
 
-	
+
 		if(remove_stroke_clicked == 2) { //Mechanism to force the user to click twice on the same stroke before removing it (safeguard)
 			stroke_was_removed = true;
 			stroke_collection[closest_stroke_idx].undo_stroke_add(vertex_boundary_markers); //Sets the vertex_boundary_markers for the vertices of this stroke to 0 again
@@ -220,19 +240,7 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 		skip_standardcallback = true;
 	} 
 	else if(tool_mode == PULL) { //Dragging an existing curve
-		double closest_dist = INFINITY;
-		handleID = initial_stroke->selectClosestVertex(down_mouse_x, down_mouse_y, closest_dist);
-		double current_closest = closest_dist;
-		closest_stroke_ID = -1;
-		int tmp_handleID;
-		for(int i = 0; i < stroke_collection.size(); i++) { //Additional strokes that cross the original stroke will never be selected as the pulled curve when the user clicks a vertex that also belongs to the original boundary, since their vertex positions are the same and we check for SMALLER distances
-			tmp_handleID = stroke_collection[i].selectClosestVertex(down_mouse_x, down_mouse_y, closest_dist); //Returns the index into stroke3DPoints of the closest point
-			if((closest_dist < current_closest) && (tmp_handleID != -1)) {
-				current_closest = closest_dist;
-				handleID = tmp_handleID;
-				closest_stroke_ID = i;
-			}
-		}
+		select_dragging_handle(down_mouse_x, down_mouse_y);
 
 		if(handleID == -1) {//User clicked too far from any of the stroke vertices
 			return false;
@@ -243,10 +251,10 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 			CurveDeformation::startPullCurve(stroke_collection[closest_stroke_ID], handleID, V.rows(), part_of_original_stroke);
 		}
 		skip_standardcallback = true;
-	}
-	else if (tool_mode == NAVIGATE) { //Navigate through the screen
+	} 
+	else if(tool_mode == NAVIGATE) { //Navigate through the screen
 		skip_standardcallback = false; //We do want to use the navigation functionality
-	}
+	} 
 	else if(tool_mode == CUT) {
 		if(cut_stroke_already_drawn) { //clicked while cut stroke already drawn
 			return true;
@@ -256,14 +264,14 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 		next_added_stroke_ID++;
 		added_stroke->strokeAddSegmentCut(down_mouse_x, down_mouse_y);
 		skip_standardcallback = true;
-	}
+	} 
 	else if(tool_mode == EXTRUDE) {
 		if(extrusion_base_already_drawn) { //clicked while the extrude base was already drawn
-			added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID); 
+			added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID);
 			next_added_stroke_ID++;
 			added_stroke->strokeAddSegmentExtrusionSilhouette(down_mouse_x, down_mouse_y);
 		} else { //clicked with no extrude base yet
-			extrusion_base = new Stroke(V, F, viewer, next_added_stroke_ID); 
+			extrusion_base = new Stroke(V, F, viewer, next_added_stroke_ID);
 			next_added_stroke_ID++;
 			extrusion_base->strokeAddSegmentExtrusionBase(down_mouse_x, down_mouse_y);
 		}
@@ -274,7 +282,7 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 }
 
 bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
-	if (!skip_standardcallback) {
+	if(!skip_standardcallback) {
 		return false;
 	}
 
@@ -283,23 +291,26 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 	}
 
 
-	if (tool_mode == DRAW && viewer.down) { //If we're still holding the mouse down
+	if(tool_mode == DRAW && viewer.down) { //If we're still holding the mouse down
 		initial_stroke->strokeAddSegment(mouse_x, mouse_y);
 		return true;
-	} else if(tool_mode == ADD && viewer.down) {
+	} 
+	else if(tool_mode == ADD && viewer.down) {
 		last_add_on_mesh = added_stroke->strokeAddSegmentAdd(mouse_x, mouse_y);
 		return true;
-	} else if(tool_mode == EXTRUDE && viewer.down) {
+	} 
+	else if(tool_mode == EXTRUDE && viewer.down) {
 		if(extrusion_base_already_drawn) {
 			added_stroke->strokeAddSegmentExtrusionSilhouette(mouse_x, mouse_y);
 		} else {
 			extrusion_base->strokeAddSegmentExtrusionBase(mouse_x, mouse_y);
 		}
 		return true;
-	} else if(tool_mode == PULL && viewer.down && handleID != -1) {
+	} 
+	else if(tool_mode == PULL && viewer.down && handleID != -1) {
 		double x = mouse_x;
 		double y = viewer.core.viewport(3) - mouse_y;
-		
+
 		Eigen::Matrix4f modelview = viewer.core.view * viewer.core.model;
 		int global_handleID;
 		if(closest_stroke_ID == -1) {
@@ -316,10 +327,10 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 			CurveDeformation::pullCurve(pt, V);
 			if(dirty_boundary) { //Smooth an extra time if the boundary is dirty, because smoothing once with a dirty boundary results in a flat mesh
 				for(int i = 0; i < 2; i++) {
-				//	SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, dirty_boundary);
+					//	SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, dirty_boundary);
 				}
 			}
-		//	SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, dirty_boundary);
+			//	SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, dirty_boundary);
 
 			turnNr++;
 		} else {
@@ -338,14 +349,14 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 		draw_all_strokes(viewer);
 
 		return true;
-	}
+	} 
 	else if(tool_mode == CUT && viewer.down) {
 		if(!cut_stroke_already_drawn) {
 			added_stroke->strokeAddSegmentCut(mouse_x, mouse_y);
 		}
 		return true;
 	}
-	
+
 	return false;
 }
 
@@ -357,27 +368,27 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 
 	if(tool_mode == DRAW) {
 		if(initial_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
-            //Give some time to show the stroke
-            #ifdef _WIN32
-                Sleep(200);
-            #else
-                usleep(200000);  /* sleep for 200 milliSeconds */
-            #endif
-            backside_vertex_map = initial_stroke->generate3DMeshFromStroke(vertex_boundary_markers, part_of_original_stroke);
+			//Give some time to show the stroke
+#ifdef _WIN32
+			Sleep(200);
+#else
+			usleep(200000);  /* sleep for 200 milliSeconds */
+#endif
+			backside_vertex_map = initial_stroke->generate3DMeshFromStroke(vertex_boundary_markers, part_of_original_stroke);
 			F = viewer.data.F;
 			V = viewer.data.V;
 
 			dirty_boundary = true;
 
 			for(int i = 0; i < initial_smooth_iter; i++) {
-                SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, dirty_boundary);
-            }
+				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, dirty_boundary);
+			}
 
 
 			viewer.data.set_mesh(V, F);
-            viewer.data.compute_normals();
+			viewer.data.compute_normals();
 
-            //Overlay the drawn stroke
+			//Overlay the drawn stroke
 			int strokeSize = (vertex_boundary_markers.array() > 0).count();
 			Eigen::MatrixXd strokePoints = V.block(0, 0, strokeSize, 3);
 			viewer.data.set_points(strokePoints, Eigen::RowVector3d(1, 0, 0)); //Displays dots
@@ -385,30 +396,27 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 
 		}
 		skip_standardcallback = false;
-	} 
-	else if(tool_mode == ADD) {
+	} else if(tool_mode == ADD) {
 		dirty_boundary = true;
 		if(!added_stroke->has_points_on_mesh) {
 			mouse_has_moved = false;
 			return true;
 		}
 		added_stroke->snap_to_vertices(vertex_boundary_markers);
-	/*	if(!last_add_on_mesh) { //TODO: either remove or fix this. might not be necessary at all
-			//mirror stroke on backside
-			added_stroke->mirror_on_backside(vertex_boundary_markers, backside_vertex_map);
-		}*/
+		/*	if(!last_add_on_mesh) { //TODO: either remove or fix this. might not be necessary at all
+				//mirror stroke on backside
+				added_stroke->mirror_on_backside(vertex_boundary_markers, backside_vertex_map);
+			}*/
 		stroke_collection.push_back(*added_stroke);
 		draw_all_strokes(viewer);
-	}
-	else if(tool_mode == REMOVE && stroke_was_removed) { //Only redraw if we actually removed a stroke (otherwise we draw unnecessary)
+	} else if(tool_mode == REMOVE && stroke_was_removed) { //Only redraw if we actually removed a stroke (otherwise we draw unnecessary)
 		stroke_was_removed = false; //Reset
 		dirty_boundary = true;
 
 		draw_all_strokes(viewer);
-	}
-	else if(tool_mode == PULL && handleID != -1 && mouse_has_moved) {
+	} else if(tool_mode == PULL && handleID != -1 && mouse_has_moved) {
 		for(int i = 0; i < 2; i++) {
-       //     SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, dirty_boundary);
+			//     SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, dirty_boundary);
 		}
 
 		for(int i = 0; i < stroke_collection.size(); i++) {
@@ -420,8 +428,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 
 		draw_all_strokes(viewer);
 
-	}
-	else if(tool_mode == CUT) {
+	} else if(tool_mode == CUT) {
 		if(!added_stroke->has_points_on_mesh) {
 			mouse_has_moved = false;
 			return true;
@@ -433,11 +440,19 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			MeshCut::cut(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, *added_stroke);
 			stroke_collection.push_back(*added_stroke);
 
-			initial_stroke->update_vert_bindings(new_mapped_indices);
+			initial_stroke->update_vert_bindings(new_mapped_indices);//Don't test if the initial one dies, cause then we have mayhem anyway? TODO
 			initial_stroke->update_Positions(V);
-			for(int i = 0; i < stroke_collection.size() - 1; i++) { //Skip the newly added stroke since it is already update inside cut()
-				stroke_collection[i].update_vert_bindings(new_mapped_indices);
-				stroke_collection[i].update_Positions(V);
+			int nr_removed = 0, original_collection_size = stroke_collection.size();
+			
+			for(int i = 0; i < original_collection_size; i++) {
+				if(!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices)) {
+					//Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist
+					stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
+					nr_removed++;
+					dirty_boundary = true;
+					continue; //Go to the next stroke, don't update this ones' positions
+				}
+				stroke_collection[i - nr_removed].update_Positions(V);
 			}
 			viewer.data.clear();
 			viewer.data.set_mesh(V, F);
@@ -452,13 +467,13 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 		} else { //We're finished drawing the cut stroke, prepare for when user draws the final stroke to remove the part
 			cut_stroke_already_drawn = true;
 		}
-	}
-	else if(tool_mode == EXTRUDE) {
+	} else if(tool_mode == EXTRUDE) {
 		if(extrusion_base_already_drawn) { //User has drawn the silhouette stroke for extrusion
 			dirty_boundary = true;
 			cout << "mouse released after extrusion silhouette drawn" << endl;
 			added_stroke->toLoop();
 			MeshExtrusion::extrude_main(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, base_surface_path, *added_stroke, *extrusion_base, base_model, base_view, base_proj, base_viewport);
+			stroke_collection.push_back(*extrusion_base);
 			stroke_collection.push_back(*added_stroke);
 
 			initial_stroke->update_vert_bindings(new_mapped_indices);
@@ -486,7 +501,6 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			extrusion_base->toLoop();
 			extrusion_base_already_drawn = true;
 			MeshExtrusion::extrude_prepare(*extrusion_base, base_surface_path); //Don't need to update all strokes here, since it didn't remove any vertices
-			stroke_collection.push_back(*extrusion_base);
 
 			base_model = extrusion_base->viewer.core.model;
 			base_view = extrusion_base->viewer.core.view;
@@ -494,6 +508,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			base_viewport = extrusion_base->viewer.core.viewport;
 
 			draw_all_strokes(viewer);
+			draw_extrusion_base(viewer); //Need to draw the extrusion base separately, since it isn't added to the stroke_collection yet.
 		}
 	}
 
@@ -501,11 +516,8 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 	return skip_standardcallback;
 }
 
-
-
 //TODO: make callback for this in viewer, like in exercise 5 of shapemod
-bool callback_load_mesh(Viewer& viewer, string filename)
-{
+bool callback_load_mesh(Viewer& viewer, string filename) {
 	igl::readOFF(filename, V, F);
 	viewer.data.clear();
 	viewer.data.set_mesh(V, F);
@@ -525,26 +537,25 @@ int main(int argc, char *argv[]) {
 	viewer.callback_mouse_up = callback_mouse_up;
 	viewer.core.point_size = 15;
 	//viewer.callback_load_mesh = callback_load_mesh;
-    
-    viewer.callback_init = [&](igl::viewer::Viewer& viewer)
-    {
-        // Add new group
-        viewer.ngui->addGroup("Inflation");
-        
-        // Expose a variable directly ...
-        viewer.ngui->addVariable("Vertex Weights",SurfaceSmoothing::vertex_weight);
-        viewer.ngui->addVariable("Edge Weights",SurfaceSmoothing::edge_weight);
 
-        
-        // Expose a variable directly ...
-        viewer.ngui->addVariable("Initial smoothing iterations",initial_smooth_iter);
+	viewer.callback_init = [&](igl::viewer::Viewer& viewer) {
+		// Add new group
+		viewer.ngui->addGroup("Inflation");
 
-        
-        // Add a button
-        viewer.ngui->addButton("Perform 1 smoothing iteration",[&viewer](){
-            SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, dirty_boundary);
-            viewer.data.set_mesh(V, F);
-            viewer.data.compute_normals();
+		// Expose a variable directly ...
+		viewer.ngui->addVariable("Vertex Weights", SurfaceSmoothing::vertex_weight);
+		viewer.ngui->addVariable("Edge Weights", SurfaceSmoothing::edge_weight);
+
+
+		// Expose a variable directly ...
+		viewer.ngui->addVariable("Initial smoothing iterations", initial_smooth_iter);
+
+
+		// Add a button
+		viewer.ngui->addButton("Perform 1 smoothing iteration", [&viewer]() {
+			SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, dirty_boundary);
+			viewer.data.set_mesh(V, F);
+			viewer.data.compute_normals();
 
 
 			for(int i = 0; i < stroke_collection.size(); i++) {
@@ -567,26 +578,23 @@ int main(int argc, char *argv[]) {
 				viewer.data.add_edges(added_points.block(0, 0, added_points.rows() - points_to_hold_back, 3), added_points.block(1, 0, added_points.rows() - points_to_hold_back, 3), stroke_collection[i].stroke_color);// Eigen::RowVector3d(0, 0, 1));
 			}
 
-        });
+		});
 
 		viewer.ngui->addGroup("Curve deformation");
 		viewer.ngui->addVariable<bool>("Smooth deformation", CurveDeformation::smooth_deform_mode);
-        
-        // call to generate menu
-        viewer.screen->performLayout();
-        return false;
-    };
+
+		// call to generate menu
+		viewer.screen->performLayout();
+		return false;
+	};
 
 	//Init stroke selector
 	initial_stroke = new Stroke(V, F, viewer, 0);
-	if (argc == 2)
-	{
+	if(argc == 2) {
 		// Read mesh
 		igl::readOFF(argv[1], V, F);
-	//	callback_load_mesh(viewer, argv[1]);
-	}
-	else
-	{
+		//	callback_load_mesh(viewer, argv[1]);
+	} else {
 		// Read mesh
 		//callback_load_mesh(viewer, "../data/cube.off");
 	}
@@ -596,3 +604,5 @@ int main(int argc, char *argv[]) {
 	//viewer.core.align_camera_center(V);
 	viewer.launch();
 }
+
+

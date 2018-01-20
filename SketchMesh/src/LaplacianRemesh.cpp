@@ -1,10 +1,8 @@
 #include "LaplacianRemesh.h"
 #include <iostream>
-#include <Eigen/Core>
 #include <igl/edge_topology.h>
 #include <igl/vertex_triangle_adjacency.h>
 #include <igl/slice.h>
-#include <igl/slice_mask.h>
 #include <igl/adjacency_list.h>
 #include <igl/project.h>
 
@@ -174,6 +172,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	Eigen::MatrixXd tmp_V;
 	Eigen::VectorXi tmp_part_of, tmp_markers;
 
+	int size_before_removing = m.V.rows();
 	row_idx = Eigen::VectorXi::Map(clean_vertices.data(), clean_vertices.size());
 	col_idx.col(0) << 0, 1, 2;
 	igl::slice(m.V, row_idx, col_idx, tmp_V);
@@ -203,7 +202,6 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		}
 	}
 
-
 	vector<int> path_vertices;
 //	Eigen::MatrixX3d path_vert_positions(path.size() - 1, 3);
 	int original_V_size = m.V.rows();
@@ -232,15 +230,15 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	m.V.conservativeResize(m.V.rows() + path.size() - 1, Eigen::NoChange);
 	m.part_of_original_stroke.conservativeResize(m.part_of_original_stroke.rows() + path.size() - 1);
 	m.vertex_boundary_markers.conservativeResize(m.vertex_boundary_markers.rows() + path.size() - 1);
-	
+	m.new_mapped_indices.conservativeResize(m.new_mapped_indices.rows() + path.size() - 1, Eigen::NoChange);
 	//TODO NOTE: NEED TO CHAGNE THIS TO USE THE OUTCOME OF RESAMPLE_BY_LENGTH...
 	//vector<PathElement>& path2 = surface_path.get_path();
 	for(int i = 0; i < path.size() - 1; i++) {
 		m.V.row(size_before + i) << path[i].get_vertex().transpose();
 		m.part_of_original_stroke[size_before + i] = 0;
 		m.vertex_boundary_markers[size_before + i] = surface_path.get_origin_stroke_ID();
-		surface_path.get_path_element(i).set_v_idx(size_before + i);
-
+		surface_path.get_path_element(i).set_v_idx(size_before_removing + i);
+		m.new_mapped_indices(vertex_is_clean.rows() + i) = size_before + i;
 		//m.V.row(size_before + i) << tmp_path.row(i); //this version uses the smoothing but results in a roundish stroke.
 	}
 	

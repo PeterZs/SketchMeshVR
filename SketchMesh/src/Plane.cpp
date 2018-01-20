@@ -1,5 +1,4 @@
 #include "Plane.h"
-#include <Eigen/Core>
 #include <Eigen/Geometry>
 
 Plane::Plane(Eigen::Vector3d v0, Eigen::Vector3d v1, Eigen::Vector3d v2) {
