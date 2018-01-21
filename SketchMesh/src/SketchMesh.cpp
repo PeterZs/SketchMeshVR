@@ -327,10 +327,10 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 			CurveDeformation::pullCurve(pt, V);
 			if(dirty_boundary) { //Smooth an extra time if the boundary is dirty, because smoothing once with a dirty boundary results in a flat mesh
 				for(int i = 0; i < 2; i++) {
-					//	SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, dirty_boundary);
+						SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, dirty_boundary);
 				}
 			}
-			//	SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, dirty_boundary);
+				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, dirty_boundary);
 
 			turnNr++;
 		} else {
@@ -446,9 +446,8 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			stroke_collection.push_back(*added_stroke);
 
 			initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers);//Don't test if the initial one dies, cause then we have mayhem anyway? TODO
-			initial_stroke->update_Positions(V);
-			int nr_removed = 0, original_collection_size = stroke_collection.size();
 			
+			int nr_removed = 0, original_collection_size = stroke_collection.size();
 			for(int i = 0; i < original_collection_size; i++) {
 				if(!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, vertex_boundary_markers)) {
 					//Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist
@@ -457,8 +456,18 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 					dirty_boundary = true;
 					continue; //Go to the next stroke, don't update this ones' positions
 				}
-				stroke_collection[i - nr_removed].update_Positions(V);
 			}
+
+			for(int i = 0; i < 2; i++) {
+				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, dirty_boundary);
+			}
+
+			//Update the stroke positions after smoothing, in case their positions have changed (although they really shouldn't)
+			initial_stroke->update_Positions(V);
+			for(int i = 0; i < stroke_collection.size(); i++) {
+				stroke_collection[i].update_Positions(V);
+			}
+
 			viewer.data.clear();
 			viewer.data.set_mesh(V, F);
 			igl::per_face_normals(V, F, N_Faces);
@@ -466,9 +475,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			viewer.core.align_camera_center(V, F);
 
 			cut_stroke_already_drawn = false; //Reset
-
 			draw_all_strokes(viewer);
-
 		} else { //We're finished drawing the cut stroke, prepare for when user draws the final stroke to remove the part
 			cut_stroke_already_drawn = true;
 		}
@@ -483,7 +490,6 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			stroke_collection.push_back(*added_stroke);
 
 			initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers);
-			initial_stroke->update_Positions(V);
 
 			int nr_removed = 0, original_collection_size = stroke_collection.size();
 			for(int i = 0; i < original_collection_size - 1; i++) { //Skip the newly added stroke since it is already updated inside extrude_main()
@@ -494,8 +500,19 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 					dirty_boundary = true;
 					continue; //Go to the next stroke, don't update this ones' positions
 				}
-				stroke_collection[i - nr_removed].update_Positions(V);
 			}
+
+
+			for(int i = 0; i < 2; i++) {
+				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, dirty_boundary);
+			}
+
+			//Update the stroke positions after smoothing, in case their positions have changed (although they really shouldn't)
+			initial_stroke->update_Positions(V);
+			for(int i = 0; i < stroke_collection.size(); i++) {
+				stroke_collection[i].update_Positions(V);
+			}
+
 
 			viewer.data.clear();
 			viewer.data.set_mesh(V, F);
