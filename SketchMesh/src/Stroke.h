@@ -35,7 +35,7 @@ public:
 	int selectClosestVertex(int mouse_x, int mouse_y, double& closest_distance);
 	double compute_stroke_diag();
 	void update_Positions(Eigen::MatrixXd V);
-	bool update_vert_bindings(Eigen::VectorXi & new_mapped_indices);
+	bool update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi & vertex_boundary_markers);
 	void snap_to_vertices(Eigen::VectorXi & vertex_boundary_markers);
 
 	void undo_stroke_add(Eigen::VectorXi & vertex_boundary_markers);
@@ -71,7 +71,7 @@ private:
 	double dep = -1;
 
 	std::vector<int> closest_vert_bindings;
-	std::vector<int> added_stroke_final_vertices;
+	//std::vector<int> added_stroke_final_vertices;
 
 	static Eigen::MatrixXd resample_stroke2D(Eigen::MatrixXd & original_stroke2DPoints);
 	static void move_to_middle(Eigen::MatrixXd &positions, Eigen::MatrixXd &new_positions);

@@ -38,7 +38,7 @@ Stroke::Stroke(const Stroke& origin) :
 	has_been_reversed(origin.has_been_reversed),
 	stroke_color(origin.stroke_color),
 	dep(origin.dep),
-	added_stroke_final_vertices(origin.added_stroke_final_vertices),
+	//added_stroke_final_vertices(origin.added_stroke_final_vertices),
 	is_loop(origin.is_loop) {
 	_time1 = std::chrono::high_resolution_clock::now();
 }
@@ -58,7 +58,7 @@ void Stroke::swap(Stroke & tmp) {//The pointers to V and F will always be the sa
 	std::swap(this->has_been_reversed, tmp.has_been_reversed);
 	std::swap(this->stroke_color, tmp.stroke_color);
 	std::swap(this->dep, tmp.dep);
-	std::swap(this->added_stroke_final_vertices, tmp.added_stroke_final_vertices);
+//	std::swap(this->added_stroke_final_vertices, tmp.added_stroke_final_vertices);
 	std::swap(this->is_loop, tmp.is_loop);
 }
 
@@ -507,6 +507,7 @@ int Stroke::selectClosestVertex(int mouse_x, int mouse_y, double& closest_distan
 	Eigen::RowVector3d pt, vert, clicked_pt(x, y, 0);
 	double closest_dist = INFINITY, dist;
 	int closest_ID;
+
 	for(int i = 0; i < stroke3DPoints.rows(); i++) { //ignore the last stroke points because it's a duplicate of the first
 		vert = stroke3DPoints.row(i).transpose();
 		igl::project(vert, modelview, viewer.core.proj, viewer.core.viewport, pt); //project the boundary vertex and store in pt
@@ -520,7 +521,9 @@ int Stroke::selectClosestVertex(int mouse_x, int mouse_y, double& closest_distan
 	closest_dist = sqrt(closest_dist);
 	double stroke_diag = compute_stroke_diag();
 	closest_distance = closest_dist;
-	if(closest_dist > 0.08*stroke_diag) { //Don't do pulling when the user clicks too far away from any curve (treat as navigation movement)
+	if(stroke3DPoints.rows() > 2 && closest_dist > 0.08*stroke_diag) { //Don't do pulling when the user clicks too far away from any curve (treat as navigation movement)
+		return -1;
+	} else if(stroke3DPoints.rows() == 2 && closest_dist > 0.08 * (stroke3DPoints.row(0).norm() * 2)) { //The stroke consist of a single point (that's "looped") so the diag will be 0. Use the point's norm instead
 		return -1;
 	}
 	return closest_ID;
@@ -542,46 +545,55 @@ void Stroke::update_Positions(Eigen::MatrixXd V) {
 }
 
 //Takes care of the vertex binding indices only. In order to also remove the stroke3DPoints corresponding to removed vertices, call update_Positions().
-bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices) {
+bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi& vertex_boundary_markers) {
 	vector<int> new_bindings;
-	int last_included = -1;
-	bool points_were_removed = false, no_tracked_point_yet = true;
+	int first_included_after_remove = -1;
+	bool points_were_removed = false, no_tracked_point_yet = true, stays_continuous = false, originally_is_loop = is_loop;
+	
 	//Closest_vert_bindings is always a loop, so skip over the last element and then after it is (optionally) rotated, add it back again.
-
 	for(int i = 0; i < closest_vert_bindings.size() - 1; i++) {
 		if(new_mapped_indices[closest_vert_bindings[i]] == -1) { //vertex has been removed. Clean up from closest_vert_bindings
+			if(!originally_is_loop && (i==0 || i==closest_vert_bindings.size()-2)) { //We have to check if the stroke remains continuous, otherwise we have to remove it
+				//The stroke wasn't a loop and either the first or last (or both) of its points was removed, meaning that it stays continuous
+				stays_continuous = true;
+			}
+
 			is_loop = false; //Since one of the vertices is removed, if the stroke used to be a loop, it can impossibly still be a loop (and if it already wasn't a loop, it stays a non-loop)
 			points_were_removed = true;
 			continue;
 		}
 		new_bindings.push_back(new_mapped_indices[closest_vert_bindings[i]]); //Get the new index of the vertex that we previously pointed to
 		if(points_were_removed && no_tracked_point_yet) {
-			last_included = new_bindings.size() - 1; //track the most recent point index that has been added after any vertex was removed
+			first_included_after_remove = new_bindings.size() - 1; //track the first point index that has been added after any vertex was removed
 			no_tracked_point_yet = false;
 		}
 	}
 
-	//If last_included == -1, this means that either no points were removed, or the last point in the loop was removed while point 0 stayed. If point 0 would've been removed, then last_included would have been set to 1 (or whatever first point wasn't removed)
-	if(new_bindings.size() != 0 && last_included != -1) {	//Check that we didn't remove ALL points in the stroke and that we actually need to reorder
-		rotate(new_bindings.begin(), new_bindings.begin() + last_included, new_bindings.end()); //Makes the stroke "continuous" again
-	}
 	if(new_bindings.size() == 0) {
 		return false; //Stroke ceases to exist.
 	}
-	new_bindings.push_back(new_bindings[0]);
-	cout << "yeah usher" << endl;
-	for(int i = 0; i < new_bindings.size(); i++) {
-		cout << new_bindings[i] << endl;
+
+	//If first_included_after_remove == -1, this means that either no points were removed, or the last point in the loop was removed while point 0 stayed. If point 0 would've been removed, then first_included_after_remove would have been set to 1 (or whatever first point wasn't removed)
+	if(first_included_after_remove != -1) {	//Check that we didn't remove ALL points in the stroke and that we actually need to reorder
+		rotate(new_bindings.begin(), new_bindings.begin() + first_included_after_remove, new_bindings.end()); //Makes the stroke "continuous" again
 	}
 
+	new_bindings.push_back(new_bindings[0]);
 	set_closest_vert_bindings(new_bindings);
+
+	if(!originally_is_loop && !stays_continuous) { //For strokes that weren't a loop at the start and that have a middle chunk removed (but not everything) we need to unset their markers because we will remove the entire stroke
+		undo_stroke_add(vertex_boundary_markers);
+		return false;
+	}
+
+
 	return true;
 }
 
 void Stroke::snap_to_vertices(Eigen::VectorXi &vertex_boundary_markers) {
 	Eigen::VectorXd min_dist;
 	Eigen::VectorXi previous;
-	vector<int> result_path;
+	vector<int> result_path, added_stroke_final_vertices;
 	int prev = -1;
 	vector<vector<int>> adj_list;
 	adjacency_list(F, adj_list);
@@ -611,14 +623,18 @@ void Stroke::snap_to_vertices(Eigen::VectorXi &vertex_boundary_markers) {
 			}
 		}
 	}
+
+	closest_vert_bindings = added_stroke_final_vertices; //closest_vert_bindings will be updated when the topology changes, added_stroke_final_vertices not, so only use it as a temporary
 	stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
 	stroke3DPoints.row(stroke3DPoints.rows() - 1) << stroke3DPoints.row(0); // Also add a copy of the first point at the end for strokes that are later added, to keep consistency with the initial stroke
-
+	if(closest_vert_bindings[0] != closest_vert_bindings[closest_vert_bindings.size() - 1]) {
+		closest_vert_bindings.push_back(closest_vert_bindings[0]); //"Loop" the closest_vert_bindings because they are used to determine which 3DPoints to update, and we need 3DPoints to stay a loop for the sake of draw
+	}
 }
 
 void Stroke::undo_stroke_add(Eigen::VectorXi& vertex_boundary_markers) {
-	for(int i = 0; i < added_stroke_final_vertices.size(); i++) {
-		vertex_boundary_markers[added_stroke_final_vertices[i]] = 0;
+	for(int i = 0; i < closest_vert_bindings.size(); i++) {
+		vertex_boundary_markers[closest_vert_bindings[i]] = 0;
 	}
 }
 

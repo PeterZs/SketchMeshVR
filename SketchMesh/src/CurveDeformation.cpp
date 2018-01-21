@@ -55,15 +55,12 @@ void CurveDeformation::pullCurve(Eigen::RowVector3d& pos, Eigen::MatrixXd& V) {
 	drag_size /= curve_diag_length;
 	bool ROI_is_updated = false;
 	if(!current_ROI_size || (fabs(drag_size - current_ROI_size) > 0.01)) { //Take the deformation and roi size as percentages
-		cout << "going into update_ROI" << endl;
 		ROI_is_updated = update_ROI(drag_size);
 	}
 	if(no_ROI_vert == 0 || current_ROI_size == 0) { //If we have no other "free" vertices other than the handle vertex, we simply move it to the target position
 		V.row(moving_vertex_ID) = pos;
-		cout << "just moving:" << moving_vertex_ID << endl;
 	} else {
 		if(ROI_is_updated) {
-			cout << " updatign " << endl;
 			setup_for_update_curve(V);
 		}
 		V.row(moving_vertex_ID) = pos;
@@ -80,14 +77,13 @@ double CurveDeformation::compute_curve_diag_length(Stroke& _stroke) {
 bool CurveDeformation::update_ROI(double drag_size) {
 	current_max_drag_size = drag_size;
 	int no_ROI_vert_tmp;
-	if(smooth_deform_mode) {
+	if(smooth_deform_mode && no_vertices > 1) {
 		no_ROI_vert_tmp = max(round(0.17*no_vertices) + 1, min(round(drag_size * no_vertices) + 1, ceil(((no_vertices - 1) / 2) - 1))); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side, always at least 1/6th of the number of vertices + 1 vertex fixed, to take care of thin meshes with many vertices)
 	} else {
 		no_ROI_vert_tmp = max(0.0, min(round(drag_size / 4.0 * no_vertices), ceil(((no_vertices - 1) / 2) - 1))); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side)
 	}
-	cout << "test" << no_ROI_vert << "  " << no_ROI_vert_tmp << "  " << endl;
+
 	if(((no_ROI_vert == no_ROI_vert_tmp) && prev_loop_type == stroke_is_loop) || no_ROI_vert_tmp == 0) { //number of vertices in ROI didn't change
-		cout << "false" << endl;
 		return false;
 	}
 
@@ -106,58 +102,6 @@ bool CurveDeformation::update_ROI(double drag_size) {
 	vector<int> fixed;
 	vector<int> fixed_local;
 	is_fixed = Eigen::VectorXi::Zero(no_vertices);
-	/*if(stroke_ID != 0 && stroke_is_loop) {//We've chosen an added stroke that's looped
-		int ROI_1_original = ROI_1, ROI_2_original = ROI_2;
-		if(ROI_1 < ROI_2) {
-			for(int i = ROI_1_original; i < handle_ID; i++) {
-				if(part_of_original_stroke[i]) {
-					ROI_1 = (((ROI_1 - 1) + no_vertices) % no_vertices);//For every original stroke vertex that's on the ROI of the selected stroke, move the lower bound of ROI to one lower
-				}
-			}
-			for(int i = handle_ID + 1; i < ROI_2_original + 1; i++) {
-				if(part_of_original_stroke[i]) {
-					ROI_2 = (((ROI_2 + 1) + no_vertices) % no_vertices);//For every original stroke vertex that's on the ROI of the selected stroke, move the upper bound of ROI to one higher
-				}
-			}
-
-		}
-		else {
-			if(handle_ID < ROI_2_original) { //Handle_ID is between 0 and ROI_2
-				for(int i = ROI_1_original; i < no_vertices; i++) {
-					if(part_of_original_stroke[i]) {
-						ROI_1 = (((ROI_1 - 1) + no_vertices) % no_vertices); //For every original stroke vertex that's on the ROI of the selected stroke, move the lower bound of ROI to one lower
-					}
-				}
-				for(int i = 0; i < handle_ID; i++) {
-					if(part_of_original_stroke[i]) {
-						ROI_1 = (((ROI_1 - 1) + no_vertices) % no_vertices); //For every original stroke vertex that's on the ROI of the selected stroke, move the lower bound of ROI to one lower
-					}
-				}
-				for(int i = handle_ID + 1; i < ROI_2_original + 1; i++) {
-					if(part_of_original_stroke[i]) {
-						ROI_2 = (((ROI_2 + 1) + no_vertices) % no_vertices); //For every original stroke vertex that's on the ROI of the selected stroke, move the upper bound of ROI to one higher
-					}
-				}
-			} else { //Handle_ID is between ROI_1 and no_vertices
-				for(int i = ROI_1_original; i < handle_ID; i++) {
-					if(part_of_original_stroke[i]) {
-						ROI_1 = (((ROI_1 - 1) + no_vertices) % no_vertices); //For every original stroke vertex that's on the ROI of the selected stroke, move the lower bound of ROI to one lower
-					}
-				}
-				for(int i = handle_ID + 1; i < no_vertices; i++) {
-					if(part_of_original_stroke[i]) {
-						ROI_2 = (((ROI_2 + 1) + no_vertices) % no_vertices); //For every original stroke vertex that's on the ROI of the selected stroke, move the upper bound of ROI to one higher
-					}
-				}
-				for(int i = 0; i < ROI_2_original + 1; i++) {
-					if(part_of_original_stroke[i]) {
-						ROI_2 = (((ROI_2 + 1) + no_vertices) % no_vertices); //For every original stroke vertex that's on the ROI of the selected stroke, move the upper bound of ROI to one higher
-					}
-				}
-			}
-		}
-	}*/
-
 
 	if(ROI_1 < ROI_2) {
 		for(int i = 0; i < ROI_1; i++) {

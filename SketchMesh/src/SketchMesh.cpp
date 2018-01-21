@@ -339,6 +339,7 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 				turnNr = 0;
 			}
 		}
+
 		initial_stroke->update_Positions(V);
 		for(int i = 0; i < stroke_collection.size(); i++) {
 			stroke_collection[i].update_Positions(V);
@@ -396,7 +397,8 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 
 		}
 		skip_standardcallback = false;
-	} else if(tool_mode == ADD) {
+	} 
+	else if(tool_mode == ADD) {
 		dirty_boundary = true;
 		if(!added_stroke->has_points_on_mesh) {
 			mouse_has_moved = false;
@@ -409,12 +411,14 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			}*/
 		stroke_collection.push_back(*added_stroke);
 		draw_all_strokes(viewer);
-	} else if(tool_mode == REMOVE && stroke_was_removed) { //Only redraw if we actually removed a stroke (otherwise we draw unnecessary)
+	} 
+	else if(tool_mode == REMOVE && stroke_was_removed) { //Only redraw if we actually removed a stroke (otherwise we draw unnecessary)
 		stroke_was_removed = false; //Reset
 		dirty_boundary = true;
 
 		draw_all_strokes(viewer);
-	} else if(tool_mode == PULL && handleID != -1 && mouse_has_moved) {
+	} 
+	else if(tool_mode == PULL && handleID != -1 && mouse_has_moved) {
 		for(int i = 0; i < 2; i++) {
 			//     SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, dirty_boundary);
 		}
@@ -428,7 +432,8 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 
 		draw_all_strokes(viewer);
 
-	} else if(tool_mode == CUT) {
+	} 
+	else if(tool_mode == CUT) {
 		if(!added_stroke->has_points_on_mesh) {
 			mouse_has_moved = false;
 			return true;
@@ -440,12 +445,12 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			MeshCut::cut(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, *added_stroke);
 			stroke_collection.push_back(*added_stroke);
 
-			initial_stroke->update_vert_bindings(new_mapped_indices);//Don't test if the initial one dies, cause then we have mayhem anyway? TODO
+			initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers);//Don't test if the initial one dies, cause then we have mayhem anyway? TODO
 			initial_stroke->update_Positions(V);
 			int nr_removed = 0, original_collection_size = stroke_collection.size();
 			
 			for(int i = 0; i < original_collection_size; i++) {
-				if(!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices)) {
+				if(!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, vertex_boundary_markers)) {
 					//Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist
 					stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
 					nr_removed++;
@@ -467,7 +472,8 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 		} else { //We're finished drawing the cut stroke, prepare for when user draws the final stroke to remove the part
 			cut_stroke_already_drawn = true;
 		}
-	} else if(tool_mode == EXTRUDE) {
+	} 
+	else if(tool_mode == EXTRUDE) {
 		if(extrusion_base_already_drawn) { //User has drawn the silhouette stroke for extrusion
 			dirty_boundary = true;
 			cout << "mouse released after extrusion silhouette drawn" << endl;
@@ -476,11 +482,19 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			stroke_collection.push_back(*extrusion_base);
 			stroke_collection.push_back(*added_stroke);
 
-			initial_stroke->update_vert_bindings(new_mapped_indices);
+			initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers);
 			initial_stroke->update_Positions(V);
-			for(int i = 0; i < stroke_collection.size() - 1; i++) { //Skip the newly added stroke since it is already updated inside extrude_main()
-				stroke_collection[i].update_vert_bindings(new_mapped_indices);
-				stroke_collection[i].update_Positions(V);
+
+			int nr_removed = 0, original_collection_size = stroke_collection.size();
+			for(int i = 0; i < original_collection_size - 1; i++) { //Skip the newly added stroke since it is already updated inside extrude_main()
+				if(!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, vertex_boundary_markers)) {
+					//Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist (or in case of non-loop strokes that have a middle portion removed, the undo_stroke_add is done inside of the update_vert_bindings
+					stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
+					nr_removed++;
+					dirty_boundary = true;
+					continue; //Go to the next stroke, don't update this ones' positions
+				}
+				stroke_collection[i - nr_removed].update_Positions(V);
 			}
 
 			viewer.data.clear();
