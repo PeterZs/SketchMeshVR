@@ -581,7 +581,7 @@ bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::V
 	new_bindings.push_back(new_bindings[0]);
 	set_closest_vert_bindings(new_bindings);
 
-	if(!originally_is_loop && !stays_continuous) { //For strokes that weren't a loop at the start and that have a middle chunk removed (but not everything) we need to unset their markers because we will remove the entire stroke
+	if(!originally_is_loop && points_were_removed && !stays_continuous) { //For strokes that weren't a loop at the start and that have a middle chunk removed (but not everything) we need to unset their markers because we will remove the entire stroke
 		undo_stroke_add(vertex_boundary_markers);
 		return false;
 	}

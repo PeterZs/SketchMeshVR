@@ -486,6 +486,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			cout << "mouse released after extrusion silhouette drawn" << endl;
 			added_stroke->toLoop();
 			MeshExtrusion::extrude_main(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, base_surface_path, *added_stroke, *extrusion_base, base_model, base_view, base_proj, base_viewport);
+
 			stroke_collection.push_back(*extrusion_base);
 			stroke_collection.push_back(*added_stroke);
 
@@ -509,7 +510,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 
 			//Update the stroke positions after smoothing, in case their positions have changed (although they really shouldn't)
 			initial_stroke->update_Positions(V);
-			for(int i = 0; i < stroke_collection.size(); i++) {
+			for(int i = 0; i < stroke_collection.size()-1; i++) {
 				stroke_collection[i].update_Positions(V);
 			}
 

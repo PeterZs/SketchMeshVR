@@ -185,7 +185,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 
 	igl::slice(m.vertex_boundary_markers, row_idx, col_idx, tmp_markers);
 	m.vertex_boundary_markers = tmp_markers; //Compact vertex_boundary_markers by removing the values for vertices that are now removed
-	
+
 	int count = 0;
 	m.new_mapped_indices.setConstant(m.new_mapped_indices.rows(), -1); //Initialize all values to -1
 	for(int i = 0; i < vertex_is_clean.rows(); i++) {
@@ -241,7 +241,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		m.new_mapped_indices(vertex_is_clean.rows() + i) = size_before + i;
 		//m.V.row(size_before + i) << tmp_path.row(i); //this version uses the smoothing but results in a roundish stroke.
 	}
-	
+
 	//Update the outer_boundary_vertices (which are indices into V before it was sliced to keep only the clean vertices)
 	for(int i = 0; i < outer_boundary_vertices.size(); i++) {
 		outer_boundary_vertices[i] = m.new_mapped_indices[outer_boundary_vertices[i]];
