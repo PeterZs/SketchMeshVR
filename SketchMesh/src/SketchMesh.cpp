@@ -420,7 +420,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 	} 
 	else if(tool_mode == PULL && handleID != -1 && mouse_has_moved) {
 		for(int i = 0; i < 2; i++) {
-			//     SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, dirty_boundary);
+			     SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, dirty_boundary);
 		}
 
 		for(int i = 0; i < stroke_collection.size(); i++) {
