@@ -178,6 +178,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	igl::slice(m.V, row_idx, col_idx, tmp_V);
 	m.V = tmp_V;
 
+
 	col_idx.resize(1);
 	col_idx.col(0) << 0;
 	igl::slice(m.part_of_original_stroke, row_idx, col_idx, tmp_part_of);
@@ -264,7 +265,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		reverse_path(path_vertices);
 		stitch(path_vertices, inner_boundary_vertices, m);
 	}
-	
+
 	//TODO: check if 708-728 in laplacianremesh is needed here
 	return Eigen::VectorXi::Map(path_vertices.data(), path_vertices.size()); //Create an Eigen::VectorXi from a std::vector
 }

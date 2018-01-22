@@ -60,7 +60,7 @@ bool dirty_boundary = false;
 int closest_stroke_ID, prev_closest_stroke_ID;
 
 //Keeps track of the stroke IDs
-int next_added_stroke_ID = 1;
+int next_added_stroke_ID = 2; //Start at 2 because marker 1 belongs to the original boundary
 
 //Variables for adding control curves
 bool last_add_on_mesh = false;
@@ -180,7 +180,7 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 	if(tool_mode == DRAW) { //Creating the first curve/mesh
 		viewer.data.clear();
 		stroke_collection.clear();
-		next_added_stroke_ID = 1;
+		next_added_stroke_ID = 2;
 		initial_stroke->strokeReset();
 		initial_stroke->strokeAddSegment(down_mouse_x, down_mouse_y);
 		skip_standardcallback = true;
@@ -486,7 +486,6 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			cout << "mouse released after extrusion silhouette drawn" << endl;
 			added_stroke->toLoop();
 			MeshExtrusion::extrude_main(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, base_surface_path, *added_stroke, *extrusion_base, base_model, base_view, base_proj, base_viewport);
-
 			stroke_collection.push_back(*extrusion_base);
 			stroke_collection.push_back(*added_stroke);
 
@@ -503,8 +502,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 				}
 			}
 
-
-			for(int i = 0; i < 2; i++) {
+			for(int i = 0; i < 3; i++) {
 				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, dirty_boundary);
 			}
 
@@ -514,9 +512,9 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 				stroke_collection[i].update_Positions(V);
 			}
 
-
 			viewer.data.clear();
 			viewer.data.set_mesh(V, F);
+
 			igl::per_face_normals(V, F, N_Faces);
 			viewer.data.set_normals(N_Faces);
 			viewer.core.align_camera_center(V, F);

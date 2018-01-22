@@ -42,6 +42,7 @@ void SurfaceSmoothing::smooth(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::Vec
 		prev_vertex_count = V.rows();
 		iteration = 0;
 	}
+
 	if(BOUNDARY_IS_DIRTY) {
 		iteration = 0;
 	}
@@ -229,8 +230,8 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 			b[m.V.rows() + i] = current_curvatures[i];
 		}
 	}
-    
-    AT = get_AT_for_LM_and_edges(m);
+
+	AT = get_AT_for_LM_and_edges(m);
 	Eigen::VectorXd target_LM = solver1.solve(AT*b);
 	return target_LM;
 }
@@ -329,10 +330,10 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 		}
 	}
 
+
 	Eigen::VectorXd Vnewx = solver2.solve(AT*bx);
 	Eigen::VectorXd Vnewy = solver2.solve(AT*by);
 	Eigen::VectorXd Vnewz = solver2.solve(AT*bz);
-
 	for(int i = 0; i < m.V.rows(); i++) {
 		if(m.vertex_boundary_markers[i]==0){ //Only update non-fixed points (curve points are fixed)
 			m.V.row(i) << Vnewx[i], Vnewy[i], Vnewz[i];

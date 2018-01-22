@@ -31,7 +31,9 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, ID);
 	stroke.counter_clockwise();
 	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_extrusion_remove_inside(m, surface_path, model, view, proj, viewport);
-	
+
+	Eigen::Matrix4f modelview = stroke.viewer.core.view * stroke.viewer.core.model;
+
 	//project points to 2D. TODO: for now following the example, should be able to work with libigl's project??
 	Eigen::RowVector3d center(0, 0, 0);
 	for(int i = 0; i < boundary_vertices.rows(); i++) {
@@ -48,9 +50,17 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	}
 	normal.normalize();
 
-	Eigen::Vector3d camera_to_center = center.transpose() - stroke.viewer.core.camera_eye.cast<double>();
+	Eigen::RowVector3d pr;
+	Eigen::Vector3d source, dir;
+	igl::project(center, modelview, stroke.viewer.core.proj, stroke.viewer.core.viewport, pr);
+
+	Eigen::Vector2d tmp0 = pr.leftCols(2);
+	unproject_ray(tmp0, modelview, stroke.viewer.core.proj, stroke.viewer.core.viewport, source, dir);	
+
+	Eigen::Vector3d camera_to_center = source + dir;
 	Eigen::Vector3d normal2 = normal.cross(camera_to_center);
 	normal2.normalize();
+
 	Eigen::Vector3d center_to_vertex = m.V.row(boundary_vertices[0]) - center;
 	double dot_prod = normal2.dot(center_to_vertex);
 	double max = dot_prod, min = dot_prod;
@@ -74,8 +84,6 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 
 	Eigen::MatrixXd silhouette_vertices(0, 3);
 	Eigen::RowVector3d v;
-	Eigen::Vector3d source, dir;
-	Eigen::Matrix4f modelview = stroke.viewer.core.view * stroke.viewer.core.model;
 
 	for(int i = 0; i < stroke.get_stroke2DPoints().rows(); i++) {
 		Eigen::Vector2d tmp = stroke.get_stroke2DPoints().row(i);
@@ -84,11 +92,16 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 		center_to_vertex = v - center;
 		dot_prod = normal2.dot(center_to_vertex);
 		if(dot_prod > max || dot_prod < min) {
-			cout << "silhouette point is outside of range " << i << endl;
-		//	continue;
+			cerr << "silhouette point " << i << " is outside of range, it will be skipped." << endl; //TODO handle exiting in a proper way
+			continue;
 		}
 		silhouette_vertices.conservativeResize(silhouette_vertices.rows() + 1, Eigen::NoChange);
 		silhouette_vertices.row(silhouette_vertices.rows() - 1) = v;
+	}
+
+	if(silhouette_vertices.rows() == 0) {
+		cout << "returning: THIS IS BAD" << endl;
+		return;
 	}
 
 	//Possibly reverse silhouette_vertices, so they start closest to the most_left_vertex
@@ -110,6 +123,7 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 		sil_original_indices.push_back(size_before_silhouette + i);
 	}
 	stroke.set_closest_vert_bindings(sil_original_indices);
+
 
 	//TODO: FOR NOW SKIPPING LINE 324-328 OF LAPLACIANEXTRUSION
 
@@ -150,13 +164,14 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 
 	Eigen::Vector3d x_vec = m.V.row(boundary_vertices[most_right_vertex_idx]) - m.V.row(boundary_vertices[most_left_vertex_idx]);
 	x_vec.normalize();
-	Eigen::Vector3d y_vec = normal;
+	Eigen::Vector3d y_vec = normal.cross(x_vec);
+	//Eigen::Vector3d y_vec = normal;
 	Eigen::Vector3d offset = x_vec.cross(y_vec);
 	offset *= 0.05;
 
-	generate_mesh(m, front_loop3D, center, x_vec, y_vec, offset, silhouette_vertices.rows(), front_loop_base_original_indices, sil_original_indices);
+	generate_mesh(m, front_loop3D, center, x_vec*-1, y_vec, offset, silhouette_vertices.rows(), front_loop_base_original_indices, sil_original_indices);
 	reverse(sil_original_indices.begin(), sil_original_indices.end());
-	generate_mesh(m, back_loop3D, center, x_vec*-1, y_vec, offset*-1, silhouette_vertices.rows(), back_loop_base_original_indices, sil_original_indices);
+	generate_mesh(m, back_loop3D, center, x_vec*-1, y_vec, offset, silhouette_vertices.rows(), back_loop_base_original_indices, sil_original_indices);
 
 	post_extrude_main_update_points(stroke, silhouette_vertices);
 	post_extrude_main_update_bindings(base, surface_path);
@@ -179,7 +194,7 @@ void MeshExtrusion::generate_mesh(Mesh& m, Eigen::MatrixXd loop3D, Eigen::Vector
 	Eigen::MatrixXi F2;
 	Eigen::MatrixXi vertex_markers, edge_markers;
 	//NOTE: TODO: Ideally we want to add the q20 flag to triangulate, BUT this will generate more interior vertices, which cannot cleanly be unprojected so it gives a mess
-	igl::triangle::triangulate(loop2D, loop_stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(loop2D.rows(), 1, 1), Eigen::MatrixXi::Constant(loop_stroke_edges.rows(), 1, 1), "YSQ", V2, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
+	igl::triangle::triangulate(loop2D, loop_stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(loop2D.rows(), 1, 1), Eigen::MatrixXi::Constant(loop_stroke_edges.rows(), 1, 1), "Yq25Q", V2, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
 																																																																	  
 	Eigen::RowVector3d vert;
 	for(int i = 0; i < V2.rows(); i++) {
