@@ -1,6 +1,8 @@
 #include "MeshCut.h"
 #include <iostream>
 #include <igl/triangle/triangulate.h>
+#include <igl/slice.h>
+#include <igl/edge_topology.h>
 #include "LaplacianRemesh.h"
 
 using namespace std;
@@ -11,12 +13,12 @@ int MeshCut::ID = -1;
 Eigen::MatrixXi MeshCut::EV, MeshCut::FE, MeshCut::EF;
 vector<vector<int>> VV;
 
-void MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::VectorXi &new_mapped_indices, Stroke& stroke) {
+void MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::VectorXi &new_mapped_indices, Eigen::VectorXi &sharp_edge, Stroke& stroke) {
 	if(V.rows() != prev_vertex_count) {
 		ID++;
 		prev_vertex_count = V.rows();
 	}
-	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, ID);
+	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, ID);
 	SurfacePath surface_path;
 	surface_path.create_from_stroke(stroke); //Prepares the drawn stroke (inserts extra points at the edges that it crosses)
 	cut_main(m, surface_path, stroke);
@@ -24,6 +26,11 @@ void MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &verte
 	post_cut_update_points(stroke, surface_path);
 
 	return;
+}
+
+void MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke) {
+	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_cut_remove_inside(m, surface_path, stroke.viewer.core.model, stroke.viewer.core.view, stroke.viewer.core.proj, stroke.viewer.core.viewport);
+	mesh_open_hole(boundary_vertices, m);
 }
 
 void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
@@ -99,30 +106,43 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 			m.F(size_before + i, 2 - j) = vert_idx_in_mesh; //To ensure right face orientation after implementing extrusion
 		}
 	}
+
+	vector<int> sharp_edge_indices;
+	for(int i = 0; i < m.sharp_edge.rows(); i++) {
+		if(m.sharp_edge[i]) {
+			sharp_edge_indices.push_back(i);
+		}
+	}
+
+	Eigen::MatrixXi EV, FE, EF;
+	igl::edge_topology(m.V, m.F, EV, FE, EF);
+
+	Eigen::MatrixXi sharpEV;
+	Eigen::VectorXi sharpEV_row_idx, sharpEV_col_idx(2);
+	sharpEV_row_idx = Eigen::VectorXi::Map(sharp_edge_indices.data(), sharp_edge_indices.size()); //Create an Eigen::VectorXi from a std::vector
+	sharpEV_col_idx.col(0) << 0, 1;
+	igl::slice(EV, sharpEV_row_idx, sharpEV_col_idx, sharpEV); //Keep only the sharp edges in the original mesh
+
+	m.sharp_edge.resize(EV.rows());
+	m.sharp_edge.setZero();
+
+	int start, end, equal_pos;
+	Eigen::VectorXi col1Equals, col2Equals;
+	for(int i = 0; i < sharpEV.rows(); i++) {
+		start = sharpEV(i, 0);
+		end = sharpEV(i, 1);
+		if(start == -1 || end == -1) { //Sharp edge no longer exists
+			continue;
+		}
+
+		col1Equals = EV.col(0).cwiseEqual(min(start, end)).cast<int>();
+		col2Equals = EV.col(1).cwiseEqual(max(start, end)).cast<int>();
+		(col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
+
+		m.sharp_edge[equal_pos] = 1; //Set this edge to be sharp
+	}
 	
 	//TODO: see laplacianCut::cut lines 93-104 about sharp boundaries
-}
-
-void MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke){
-	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_cut_remove_inside(m, surface_path, stroke.viewer.core.model, stroke.viewer.core.view, stroke.viewer.core.proj, stroke.viewer.core.viewport);
-	mesh_open_hole(boundary_vertices, m);
-}
-
-Eigen::MatrixXd MeshCut::resample_by_length_with_fixes(vector<int> path_vertices, Mesh& m, double unit_length) {
-	if(path_vertices.size() <= 1) {
-		return m.V.row(path_vertices[0]);
-	}
-
-	//TODO: Skipping stuff from CleanStroke3D line 64-76. IS IT NEEDED?
-
-	Eigen::MatrixXd resampled(0, 3);
-	resampled.conservativeResize(resampled.rows() + 1, Eigen::NoChange);
-	resampled.row(resampled.rows() - 1) = m.V.row(path_vertices[0]);
-
-	int idx0 = 0, idx1;
-	while(true) {
-		//	idx1 = find_next_fi
-	}
 }
 
 //Updates the stroke's 3DPoints and closest_vert_bindings with the new vertices
@@ -140,4 +160,21 @@ void MeshCut::post_cut_update_points(Stroke& stroke, SurfacePath& surface_path) 
 
 	stroke.set3DPoints(new_3DPoints);
 	stroke.set_closest_vert_bindings(new_closest_vertex_indices);
+}
+
+Eigen::MatrixXd MeshCut::resample_by_length_with_fixes(vector<int> path_vertices, Mesh& m, double unit_length) {
+	if(path_vertices.size() <= 1) {
+		return m.V.row(path_vertices[0]);
+	}
+
+	//TODO: Skipping stuff from CleanStroke3D line 64-76. IS IT NEEDED?
+
+	Eigen::MatrixXd resampled(0, 3);
+	resampled.conservativeResize(resampled.rows() + 1, Eigen::NoChange);
+	resampled.row(resampled.rows() - 1) = m.V.row(path_vertices[0]);
+
+	int idx0 = 0, idx1;
+	while(true) {
+		//	idx1 = find_next_fi
+	}
 }

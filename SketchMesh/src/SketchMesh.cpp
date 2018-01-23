@@ -8,6 +8,7 @@
 #include <igl/viewer/Viewer.h>
 #include <igl/per_face_normals.h>
 #include <igl/cat.h>
+#include <igl/edge_topology.h>
 #include "SketchMesh.h"
 #include "Stroke.h"
 #include "SurfaceSmoothing.h"
@@ -27,10 +28,12 @@ Eigen::MatrixXi F;
 // Per face normals, #F x3
 Eigen::MatrixXd N_Faces;
 
-// Per vertex indicator of whether vertex is on boundary (on boundary if == 1)
+//Per vertex indicator of whether vertex is on boundary (on boundary if == 1)
 Eigen::VectorXi vertex_boundary_markers;
 //Per vertex indicator of whether vertex is on original stroke (outline of shape) (on OG stroke if ==1)
 Eigen::VectorXi part_of_original_stroke;
+//Per edge indicator of whether the edge is sharp (if == 1 then sharp, otherwise smooth)
+Eigen::VectorXi sharp_edge;
 //Takes care of index mapping from before a cut/extrusion action to after (since some vertices are removed)
 Eigen::VectorXi new_mapped_indices;
 
@@ -327,10 +330,10 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 			CurveDeformation::pullCurve(pt, V);
 			if(dirty_boundary) { //Smooth an extra time if the boundary is dirty, because smoothing once with a dirty boundary results in a flat mesh
 				for(int i = 0; i < 2; i++) {
-						SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, dirty_boundary);
+						SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 				}
 			}
-				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, dirty_boundary);
+				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 
 			turnNr++;
 		} else {
@@ -379,10 +382,15 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			F = viewer.data.F;
 			V = viewer.data.V;
 
+			Eigen::MatrixXi EV, FE, EF;
+			igl::edge_topology(V, F, EV, FE, EF);
+			sharp_edge.resize(EV.rows());
+			sharp_edge.setZero(); //Set all edges to smooth after initial draw
+
 			dirty_boundary = true;
 
 			for(int i = 0; i < initial_smooth_iter; i++) {
-				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, dirty_boundary);
+				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 			}
 
 
@@ -420,7 +428,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 	} 
 	else if(tool_mode == PULL && handleID != -1 && mouse_has_moved) {
 		for(int i = 0; i < 2; i++) {
-			     SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, dirty_boundary);
+			     SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 		}
 
 		for(int i = 0; i < stroke_collection.size(); i++) {
@@ -442,7 +450,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			dirty_boundary = true;
 			added_stroke->append_final_point();
 			added_stroke->toLoop();
-			MeshCut::cut(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, *added_stroke);
+			MeshCut::cut(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, *added_stroke);
 			stroke_collection.push_back(*added_stroke);
 
 			initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers);//Don't test if the initial one dies, cause then we have mayhem anyway? TODO
@@ -459,7 +467,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			}
 
 			for(int i = 0; i < 2; i++) {
-				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, dirty_boundary);
+				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 			}
 
 			//Update the stroke positions after smoothing, in case their positions have changed (although they really shouldn't)
@@ -485,7 +493,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			dirty_boundary = true;
 			cout << "mouse released after extrusion silhouette drawn" << endl;
 			added_stroke->toLoop();
-			MeshExtrusion::extrude_main(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, base_surface_path, *added_stroke, *extrusion_base, base_model, base_view, base_proj, base_viewport);
+			MeshExtrusion::extrude_main(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, base_surface_path, *added_stroke, *extrusion_base, base_model, base_view, base_proj, base_viewport);
 			stroke_collection.push_back(*extrusion_base);
 			stroke_collection.push_back(*added_stroke);
 
@@ -503,7 +511,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			}
 
 			for(int i = 0; i < 3; i++) {
-				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, dirty_boundary);
+				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 			}
 
 			//Update the stroke positions after smoothing, in case their positions have changed (although they really shouldn't)
@@ -583,7 +591,7 @@ int main(int argc, char *argv[]) {
 
 		// Add a button
 		viewer.ngui->addButton("Perform 1 smoothing iteration", [&viewer]() {
-			SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, dirty_boundary);
+			SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 			viewer.data.set_mesh(V, F);
 			viewer.data.compute_normals();
 

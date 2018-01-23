@@ -2,8 +2,11 @@
 #include "LaplacianRemesh.h"
 #include "Plane.h"
 #include <iostream>
+#include <algorithm>
 #include <igl/unproject_ray.h>
 #include <igl/triangle/triangulate.h>
+#include <igl/edge_topology.h>
+#include <igl/slice.h>
 
 using namespace std;
 using namespace igl;
@@ -22,15 +25,33 @@ void MeshExtrusion::extrude_prepare(Stroke& base, SurfacePath& surface_path) {
 
 }
 
-void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::VectorXi &new_mapped_indices, SurfacePath& surface_path, Stroke& stroke, Stroke& base, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport) {
+void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::VectorXi &new_mapped_indices, Eigen::VectorXi &sharp_edge, SurfacePath& surface_path, Stroke& stroke, Stroke& base, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport) {
 	if(V.rows() != prev_vertex_count) {
 		ID++;
 		prev_vertex_count = V.rows();
 	}
 
-	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, ID);
+	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, ID);
 	stroke.counter_clockwise();
 	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_extrusion_remove_inside(m, surface_path, model, view, proj, viewport);
+
+
+	vector<int> sharp_edge_indices;
+	for(int i = 0; i < m.sharp_edge.rows(); i++) {
+		if(m.sharp_edge[i]) {
+			sharp_edge_indices.push_back(i);
+		}
+	}
+
+	Eigen::MatrixXi EV, FE, EF;
+	igl::edge_topology(m.V, m.F, EV, FE, EF);
+
+	Eigen::MatrixXi sharpEV;
+	Eigen::VectorXi sharpEV_row_idx, sharpEV_col_idx(2);
+	sharpEV_row_idx = Eigen::VectorXi::Map(sharp_edge_indices.data(), sharp_edge_indices.size()); //Create an Eigen::VectorXi from a std::vector
+	sharpEV_col_idx.col(0) << 0, 1;
+	igl::slice(EV, sharpEV_row_idx, sharpEV_col_idx, sharpEV); //Keep only the sharp edges in the original mesh
+
 
 	Eigen::Matrix4f modelview = stroke.viewer.core.view * stroke.viewer.core.model;
 
@@ -100,7 +121,7 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	}
 
 	if(silhouette_vertices.rows() == 0) {
-		cout << "returning: THIS IS BAD" << endl;
+		cout << "returning: THIS IS BAD" << endl; //todo
 		return;
 	}
 
@@ -165,7 +186,6 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	Eigen::Vector3d x_vec = m.V.row(boundary_vertices[most_right_vertex_idx]) - m.V.row(boundary_vertices[most_left_vertex_idx]);
 	x_vec.normalize();
 	Eigen::Vector3d y_vec = normal.cross(x_vec);
-	//Eigen::Vector3d y_vec = normal;
 	Eigen::Vector3d offset = x_vec.cross(y_vec);
 	offset *= 0.05;
 
@@ -175,6 +195,28 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 
 	post_extrude_main_update_points(stroke, silhouette_vertices);
 	post_extrude_main_update_bindings(base, surface_path);
+
+
+	igl::edge_topology(m.V, m.F, EV, FE, EF);
+	m.sharp_edge.resize(EV.rows());
+	m.sharp_edge.setZero();
+
+	int start, end, equal_pos;
+	Eigen::VectorXi col1Equals, col2Equals;
+	for(int i = 0; i < sharpEV.rows(); i++) {
+		start = sharpEV(i, 0); //No vertices were removed in the meantime, so use indices as-is
+		end = sharpEV(i, 1);
+		if(start == -1 || end == -1) { //Sharp edge no longer exists
+			continue;
+		}
+
+		col1Equals = EV.col(0).cwiseEqual(std::min(start, end)).cast<int>();
+		col2Equals = EV.col(1).cwiseEqual(std::max(start, end)).cast<int>();
+		(col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
+
+		m.sharp_edge[equal_pos] = 1; //Set this edge to be sharp
+	}
+
 }
 
 void MeshExtrusion::generate_mesh(Mesh& m, Eigen::MatrixXd loop3D, Eigen::Vector3d center, Eigen::Vector3d x_vec, Eigen::Vector3d y_vec, Eigen::Vector3d offset, int nr_silhouette_vert, vector<int> loop_base_original_indices, vector<int> sil_original_indices) {
@@ -193,7 +235,6 @@ void MeshExtrusion::generate_mesh(Mesh& m, Eigen::MatrixXd loop3D, Eigen::Vector
 	Eigen::MatrixXd V2;
 	Eigen::MatrixXi F2;
 	Eigen::MatrixXi vertex_markers, edge_markers;
-	//NOTE: TODO: Ideally we want to add the q20 flag to triangulate, BUT this will generate more interior vertices, which cannot cleanly be unprojected so it gives a mess
 	igl::triangle::triangulate(loop2D, loop_stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(loop2D.rows(), 1, 1), Eigen::MatrixXi::Constant(loop_stroke_edges.rows(), 1, 1), "Yq25Q", V2, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
 																																																																	  
 	Eigen::RowVector3d vert;

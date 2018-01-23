@@ -8,7 +8,7 @@
 class MeshCut {
 
 public:
-	static void cut(Eigen::MatrixXd & V, Eigen::MatrixXi & F, Eigen::VectorXi & vertex_boundary_markers, Eigen::VectorXi & part_of_original_stroke, Eigen::VectorXi & new_mapped_indices, Stroke & stroke);
+	static void cut(Eigen::MatrixXd & V, Eigen::MatrixXi & F, Eigen::VectorXi & vertex_boundary_markers, Eigen::VectorXi & part_of_original_stroke, Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi & sharp_edge, Stroke & stroke);
 
 
 private:

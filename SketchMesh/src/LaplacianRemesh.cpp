@@ -5,6 +5,7 @@
 #include <igl/slice.h>
 #include <igl/adjacency_list.h>
 #include <igl/project.h>
+#include <igl/cat.h>
 
 
 using namespace std;
@@ -38,9 +39,24 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	m.new_mapped_indices.resize(m.V.rows()); //Resize the map from old to new (clean) vertex indices to allow it to contain the number of vertices that are in the mesh at the start
 
 
+	vector<int> sharp_edge_indices;
+	for(int i = 0; i < m.sharp_edge.rows(); i++) {
+		if(m.sharp_edge[i]) {
+			sharp_edge_indices.push_back(i);
+		}
+	}
+
 	vector<vector<int>> VF, VI;
 	igl::edge_topology(m.V, m.F, EV, FE, EF);
 	igl::vertex_triangle_adjacency(m.V.rows(), m.F, VF, VI);
+
+
+	Eigen::MatrixXi sharpEV;
+	Eigen::VectorXi sharpEV_row_idx, sharpEV_col_idx(2);
+	sharpEV_row_idx = Eigen::VectorXi::Map(sharp_edge_indices.data(), sharp_edge_indices.size()); //Create an Eigen::VectorXi from a std::vector
+	sharpEV_col_idx.col(0) << 0, 1;
+	igl::slice(EV, sharpEV_row_idx, sharpEV_col_idx, sharpEV); //Keep only the sharp edges in the original mesh
+	cout << "sliced EV: " << endl << sharpEV << endl << endl;
 
 	int face = -1;
 	int edge = -1;
@@ -77,7 +93,6 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		}
 	}
 
-	vector<int> removed_vertices = inner_boundary_vertices;
 
 	//Collect faces along the path
 	for(int i = 0; i < path.size(); i++) {
@@ -98,19 +113,6 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 				}
 			}
 		}
-
-		//Collect all inside vertices (vertices to be removed)
-		/*for(int i = 0; i < m.V.rows(); i++) {
-			if(dirty_vertices[i] == 0) { //Vertices with a - value are already known to be removed and vertices with a + value are already known to stay
-				for(int j = 0; j < VF[i].size(); j++) {
-					if(dirty_face[VF[i][j]]) {
-						removed_vertices.push_back(i);
-						cout << i << " ";
-						break; //We've found confirmation that the vertex is removed, don't need to search further
-					}
-				}
-			}
-		}*/
 	}
 
 	//Remove dirty faces
@@ -151,7 +153,6 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	igl::edge_topology(m.V, m.F, EV, FE, EF); //TODO: NOTE: might need to save the EV that is outputted here in a new variable since maybe some methods might need the old EV
 	igl::vertex_triangle_adjacency(m.V.rows(), m.F, VF, VI);
 
-
 	//NOTE: Output from sort_boundary_vertices is not necessarily counter-clockwise
 	outer_boundary_vertices = sort_boundary_vertices(path[0].get_vertex(), outer_boundary_vertices, m);
 	if(!remove_inside_faces) {
@@ -178,7 +179,6 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	igl::slice(m.V, row_idx, col_idx, tmp_V);
 	m.V = tmp_V;
 
-
 	col_idx.resize(1);
 	col_idx.col(0) << 0;
 	igl::slice(m.part_of_original_stroke, row_idx, col_idx, tmp_part_of);
@@ -202,6 +202,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 			m.F(i,j) = m.new_mapped_indices[m.F(i,j)];
 		}
 	}
+
 
 	vector<int> path_vertices;
 //	Eigen::MatrixX3d path_vert_positions(path.size() - 1, 3);
@@ -227,19 +228,21 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	Eigen::MatrixX3d tmp_path = resample_stroke(path_vert_positions); //Resamples the stroke by moving vertices to the middle of their neigbors --> implicitly results in smoothing/round stroke. not what we want
 	*/
 	
+	Eigen::MatrixXi added_sharpEV(path.size() - 1, 2);
 	int size_before = m.V.rows();
 	m.V.conservativeResize(m.V.rows() + path.size() - 1, Eigen::NoChange);
 	m.part_of_original_stroke.conservativeResize(m.part_of_original_stroke.rows() + path.size() - 1);
 	m.vertex_boundary_markers.conservativeResize(m.vertex_boundary_markers.rows() + path.size() - 1);
 	m.new_mapped_indices.conservativeResize(m.new_mapped_indices.rows() + path.size() - 1, Eigen::NoChange);
 	//TODO NOTE: NEED TO CHAGNE THIS TO USE THE OUTCOME OF RESAMPLE_BY_LENGTH...
-	//vector<PathElement>& path2 = surface_path.get_path();
 	for(int i = 0; i < path.size() - 1; i++) {
 		m.V.row(size_before + i) << path[i].get_vertex().transpose();
 		m.part_of_original_stroke[size_before + i] = 0;
 		m.vertex_boundary_markers[size_before + i] = surface_path.get_origin_stroke_ID();
 		surface_path.get_path_element(i).set_v_idx(size_before_removing + i);
 		m.new_mapped_indices(vertex_is_clean.rows() + i) = size_before + i;
+		added_sharpEV.row(i) << vertex_is_clean.rows() + i, vertex_is_clean.rows() + ((i + 1) + path.size() - 1) % (path.size() - 1); //Use mod (path.size() - 1) to compensate for start point that is in path double
+
 		//m.V.row(size_before + i) << tmp_path.row(i); //this version uses the smoothing but results in a roundish stroke.
 	}
 
@@ -265,6 +268,29 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		reverse_path(path_vertices);
 		stitch(path_vertices, inner_boundary_vertices, m);
 	}
+
+	igl::edge_topology(m.V, m.F, EV, FE, EF);
+
+	//Insert new and old sharp edges back into m.sharp_edge
+	m.sharp_edge.resize(EV.rows());
+	m.sharp_edge.setZero();
+	int start, end, equal_pos;
+	Eigen::VectorXi col1Equals, col2Equals;
+	Eigen::MatrixXi sharpEVcat = igl::cat(1, sharpEV, added_sharpEV);
+	for(int i = 0; i < sharpEVcat.rows(); i++) {
+		start = m.new_mapped_indices(sharpEVcat(i, 0));
+		end = m.new_mapped_indices(sharpEVcat(i, 1));
+		if(start == -1 || end == -1) { //Sharp edge no longer exists
+			continue;
+		}
+
+		col1Equals = EV.col(0).cwiseEqual(min(start, end)).cast<int>();
+		col2Equals = EV.col(1).cwiseEqual(max(start, end)).cast<int>();
+		(col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
+
+		m.sharp_edge[equal_pos] = 1; //Set this edge to be sharp
+	}
+
 
 	//TODO: check if 708-728 in laplacianremesh is needed here
 	return Eigen::VectorXi::Map(path_vertices.data(), path_vertices.size()); //Create an Eigen::VectorXi from a std::vector
@@ -521,12 +547,10 @@ bool LaplacianRemesh::is_counter_clockwise_boundaries(Eigen::MatrixXd boundary_p
 	Eigen::Vector2d prev, next;
 	vert = boundary_points.row(boundary_points.rows() - 1);
 	igl::project(vert, modelview, proj, viewport, pt); //project the boundary vertex and store in pt
-//	prev = vert.leftCols(2).transpose();
 	prev = pt.leftCols(2).transpose();
 	for(int i = 0; i < boundary_points.rows(); i++) {
 		vert = boundary_points.row(i);
 		igl::project(vert, modelview, proj, viewport, pt); //project the boundary vertex and store in pt
-		//next = vert.leftCols(2).transpose();
 		next = pt.leftCols(2).transpose();
 		total_area += (prev[1] + next[1]) * (next[0] - prev[0]);
 		prev = next;

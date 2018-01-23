@@ -9,7 +9,7 @@ class MeshExtrusion {
 
 public:
 	static void extrude_prepare(Stroke & base, SurfacePath & surface_path);
-	static void extrude_main(Eigen::MatrixXd & V, Eigen::MatrixXi & F, Eigen::VectorXi & vertex_boundary_markers, Eigen::VectorXi & part_of_original_stroke, Eigen::VectorXi &new_mapped_indices, SurfacePath & surface_path, Stroke & stroke, Stroke & base, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport);
+	static void extrude_main(Eigen::MatrixXd & V, Eigen::MatrixXi & F, Eigen::VectorXi & vertex_boundary_markers, Eigen::VectorXi & part_of_original_stroke, Eigen::VectorXi &new_mapped_indices, Eigen::VectorXi &sharp_edge, SurfacePath & surface_path, Stroke & stroke, Stroke & base, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport);
 
 private:
 	static int prev_vertex_count;
