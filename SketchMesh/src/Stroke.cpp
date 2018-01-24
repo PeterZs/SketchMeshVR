@@ -64,7 +64,7 @@ void Stroke::swap(Stroke & tmp) {//The pointers to V and F will always be the sa
 
 Stroke::~Stroke() {}
 
-//To be used exclusively for drawing strokes for INITIAL MESHES (no extrusion)
+/** Used for DRAW. Will add a new 2D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its unprojection as a 3D point with a z-value of 0. After adding the new point it will restart the timer. **/
 void Stroke::strokeAddSegment(int mouse_x, int mouse_y) {
 	//OpenGL has origin at left bottom, window(s) has origin at left top
 	double x = mouse_x;
@@ -76,7 +76,7 @@ void Stroke::strokeAddSegment(int mouse_x, int mouse_y) {
 	if(!empty2D()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if(timePast < 10000000) { //Don't add another segment before x nanoseconds
+		if(timePast < 10000000) {
 			return;
 		}
 	}
@@ -85,7 +85,7 @@ void Stroke::strokeAddSegment(int mouse_x, int mouse_y) {
 	Eigen::RowVector3d pt(0, 0, 0);
 
 	pt = igl::unproject(Eigen::Vector3f(x, y, 0.0f), modelview, viewer.core.proj, viewer.core.viewport).transpose().cast<double>();
-	if(stroke2DPoints.rows() == 1 && empty2D()) { //Add first point
+	if(stroke2DPoints.rows() == 1 && empty2D()) {
 		stroke2DPoints.row(0) << x, y;
 		stroke3DPoints.row(0) << pt[0], pt[1], pt[2];
 	} else {
@@ -98,9 +98,10 @@ void Stroke::strokeAddSegment(int mouse_x, int mouse_y) {
 	closest_vert_bindings.push_back(stroke3DPoints.rows() - 1); //In the case of DRAW this will match the vertex indices, since we start from 0
 	viewer.data.set_stroke_points(stroke3DPoints); //Will remove all previous points but is okay for draw since it's the only points there are
 
-	_time1 = std::chrono::high_resolution_clock::now(); //restart the "start" timer
+	_time1 = std::chrono::high_resolution_clock::now();
 }
 
+/** Used for ADD. Will add a new 2D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its unprojection onto the existing mesh as a 3D point. After adding the new point it will restart the timer. **/
 bool Stroke::strokeAddSegmentAdd(int mouse_x, int mouse_y) {
 	bool result = false;
 	//OpenGL has origin at left bottom, window(s) has origin at left top
@@ -113,7 +114,7 @@ bool Stroke::strokeAddSegmentAdd(int mouse_x, int mouse_y) {
 	if(!empty2D()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if(timePast < 10000000) { //Don't add another segment before x nanoseconds
+		if(timePast < 10000000) {
 			return result;
 		}
 	}
@@ -141,9 +142,8 @@ bool Stroke::strokeAddSegmentAdd(int mouse_x, int mouse_y) {
 
 		has_points_on_mesh = true;
 
-		//Only add point when it's on the mesh
-		if(stroke2DPoints.rows() == 1 && empty2D()) { //Add first point
-			stroke2DPoints.row(0) << x, y;
+		if(stroke2DPoints.rows() == 1 && empty2D()) {
+            stroke2DPoints.row(0) << x, y;
 			stroke3DPoints.row(0) << pt[0], pt[1], pt[2];
 		} else {
 			stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
@@ -159,10 +159,12 @@ bool Stroke::strokeAddSegmentAdd(int mouse_x, int mouse_y) {
 		result = true;
 	}
 
-	_time1 = std::chrono::high_resolution_clock::now(); //restart the "start" timer
+	_time1 = std::chrono::high_resolution_clock::now();
 	return result;
 }
 
+
+/** Used for CUT. Will add a new 2D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its unprojection onto the existing as a 3D point. If the unprojection isn't on the mesh, it will unproject it and use it as the start or end point. After adding the new point it will restart the timer. **/
 void Stroke::strokeAddSegmentCut(int mouse_x, int mouse_y) {
 	//OpenGL has origin at left bottom, window(s) has origin at left top
 	double x = mouse_x;
@@ -174,7 +176,7 @@ void Stroke::strokeAddSegmentCut(int mouse_x, int mouse_y) {
 	if(!empty2D()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if(timePast < 10000000) { //Don't add another segment before x nanoseconds
+		if(timePast < 10000000) {
 			return;
 		}
 	}
@@ -188,8 +190,7 @@ void Stroke::strokeAddSegmentCut(int mouse_x, int mouse_y) {
 		pt = V.row(F(faceID, 0))*bc(0) + V.row(F(faceID, 1))*bc(1) + V.row(F(faceID, 2))*bc(2);
 		has_points_on_mesh = true;
 
-		//Only add point when it's on the mesh
-		if(stroke2DPoints.rows() == 1 && empty2D()) { //Add first point
+		if(stroke2DPoints.rows() == 1 && empty2D()) {
 			cout << "This shouldn't happen. Draw the first point outside of the mesh" << endl;
 			return;
 		} else {
@@ -218,11 +219,11 @@ void Stroke::strokeAddSegmentCut(int mouse_x, int mouse_y) {
 		stroke_color = Eigen::RowVector3d(1, 0, 0);
 	}
 
-	_time1 = std::chrono::high_resolution_clock::now(); //restart the "start" timer
+	_time1 = std::chrono::high_resolution_clock::now();
 	return;
 }
 
-//For drawing extrusion base strokes. Need to be drawn entirely on the existing mesh
+/** Used for EXTRUDE. Extrusion base strokes need to be drawn entirely on the mesh (points outside of it will be ignored) and needs to surround at least one whole triangle. Will add a new 2D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its unprojection onto the existing mesh as a 3D point. After adding the new point it will restart the timer. The closest vertex bindings are handled in SurfacePath. **/
 void Stroke::strokeAddSegmentExtrusionBase(int mouse_x, int mouse_y) {
 	//OpenGL has origin at left bottom, window(s) has origin at left top
 	double x = mouse_x;
@@ -234,8 +235,8 @@ void Stroke::strokeAddSegmentExtrusionBase(int mouse_x, int mouse_y) {
 	if(!empty2D()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if(timePast < 50000000) { //Don't add another segment before x nanoseconds
-			return;
+		if(timePast < 50000000) {
+            return;
 		}
 	}
 
@@ -246,23 +247,10 @@ void Stroke::strokeAddSegmentExtrusionBase(int mouse_x, int mouse_y) {
 	Eigen::Vector3f bc;
 	if(igl::unproject_onto_mesh(Eigen::Vector2f(x, y), modelview, viewer.core.proj, viewer.core.viewport, V, F, faceID, bc)) {
 		pt = V.row(F(faceID, 0))*bc(0) + V.row(F(faceID, 1))*bc(1) + V.row(F(faceID, 2))*bc(2);
-		double cur_dist, min_dist = INFINITY;
-		int closest_vert_idx;
-		for(int i = 0; i < 3; i++) {
-			cur_dist = (pt - V.row(F(faceID, i))).norm();
-			if(cur_dist < min_dist) {
-				min_dist = cur_dist;
-				closest_vert_idx = F(faceID, i);
-			}
-		}
-
-		/*if(closest_vert_bindings.size() == 0 || closest_vert_idx != closest_vert_bindings.back()) { //Add binding to closest mesh vertex. TODO: might be able to remove
-			closest_vert_bindings.push_back(closest_vert_idx);
-		}*/
 
 		has_points_on_mesh = true; 
 
-		if(stroke2DPoints.rows() == 1 && empty2D()) { //Add first point
+		if(stroke2DPoints.rows() == 1 && empty2D()) {
 			stroke2DPoints.row(0) << x, y;
 			stroke3DPoints.row(0) << pt[0], pt[1], pt[2];
 		} else {
@@ -281,10 +269,10 @@ void Stroke::strokeAddSegmentExtrusionBase(int mouse_x, int mouse_y) {
 		viewer.data.add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0, 0, 1));
 	}
 
-	_time1 = std::chrono::high_resolution_clock::now(); //restart the "start" timer
+	_time1 = std::chrono::high_resolution_clock::now();
 }
 
-//For drawing extrusion silhouette strokes. Draw in a perpendicular view. CAUTION: do not use stroke3DPoints as they are. Project onto the right plane first.
+/** Used for EXTRUDE. Extrusion silhouette strokes should be drawn in any of the side views. Will add a new 2D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its unprojection as a 3D point. These need to be projected to a different plane than the 2D points are in, before meshing (done in MeshExtrusion). After adding the new point it will restart the timer. The closest vertex bindings are handled in SurfacePath. **/
 void Stroke::strokeAddSegmentExtrusionSilhouette(int mouse_x, int mouse_y) {
 	//OpenGL has origin at left bottom, window(s) has origin at left top
 	double x = mouse_x;
@@ -296,8 +284,8 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(int mouse_x, int mouse_y) {
 	if(!empty2D()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if(timePast < 50000000) { //Don't add another segment before x nanoseconds
-			return;
+		if(timePast < 50000000) {
+            return;
 		}
 	}
 
@@ -305,7 +293,7 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(int mouse_x, int mouse_y) {
 	Eigen::RowVector3d pt(0, 0, 0);
 
 	pt = igl::unproject(Eigen::Vector3f(x, y, 0.8f), modelview, viewer.core.proj, viewer.core.viewport).transpose().cast<double>();
-	if(stroke2DPoints.rows() == 1 && empty2D()) { //Add first point
+	if(stroke2DPoints.rows() == 1 && empty2D()) {
 		stroke2DPoints.row(0) << x, y;
 		stroke3DPoints.row(0) << pt[0], pt[1], pt[2];
 	} else {
@@ -320,10 +308,10 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(int mouse_x, int mouse_y) {
 		viewer.data.add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0.2, 0.6, 1));
 	}
 
-	_time1 = std::chrono::high_resolution_clock::now(); //restart the "start" timer
+	_time1 = std::chrono::high_resolution_clock::now();
 }
 
-//Used for cutting. Final point doesn't get drawn on screen but is somewhere off the mesh
+/** Used for CUT. Adds the final point, which is the first point outside of the mesh. Doesn't get drawn. **/
 void Stroke::append_final_point() {
 	stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
 	stroke2DPoints.row(stroke2DPoints.rows() - 1) << cut_stroke_final_point_2D[0], cut_stroke_final_point_2D[1];
@@ -369,7 +357,7 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	for(int i = 0; i < stroke2DPoints.rows(); i++) {
 		stroke_edges.row(i) << i, ((i + 1) % stroke2DPoints.rows());
 	}
-	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "YQq25", V2_tmp, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
+	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "YQq25", V2_tmp, F2, vertex_markers, edge_markers);
 	V2 = Eigen::MatrixXd::Zero(V2_tmp.rows(), V2_tmp.cols() + 1);
 
 	//zero mean in x and y
@@ -380,9 +368,7 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 
 
 	generate_backfaces(F2, F2_back);
-	int nr_boundary_vertices = (vertex_markers.array() == 1).count(); //check how many vertices were marked as 1 (boundary)
-	int nr_boundary_edges = (edge_markers.array() == 1).count(); //check how many edges were marked as 1 (boundary)
-
+	int nr_boundary_vertices = (vertex_markers.array() == 1).count();
 	int original_size = V2.rows();
 	V2.conservativeResize(2 * original_size - nr_boundary_vertices, Eigen::NoChange); //Increase size, such that boundary vertices only get included one
 	unordered_map<int, int> backside_vertex_map;
@@ -401,8 +387,7 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	V2.col(0) = V2.col(0).array() - V2.col(0).mean();
 	V2.col(1) = V2.col(1).array() - V2.col(1).mean();
 
-	//Add backside faces, using original vertices for boundary and copied vertices for inside
-	//Duplicate all faces
+	//Add backside faces, using original vertices for boundary and copied vertices for interior
 	original_size = F2_back.rows();
 	F2.conservativeResize(original_size * 2, Eigen::NoChange);
 	for(int i = 0; i < original_size; i++) {
@@ -445,6 +430,7 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	return backside_vertex_map;
 }
 
+/** Makes the stroke counter clockwise. **/
 void Stroke::counter_clockwise() {
 	double total_area = 0;
 	Eigen::Vector2d prev, next;
@@ -463,12 +449,13 @@ void Stroke::counter_clockwise() {
 
 }
 
+/** Resamples the stroke by moving all vertices to the middle of their neighbors. Essentially has a smoothing effect. **/
 Eigen::MatrixXd Stroke::resample_stroke2D(Eigen::MatrixXd & original_stroke2DPoints) {
 	Eigen::MatrixXd new_stroke2DPoints = Eigen::MatrixXd::Zero(original_stroke2DPoints.rows(), 2);
 	int nr_iterations = max(5.0, original_stroke2DPoints.rows() / 4.0);
 	for(int i = 0; i < nr_iterations; i++) {
 		move_to_middle(original_stroke2DPoints, new_stroke2DPoints);
-		move_to_middle(new_stroke2DPoints, original_stroke2DPoints); //TODO: is this to save us a copy? basically performing an extra move_to_middle step
+		move_to_middle(new_stroke2DPoints, original_stroke2DPoints);
 	}
 	return new_stroke2DPoints;
 }
@@ -499,6 +486,7 @@ void Stroke::generate_backfaces(Eigen::MatrixXi &faces, Eigen::MatrixXi &back_fa
 	back_faces = faces.rowwise().reverse().eval();
 }
 
+/** Returns the ID of the stroke's 3D point that is closest to where the user clicked. Stores the distance to this point in closest_distance. If the user clicked too far away from any of the stroke's points, it will return -1. **/
 int Stroke::selectClosestVertex(int mouse_x, int mouse_y, double& closest_distance) {
 	double x = mouse_x;
 	double y = viewer.core.viewport(3) - mouse_y;
@@ -508,9 +496,9 @@ int Stroke::selectClosestVertex(int mouse_x, int mouse_y, double& closest_distan
 	double closest_dist = INFINITY, dist;
 	int closest_ID;
 
-	for(int i = 0; i < stroke3DPoints.rows(); i++) { //ignore the last stroke points because it's a duplicate of the first
+	for(int i = 0; i < stroke3DPoints.rows(); i++) {
 		vert = stroke3DPoints.row(i).transpose();
-		igl::project(vert, modelview, viewer.core.proj, viewer.core.viewport, pt); //project the boundary vertex and store in pt
+		igl::project(vert, modelview, viewer.core.proj, viewer.core.viewport, pt);
 		dist = (pt - clicked_pt).squaredNorm();
 		if(dist < closest_dist) {
 			closest_dist = dist;
@@ -537,7 +525,7 @@ double Stroke::compute_stroke_diag() {
 
 void Stroke::update_Positions(Eigen::MatrixXd V) {
 	stroke3DPoints.resize(closest_vert_bindings.size(), Eigen::NoChange);
-	for(int i = 0; i < closest_vert_bindings.size(); i++) { //iterate over closest_vert_bindings instead of over stroke3DPoints, because the vertex bindings might have been updated and shrunken
+	for(int i = 0; i < closest_vert_bindings.size(); i++) { //Iterate over the (updated) closest_vert_bindings instead of over stroke3DPoints
 		stroke3DPoints.row(i) = V.row(closest_vert_bindings[i]);
 	}
 
@@ -545,26 +533,28 @@ void Stroke::update_Positions(Eigen::MatrixXd V) {
 }
 
 //Takes care of the vertex binding indices only. In order to also remove the stroke3DPoints corresponding to removed vertices, call update_Positions().
+
+/** Remaps the stroke's vertex bindings after the mesh topology has changed. If a stroke becomes non-continous (can only happen to strokes that were non-looped at the start and that did not have their first and/or last point removed) the stroke will be removed and its boundary_vertex_markers unset. Looped strokes always stay continuous, since we can ony remove one continuous piece of them.
+    Note that this method does not update the stroke3DPoints, use update_Positions() for that. **/
 bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi& vertex_boundary_markers) {
 	vector<int> new_bindings;
 	int first_included_after_remove = -1;
 	bool points_were_removed = false, no_tracked_point_yet = true, stays_continuous = false, originally_is_loop = is_loop;
 	
-	//Closest_vert_bindings is always a loop, so skip over the last element and then after it is (optionally) rotated, add it back again.
-	for(int i = 0; i < closest_vert_bindings.size() - 1; i++) {
-		if(new_mapped_indices[closest_vert_bindings[i]] == -1) { //vertex has been removed. Clean up from closest_vert_bindings
-			if(!originally_is_loop && (i==0 || i==closest_vert_bindings.size()-2)) { //We have to check if the stroke remains continuous, otherwise we have to remove it
-				//The stroke wasn't a loop and either the first or last (or both) of its points was removed, meaning that it stays continuous
+    for(int i = 0; i < closest_vert_bindings.size() - 1; i++) {	//Closest_vert_bindings is always a loop
+
+		if(new_mapped_indices[closest_vert_bindings[i]] == -1) { //Removed vertex
+			if(!originally_is_loop && (i==0 || i==closest_vert_bindings.size()-2)) {
 				stays_continuous = true;
 			}
 
-			is_loop = false; //Since one of the vertices is removed, if the stroke used to be a loop, it can impossibly still be a loop (and if it already wasn't a loop, it stays a non-loop)
+			is_loop = false;
 			points_were_removed = true;
 			continue;
 		}
-		new_bindings.push_back(new_mapped_indices[closest_vert_bindings[i]]); //Get the new index of the vertex that we previously pointed to
+		new_bindings.push_back(new_mapped_indices[closest_vert_bindings[i]]);
 		if(points_were_removed && no_tracked_point_yet) {
-			first_included_after_remove = new_bindings.size() - 1; //track the first point index that has been added after any vertex was removed
+			first_included_after_remove = new_bindings.size() - 1;
 			no_tracked_point_yet = false;
 		}
 	}
@@ -573,15 +563,14 @@ bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::V
 		return false; //Stroke ceases to exist.
 	}
 
-	//If first_included_after_remove == -1, this means that either no points were removed, or the last point in the loop was removed while point 0 stayed. If point 0 would've been removed, then first_included_after_remove would have been set to 1 (or whatever first point wasn't removed)
-	if(first_included_after_remove != -1) {	//Check that we didn't remove ALL points in the stroke and that we actually need to reorder
+	if(first_included_after_remove != -1) {	//Check that we didn't remove ALL points in the stroke and that we actually need to reorder (because point 0 was removed)
 		rotate(new_bindings.begin(), new_bindings.begin() + first_included_after_remove, new_bindings.end()); //Makes the stroke "continuous" again
 	}
 
-	new_bindings.push_back(new_bindings[0]);
+	new_bindings.push_back(new_bindings[0]); //Make the vertex bindings looped again
 	set_closest_vert_bindings(new_bindings);
 
-	if(!originally_is_loop && points_were_removed && !stays_continuous) { //For strokes that weren't a loop at the start and that have a middle chunk removed (but not everything) we need to unset their markers because we will remove the entire stroke
+	if(!originally_is_loop && points_were_removed && !stays_continuous) { //For non-looped strokes that have a middle chunk removed (but not everything), unset their markers because we will remove the entire stroke
 		undo_stroke_add(vertex_boundary_markers);
 		return false;
 	}
@@ -590,6 +579,7 @@ bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::V
 	return true;
 }
 
+/** Used for ADD. Snaps the drawn stroke3DPoints to the closest mesh vertices and sets their boundary_markers accordingly. **/
 void Stroke::snap_to_vertices(Eigen::VectorXi &vertex_boundary_markers) {
 	Eigen::VectorXd min_dist;
 	Eigen::VectorXi previous;
@@ -598,7 +588,6 @@ void Stroke::snap_to_vertices(Eigen::VectorXi &vertex_boundary_markers) {
 	vector<vector<int>> adj_list;
 	adjacency_list(F, adj_list);
 
-	//Determine whether the stroke is a loop or not
 	if((stroke3DPoints.row(0) - stroke3DPoints.row(stroke3DPoints.rows() - 1)).norm() < compute_stroke_diag() / 5.0) {
 		is_loop = true;
 	} else {
@@ -618,7 +607,7 @@ void Stroke::snap_to_vertices(Eigen::VectorXi &vertex_boundary_markers) {
 				added_stroke_final_vertices.push_back(idx);
 				stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
 				stroke3DPoints.row(stroke3DPoints.rows() - 1) << V.row(added_stroke_final_vertices.back());
-				vertex_boundary_markers[added_stroke_final_vertices.back()] = stroke_ID; //Set all vertices that are in the added stroke3DPoints to be "boundary"/constraint vertices
+				vertex_boundary_markers[added_stroke_final_vertices.back()] = stroke_ID;
 				prev = idx;
 			}
 		}

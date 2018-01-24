@@ -3,7 +3,7 @@
 #include <Eigen/Core>
 #include "Stroke.h"
 
-//This class  is used for curves that are drawn onto an existing mesh surface, and that need to generate new mesh vertices and edges etc. (whereas the Stroke class simply takes drawn curves as they are)
+//This class is used for curves that are drawn onto an existing mesh surface, and that need to generate new mesh vertices and edges etc. (whereas the Stroke class simply takes drawn curves as they are)
 class PathElement;
 
 class SurfacePath {

@@ -13,6 +13,7 @@ SurfacePath::SurfacePath() {
 
 }
 
+/** Creates a SurfacePath that contains both the original points in stroke, and new points at the locations where stroke segments cross face edges. Won't wrap around to the backside of the mesh (because it will arrive at the first index again before having to switch direction). Used for extrusion **/
 void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 	origin_stroke = new Stroke(stroke);
 	path.clear();
@@ -20,7 +21,7 @@ void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 	
 	Eigen::Vector3f bc;
 	int faceID = -1;
-	int prev_p = stroke.get_stroke2DPoints().rows() - 1; //Start at end-1
+	int prev_p = stroke.get_stroke2DPoints().rows() - 1;
 	int start_p = prev_p;
 	int next_p;
 
@@ -62,8 +63,8 @@ void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 
 }
 
-//Adds stroke elements at the intersection points of the original drawn stroke with mesh edges
-//Used in CUT
+
+/** Creates a SurfacePath that contains both the original points in stroke, and new points at the locations where stroke segments cross face edges. Also wraps around to the backside of the mesh. Used for cutting **/
 void SurfacePath::create_from_stroke(const Stroke & stroke) {
 	origin_stroke = new Stroke(stroke);
 	path.clear();
@@ -71,7 +72,7 @@ void SurfacePath::create_from_stroke(const Stroke & stroke) {
 
 	Eigen::Vector3f bc;
 	int faceID = -1;
-	int prev_p = 1; //Start at 1, because point 0 is defined to be the last point at the beginning of the stroke to lie outside of the mesh
+	int prev_p = 1; //Start at point 1, because point 0 is defined to be the last point at the beginning of the stroke to lie outside of the mesh
 	int start_p = prev_p;
 	int next_p;
 	igl::unproject_onto_mesh(stroke.get_stroke2DPoints().row(prev_p).cast<float>(), modelview, stroke.viewer.core.proj, stroke.viewer.core.viewport, stroke.get_V(), stroke.get_F(), faceID, bc);
@@ -110,6 +111,7 @@ void SurfacePath::create_from_stroke(const Stroke & stroke) {
 
 }
 
+/** Determines the moving direction when going from prev_p to next_p and adds new vertices at mesh edges when the segment from prev_p to next_p crosses an edge. **/
 int SurfacePath::extend_path(int prev_p, int next_p, int faceID, bool& forward, Eigen::Matrix4f modelview) {
 	Eigen::Vector3d source, dir;
 	Eigen::MatrixX2d stroke2DPoints = origin_stroke->get_stroke2DPoints();
@@ -141,14 +143,16 @@ int SurfacePath::extend_path(int prev_p, int next_p, int faceID, bool& forward, 
 		path.push_back(newElement);
 
 		faceID = (EF(edge, 0) == faceID) ? EF(edge, 1) : EF(edge, 0); //get the polygon on the other side of the edge
-		//This means that the current stroke point is projected into both "its own" polygon and into the polygon of the next point, WHILE the next point's polygon is across an edge. MUST MEAN that the next point's polygon is on the backside
+		
 		if(is_projected_inside(stroke2DPoints.row(prev_p), faceID, modelview)) {
+            //This means that the current point (prev_p) is projected into both "its own" polygon and into the polygon of next_p, while next_p's polygon is across an edge. Means that next_p's polygon is on the backside
 			forward = false;
 			return faceID;
 		}
 	}
 }
 
+/** Finds and returns the edge ID of the edge that is being crossed by the segment from strokeEdge.start to strokeEdge.end. Returns -1 if no such edge exists. **/
 int SurfacePath::find_next_edge(pair<int, int> strokeEdge, int prev_edge, int polygon, Eigen::Matrix4f modelview) {
 	Eigen::MatrixX2d stroke2DPoints = origin_stroke->get_stroke2DPoints();
 	Eigen::RowVector2d stroke_start = stroke2DPoints.row(strokeEdge.first).transpose();
@@ -172,13 +176,13 @@ int SurfacePath::find_next_edge(pair<int, int> strokeEdge, int prev_edge, int po
 	return -1;
 }
 
-//Follows principle from https://stackoverflow.com/questions/14176776/find-out-if-2-lines-intersect but slightly different
+/** Determines whether a pair of 2D segments crosses eachother. Follows principle from https://stackoverflow.com/questions/14176776/find-out-if-2-lines-intersect but slightly different **/
 bool SurfacePath::edges2D_cross(pair<Eigen::Vector2d, Eigen::Vector2d> edge1, pair<Eigen::Vector2d, Eigen::Vector2d> edge2) {
 	double a0, b0, c0, a1, b1, c1;
-	a0 = edge1.first[1] - edge1.second[1]; //y coordinates of start and end point of first edge
-	b0 = edge1.second[0] - edge1.first[0];
+	a0 = edge1.first[1] - edge1.second[1];
+    b0 = edge1.second[0] - edge1.first[0];
 	c0 = edge1.second[1] * edge1.first[0] - edge1.second[0] * edge1.first[1];
-	a1 = edge2.first[1] - edge2.second[1]; //y coordinates of start and end point of first edge
+	a1 = edge2.first[1] - edge2.second[1];
 	b1 = edge2.second[0] - edge2.first[0];
 	c1 = edge2.second[1] * edge2.first[0] - edge2.second[0] * edge2.first[1];
 
@@ -190,10 +194,12 @@ bool SurfacePath::edges2D_cross(pair<Eigen::Vector2d, Eigen::Vector2d> edge1, pa
 	}
 }
 
+/** Returns whether a face is front facing in the current viewer. **/
 bool SurfacePath::front_facing(int faceID) {
 	return is_counter_clockwise(faceID);
 }
 
+/** Determines whether the vertices of an edge are in counter-clockwise order as seen from the current viewpoint. **/
 bool SurfacePath::is_counter_clockwise(int faceID) {
 	//TODO: Not sure if we should zero-mean the face vertices first
 	Eigen::Matrix4f modelview = origin_stroke->viewer.core.view * origin_stroke->viewer.core.model;
@@ -223,6 +229,7 @@ bool SurfacePath::is_counter_clockwise(int faceID) {
 
 }
 
+/** Checks if point v is projected in face as seen from the current viewer. Checks if the point is on the correct side of all face edges. **/
 bool SurfacePath::is_projected_inside(Eigen::RowVector2d v, int face, Eigen::Matrix4f modelview) {
 	int sign = -1;
 	if(!front_facing(face)) {
@@ -248,7 +255,11 @@ bool SurfacePath::is_projected_inside(Eigen::RowVector2d v, int face, Eigen::Mat
 	return true;
 }
 
-//Libigl's unproject_onto_mesh always unprojects onto the polygon that's closest to the camera, making unprojecting onto backside polygons impossible.
+int SurfacePath::cross_prod2D(Eigen::Vector2d vec0, Eigen::Vector2d vec1) {
+    return vec0[0] * vec1[1] - vec0[1] * vec1[0];
+}
+
+/** Takes a 2D point and unprojects this onto the face with ID faceID. This does not always have to be the first face in the line of sight to the 3D point (as compared to igl::unproject_onto_mesh, which unprojects to the first triangle that is hit). **/
 Eigen::Vector3d SurfacePath::unproject_onto_polygon(Eigen::Vector2d point, int faceID, Eigen::Matrix4f modelview) {
 	Eigen::Vector3d source, dir;
 	Eigen::Vector3d tmp1 = origin_stroke->get_V().row(origin_stroke->get_F()(faceID, 0));
@@ -260,10 +271,6 @@ Eigen::Vector3d SurfacePath::unproject_onto_polygon(Eigen::Vector2d point, int f
 	intersect_triangle1(source.data(), dir.data(), tmp1.data(), tmp2.data(), tmp3.data(), &t, &u, &v);
 
 	return source + t*dir;
-}
-
-int SurfacePath::cross_prod2D(Eigen::Vector2d vec0, Eigen::Vector2d vec1) {
-	return vec0[0] * vec1[1] - vec0[1] * vec1[0];
 }
 
 vector<PathElement> SurfacePath::get_path() {
