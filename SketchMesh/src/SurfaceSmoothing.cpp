@@ -6,6 +6,7 @@
 #include <igl/diag.h>
 #include <igl/per_vertex_normals.h>
 #include <igl/adjacency_list.h>
+#include <igl/edge_topology.h>
 #include "SurfaceSmoothing.h"
 
 using namespace std;
@@ -13,6 +14,7 @@ using namespace igl;
 
 int SurfaceSmoothing::prev_vertex_count = -1;
 Eigen::MatrixX3d SurfaceSmoothing::vertex_normals(0, 3);
+Eigen::MatrixXi SurfaceSmoothing::EV;
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solver1;
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solver2;
 
@@ -48,6 +50,7 @@ void SurfaceSmoothing::smooth(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::Vec
 	}
 
 	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, ID);
+	igl::edge_topology(m.V, m.F, EV, Eigen::MatrixXi(0,0), Eigen::MatrixXi(0,0));
 	smooth_main(m, BOUNDARY_IS_DIRTY);
 
 	BOUNDARY_IS_DIRTY = false;
@@ -365,4 +368,27 @@ Eigen::VectorXd SurfaceSmoothing::get_curvatures(Mesh &m) {
         curvatures[i] = laplacians.row(i).norm()*sign;
 	}
 	return curvatures;
+}
+
+bool SurfaceSmoothing::on_border(int idx, Eigen::VectorXi &sharp_edge) {
+	int equal_pos;
+	Eigen::VectorXi col1Equals, col2Equals;
+	for (int i = 0; i < neighbors[idx].size(); i++) {
+			col1Equals = EV.col(0).cwiseEqual(std::min(idx, neighbors[idx][i])).cast<int>();
+			col2Equals = EV.col(1).cwiseEqual(std::max(idx, neighbors[idx][i])).cast<int>();
+			(col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
+
+			if (sharp_edge[equal_pos]) {
+				return true;
+			}
+		
+	}
+	return false;
+
+	for (int i = 0; i < neighbors.size(); i++) {
+		for (int j = 0; j < neighbors[i].size(); j++) {
+
+		}
+	}
+
 }
