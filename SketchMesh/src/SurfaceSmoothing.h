@@ -46,6 +46,9 @@ private:
 	static Eigen::MatrixX3d compute_vertex_laplacians(Mesh & m);
 	static Eigen::VectorXd get_curvatures(Mesh & m);
 
+	static bool on_border(int idx, Eigen::VectorXi &sharp_edge);
+	static Eigen::MatrixXi EV;
+
 };
 
 

@@ -1,3 +1,6 @@
 [submodule "libigl"]
 	path = libigl
 	url = https://github.com/FloorVerhoeven/libigl.git
+[submodule "VR"]
+	path = VR-Viewer
+	url = https://gitlab.com/FloorVerhoeven/VR-Viewer
