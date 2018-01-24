@@ -4,4 +4,4 @@
 
 [submodule "VR"]
 	path = VR-Viewer
-	url = https://gitlab.com/FloorVerhoeven/VR-Viewer
+	url = https://gitlab.com/FloorVerhoeven/VR-Viewer.git
