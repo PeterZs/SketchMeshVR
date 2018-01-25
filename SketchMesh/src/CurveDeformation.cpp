@@ -4,54 +4,47 @@
 using namespace std;
 using namespace igl;
 
-double CurveDeformation::current_max_drag_size, CurveDeformation::current_ROI_size, CurveDeformation::drag_size, CurveDeformation::curve_diag_length;
-Eigen::RowVector3d CurveDeformation::start_pos;
-Eigen::VectorXi CurveDeformation::fixed_indices;
-Eigen::VectorXi CurveDeformation::fixed_indices_local;
-int CurveDeformation::moving_vertex_ID;
-int CurveDeformation::handle_ID;
+int moving_vertex_ID, handle_ID;
+double current_max_drag_size, current_ROI_size, curve_diag_length;
 bool CurveDeformation::smooth_deform_mode;
-Eigen::VectorXi CurveDeformation::part_of_original_stroke;
-int no_vertices, no_ROI_vert = -1, total_no_mesh_vertices;
-Eigen::SparseMatrix<double> A;
-Eigen::SparseMatrix<double> A_L1;
-Eigen::SparseMatrix<double> A_L1_T;
+Eigen::RowVector3d start_pos;
+Eigen::VectorXi fixed_indices, fixed_indices_local;
+
+int no_vertices, no_ROI_vert = -1;
+Eigen::SparseMatrix<double> A, A_L1_T;
 Eigen::VectorXd B;
-Eigen::SparseMatrix<double> B_L1;
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solverL1; //Solver for final vertex positions (with L1)
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solverPosRot;
 //Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solverPosRot;
-Eigen::VectorXd PosRot;
+
+int CONSTRAINT_WEIGHT = 10000, stroke_ID;
+bool stroke_is_loop, prev_loop_type;
 vector<Eigen::Matrix3d> Rot;
 vector<int> vert_bindings;
-Eigen::MatrixXd original_L0, original_L1;
-int CONSTRAINT_WEIGHT = 10000;
 Eigen::VectorXi is_fixed; //Indicates for every vertex on the pulled curve whether or not it is fixed (aka it is 0 when it is in the ROI and 1 when it is not)
-bool stroke_is_loop, prev_loop_type;
-int stroke_ID;
+Eigen::VectorXd PosRot;
+Eigen::MatrixXd original_L0, original_L1;
 
 
-void CurveDeformation::startPullCurve(Stroke& _stroke, int handle_ID, int no_total_vertices, Eigen::VectorXi& part_of_original_stroke_) {
-	CurveDeformation::current_max_drag_size = -1.0;
-	CurveDeformation::start_pos = (_stroke.get3DPoints()).row(handle_ID);
-	CurveDeformation::moving_vertex_ID = _stroke.get_vertex_idx_for_point(handle_ID); //The global vertex index (in V) for the moving vertex
-	CurveDeformation::current_ROI_size = 0.0;
-	CurveDeformation::curve_diag_length = compute_curve_diag_length(_stroke);
-	CurveDeformation::handle_ID = handle_ID;
+void CurveDeformation::startPullCurve(Stroke& _stroke, int _handle_ID) {
+	current_max_drag_size = -1.0;
+	start_pos = (_stroke.get3DPoints()).row(_handle_ID);
+	moving_vertex_ID = _stroke.get_vertex_idx_for_point(_handle_ID); //The global vertex index (in V) for the moving vertex
+	current_ROI_size = 0.0;
+	curve_diag_length = compute_curve_diag_length(_stroke);
+	handle_ID = _handle_ID;
 	no_vertices = _stroke.get3DPoints().rows() - 1; //We should ignore the last one, which is a copy of the first one
 	no_ROI_vert = -1;
 	Rot.resize(no_vertices);
-	total_no_mesh_vertices = no_total_vertices;
 	vert_bindings = _stroke.get_closest_vert_bindings();
 	stroke_is_loop = _stroke.is_loop;
 	stroke_ID = _stroke.get_ID();
-	CurveDeformation::part_of_original_stroke = part_of_original_stroke_;
 }
 
 //pos is the unprojection from the position to where the user dragged the vertex
-void CurveDeformation::pullCurve(Eigen::RowVector3d& pos, Eigen::MatrixXd& V) {
+void CurveDeformation::pullCurve(Eigen::RowVector3d& pos, Eigen::MatrixXd& V, Eigen::VectorXi& part_of_original_stroke) {
 	Eigen::Vector3d move_vec = (pos - start_pos).transpose();
-	drag_size = move_vec.norm();
+	double drag_size = move_vec.norm();
 	drag_size /= curve_diag_length;
 	bool ROI_is_updated = false;
 	if(!current_ROI_size || (fabs(drag_size - current_ROI_size) > 0.01)) { //Take the deformation and roi size as percentages
@@ -64,7 +57,7 @@ void CurveDeformation::pullCurve(Eigen::RowVector3d& pos, Eigen::MatrixXd& V) {
 			setup_for_update_curve(V);
 		}
 		V.row(moving_vertex_ID) = pos;
-		update_curve(V);
+		update_curve(V, part_of_original_stroke);
 	}
 }
 
@@ -152,7 +145,8 @@ void CurveDeformation::setup_for_update_curve(Eigen::MatrixXd& V) {
 }
 
 void CurveDeformation::setup_for_L1_position_step(Eigen::MatrixXd& V) {
-	A_L1 = Eigen::SparseMatrix<double>(no_vertices + fixed_indices.size(), no_vertices);
+	//Eigen::SparseMatrix<double> A_L1 = Eigen::SparseMatrix<double>(no_vertices + fixed_indices.size(), no_vertices);
+	Eigen::SparseMatrix<double> A_L1(no_vertices + fixed_indices.size(), no_vertices);
 	original_L1.resize(no_vertices, 3);
 	int cur, next, prev;
 	if(stroke_is_loop) {
@@ -197,7 +191,7 @@ void CurveDeformation::setup_for_L1_position_step(Eigen::MatrixXd& V) {
 	solverL1.compute(A_L1_T*A_L1);
 }
 
-void CurveDeformation::update_curve(Eigen::MatrixXd& V) {
+void CurveDeformation::update_curve(Eigen::MatrixXd& V, Eigen::VectorXi & part_of_original_stroke) {
 	for(int i = 0; i < no_vertices; i++) {
 		Rot[i] = Eigen::Matrix3d::Identity();
 	}
@@ -206,7 +200,7 @@ void CurveDeformation::update_curve(Eigen::MatrixXd& V) {
 		solve_for_pos_and_rot(V);
 		update_rot();
 	}
-	final_L1_pos(V);
+	final_L1_pos(V, part_of_original_stroke);
 }
 
 void CurveDeformation::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
@@ -325,7 +319,7 @@ Eigen::Matrix3d CurveDeformation::compute_orthonormal(Eigen::Matrix3d& rot) {
 	return svd.matrixU()*VT;
 }
 
-void CurveDeformation::final_L1_pos(Eigen::MatrixXd &V) {
+void CurveDeformation::final_L1_pos(Eigen::MatrixXd &V, Eigen::VectorXi & part_of_original_stroke) {
 	Eigen::VectorXd Bx(no_vertices + fixed_indices.size()), By(no_vertices + fixed_indices.size()), Bz(no_vertices + fixed_indices.size());
 	Eigen::Vector3d Rl;
 	for(int i = 0; i < no_vertices; i++) {

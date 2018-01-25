@@ -249,9 +249,9 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 			return false;
 		}
 		if(closest_stroke_ID == -1) {
-			CurveDeformation::startPullCurve(*initial_stroke, handleID, V.rows(), part_of_original_stroke);
+			CurveDeformation::startPullCurve(*initial_stroke, handleID);
 		} else {
-			CurveDeformation::startPullCurve(stroke_collection[closest_stroke_ID], handleID, V.rows(), part_of_original_stroke);
+			CurveDeformation::startPullCurve(stroke_collection[closest_stroke_ID], handleID);
 		}
 		skip_standardcallback = true;
 	} 
@@ -327,7 +327,7 @@ bool callback_mouse_move(Viewer& viewer, int mouse_x, int mouse_y) {
 		Eigen::RowVector3d pt = igl::unproject(Eigen::Vector3f(x, y, pr[2]), modelview, viewer.core.proj, viewer.core.viewport).transpose().cast<double>();
 
 		if(turnNr == 0) { //increase the number to smooth less often
-			CurveDeformation::pullCurve(pt, V);
+			CurveDeformation::pullCurve(pt, V, part_of_original_stroke);
 			if(dirty_boundary) { //Smooth an extra time if the boundary is dirty, because smoothing once with a dirty boundary results in a flat mesh
 				for(int i = 0; i < 2; i++) {
 						SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
