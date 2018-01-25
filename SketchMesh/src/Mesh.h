@@ -1,7 +1,6 @@
 #ifndef _MESH_H_
 #define _MESH_H_
 #include <Eigen/Core>
-#include <Eigen/Geometry>
 
 class Mesh {
 
