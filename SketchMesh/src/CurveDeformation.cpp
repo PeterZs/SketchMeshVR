@@ -1,33 +1,27 @@
-#include <iostream>
 #include "CurveDeformation.h"
 
 using namespace std;
 using namespace igl;
 
-int moving_vertex_ID, handle_ID;
-double current_max_drag_size, current_ROI_size, curve_diag_length;
-bool CurveDeformation::smooth_deform_mode;
-Eigen::RowVector3d start_pos;
-Eigen::VectorXi fixed_indices, fixed_indices_local;
+int moving_vertex_ID, handle_ID, CONSTRAINT_WEIGHT = 10000, stroke_ID, no_vertices, no_ROI_vert = -1;
+double current_ROI_size, curve_diag_length;
+bool CurveDeformation::smooth_deform_mode, stroke_is_loop, prev_loop_type;
 
-int no_vertices, no_ROI_vert = -1;
+vector<Eigen::Matrix3d> Rot;
+vector<int> vert_bindings;
+
+Eigen::RowVector3d start_pos;
+Eigen::VectorXi fixed_indices, fixed_indices_local, is_fixed; //Indicates for every vertex on the pulled curve whether or not it is fixed (aka it is 0 when it is in the ROI and 1 when it is not);
+Eigen::VectorXd B, PosRot;
+Eigen::MatrixXd original_L0, original_L1;
+
 Eigen::SparseMatrix<double> A, A_L1_T;
-Eigen::VectorXd B;
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solverL1; //Solver for final vertex positions (with L1)
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solverPosRot;
 //Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solverPosRot;
 
-int CONSTRAINT_WEIGHT = 10000, stroke_ID;
-bool stroke_is_loop, prev_loop_type;
-vector<Eigen::Matrix3d> Rot;
-vector<int> vert_bindings;
-Eigen::VectorXi is_fixed; //Indicates for every vertex on the pulled curve whether or not it is fixed (aka it is 0 when it is in the ROI and 1 when it is not)
-Eigen::VectorXd PosRot;
-Eigen::MatrixXd original_L0, original_L1;
-
 
 void CurveDeformation::startPullCurve(Stroke& _stroke, int _handle_ID) {
-	current_max_drag_size = -1.0;
 	start_pos = (_stroke.get3DPoints()).row(_handle_ID);
 	moving_vertex_ID = _stroke.get_vertex_idx_for_point(_handle_ID); //The global vertex index (in V) for the moving vertex
 	current_ROI_size = 0.0;
@@ -43,8 +37,7 @@ void CurveDeformation::startPullCurve(Stroke& _stroke, int _handle_ID) {
 
 //pos is the unprojection from the position to where the user dragged the vertex
 void CurveDeformation::pullCurve(Eigen::RowVector3d& pos, Eigen::MatrixXd& V, Eigen::VectorXi& part_of_original_stroke) {
-	Eigen::Vector3d move_vec = (pos - start_pos).transpose();
-	double drag_size = move_vec.norm();
+	double drag_size = (pos - start_pos).norm();
 	drag_size /= curve_diag_length;
 	bool ROI_is_updated = false;
 	if(!current_ROI_size || (fabs(drag_size - current_ROI_size) > 0.01)) { //Take the deformation and roi size as percentages
@@ -68,7 +61,6 @@ double CurveDeformation::compute_curve_diag_length(Stroke& _stroke) {
 }
 
 bool CurveDeformation::update_ROI(double drag_size) {
-	current_max_drag_size = drag_size;
 	int no_ROI_vert_tmp;
 	if(smooth_deform_mode && no_vertices > 1) {
 		no_ROI_vert_tmp = max(round(0.17*no_vertices) + 1, min(round(drag_size * no_vertices) + 1, ceil(((no_vertices - 1) / 2) - 1))); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side, always at least 1/6th of the number of vertices + 1 vertex fixed, to take care of thin meshes with many vertices)
@@ -83,7 +75,14 @@ bool CurveDeformation::update_ROI(double drag_size) {
 	current_ROI_size = drag_size;
 	no_ROI_vert = no_ROI_vert_tmp;
 	prev_loop_type = stroke_is_loop;
+
 	int ROI_1, ROI_2;
+	compute_ROI_boundaries(ROI_1, ROI_2);
+	setup_fixed_indices(ROI_1, ROI_2);
+	return true;
+}
+
+void CurveDeformation::compute_ROI_boundaries(int& ROI_1, int& ROI_2) {
 	if(stroke_is_loop) {
 		ROI_1 = (((handle_ID - no_ROI_vert) + no_vertices) % no_vertices);
 		ROI_2 = (((handle_ID + no_ROI_vert) + no_vertices) % no_vertices);
@@ -91,9 +90,10 @@ bool CurveDeformation::update_ROI(double drag_size) {
 		ROI_1 = max(0, handle_ID - no_ROI_vert); //For non-loop strokes (e.g. added strokes), don't wrap around but instead cap at the first and last vertex of the stroke
 		ROI_2 = min(no_vertices - 1, handle_ID + no_ROI_vert);
 	}
+}
 
-	vector<int> fixed;
-	vector<int> fixed_local;
+void CurveDeformation::setup_fixed_indices(int ROI_1, int ROI_2) {
+	vector<int> fixed, fixed_local;
 	is_fixed = Eigen::VectorXi::Zero(no_vertices);
 
 	if(ROI_1 < ROI_2) {
@@ -119,10 +119,9 @@ bool CurveDeformation::update_ROI(double drag_size) {
 	fixed_local.push_back(handle_ID);
 	is_fixed[handle_ID] = 1;
 
-	fixed_indices = Eigen::VectorXi::Map(fixed.data(), fixed.size()); //Create an Eigen::VectorXi from a std::vector
-	fixed_indices_local = Eigen::VectorXi::Map(fixed_local.data(), fixed_local.size()); //Create an Eigen::VectorXi from a std::vector
+	fixed_indices = Eigen::VectorXi::Map(fixed.data(), fixed.size());
+	fixed_indices_local = Eigen::VectorXi::Map(fixed_local.data(), fixed_local.size());
 
-	return true;
 }
 
 void CurveDeformation::setup_for_update_curve(Eigen::MatrixXd& V) {
@@ -145,7 +144,6 @@ void CurveDeformation::setup_for_update_curve(Eigen::MatrixXd& V) {
 }
 
 void CurveDeformation::setup_for_L1_position_step(Eigen::MatrixXd& V) {
-	//Eigen::SparseMatrix<double> A_L1 = Eigen::SparseMatrix<double>(no_vertices + fixed_indices.size(), no_vertices);
 	Eigen::SparseMatrix<double> A_L1(no_vertices + fixed_indices.size(), no_vertices);
 	original_L1.resize(no_vertices, 3);
 	int cur, next, prev;
@@ -234,8 +232,8 @@ void CurveDeformation::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
 			A.insert(i * 3 + 2, prev * 3 + 2) = -1;//L0
 			A.insert(i * 3 + 2, cur * 3 + 2) = 1;//L0
 		}
-		A.insert(i * 3 + 2, no_vertices * 3 + cur * 3) = -Rot[i].row(1).dot(original_L0.row(i)); //TODO: in teddy this is row(0)
-		A.insert(i * 3 + 2, no_vertices * 3 + cur * 3 + 1) = Rot[i].row(0).dot(original_L0.row(i)); //TODO: in teddy this is row(1)
+		A.insert(i * 3 + 2, no_vertices * 3 + cur * 3) = -Rot[i].row(1).dot(original_L0.row(i));
+		A.insert(i * 3 + 2, no_vertices * 3 + cur * 3 + 1) = Rot[i].row(0).dot(original_L0.row(i));
 		A.insert(i * 3 + 2, no_vertices * 3 + cur * 3 + 2) = 0;
 		B[i * 3 + 2] = Rot[i].row(2).dot(original_L0.row(i));
 	}
