@@ -466,7 +466,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 				}
 			}
 
-			for(int i = 0; i < 2; i++) {
+			for(int i = 0; i < 8; i++) {
 				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 			}
 
@@ -583,6 +583,7 @@ int main(int argc, char *argv[]) {
 		// Expose a variable directly ...
 		viewer.ngui->addVariable("Vertex Weights", SurfaceSmoothing::vertex_weight);
 		viewer.ngui->addVariable("Edge Weights", SurfaceSmoothing::edge_weight);
+		viewer.ngui->addVariable("factor", SurfaceSmoothing::factor);
 
 
 		// Expose a variable directly ...

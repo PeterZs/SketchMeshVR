@@ -13,6 +13,8 @@ public:
 	static Eigen::VectorXd curvatures;
     static double vertex_weight;
     static double edge_weight;
+	static double curvature_vertex_weight;
+	static double factor;
 	static std::unordered_map<int, Eigen::MatrixXd> precomputed_L; //Maps to the mesh ID
 	static std::unordered_map<int, Eigen::MatrixX3d> precomputed_target_normals;
 	static std::unordered_map<int, Eigen::SparseMatrix<double>> precompute_matrix_for_LM_and_edges;
@@ -46,7 +48,8 @@ private:
 	static Eigen::MatrixX3d compute_vertex_laplacians(Mesh & m);
 	static Eigen::VectorXd get_curvatures(Mesh & m);
 
-	static bool on_border(int idx, Eigen::VectorXi &sharp_edge);
+//	static bool on_border(int idx, Eigen::VectorXi &sharp_edge);
+	static Eigen::VectorXi points_on_border(Eigen::VectorXi & sharp_edge);
 	static Eigen::MatrixXi EV;
 
 };

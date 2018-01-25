@@ -34,6 +34,25 @@ void MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke) {
 }
 
 void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
+	vector<int> sharp_edge_indices;
+	for(int i = 0; i < m.sharp_edge.rows(); i++) {
+		if(m.sharp_edge[i]) {
+			sharp_edge_indices.push_back(i);
+		}
+	}
+
+	Eigen::MatrixXi EV, FE, EF;
+	igl::edge_topology(m.V, m.F, EV, FE, EF);
+
+	//Keep only the sharp edges in the original mesh
+	Eigen::MatrixXi sharpEV;
+	Eigen::VectorXi sharpEV_row_idx, sharpEV_col_idx(2);
+	sharpEV_row_idx = Eigen::VectorXi::Map(sharp_edge_indices.data(), sharp_edge_indices.size());
+	sharpEV_col_idx.col(0) << 0, 1;
+	igl::slice(EV, sharpEV_row_idx, sharpEV_col_idx, sharpEV); 
+
+
+
 	//project points to 2D. TODO: for now following the example, should be able to work with libigl's project??
 	Eigen::RowVector3d center(0,0,0);
 	for (int i = 0; i < boundary_vertices.rows(); i++) {
@@ -107,21 +126,7 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 		}
 	}
 
-	vector<int> sharp_edge_indices;
-	for(int i = 0; i < m.sharp_edge.rows(); i++) {
-		if(m.sharp_edge[i]) {
-			sharp_edge_indices.push_back(i);
-		}
-	}
-
-	Eigen::MatrixXi EV, FE, EF;
 	igl::edge_topology(m.V, m.F, EV, FE, EF);
-
-	Eigen::MatrixXi sharpEV;
-	Eigen::VectorXi sharpEV_row_idx, sharpEV_col_idx(2);
-	sharpEV_row_idx = Eigen::VectorXi::Map(sharp_edge_indices.data(), sharp_edge_indices.size()); //Create an Eigen::VectorXi from a std::vector
-	sharpEV_col_idx.col(0) << 0, 1;
-	igl::slice(EV, sharpEV_row_idx, sharpEV_col_idx, sharpEV); //Keep only the sharp edges in the original mesh
 
 	m.sharp_edge.resize(EV.rows());
 	m.sharp_edge.setZero();
