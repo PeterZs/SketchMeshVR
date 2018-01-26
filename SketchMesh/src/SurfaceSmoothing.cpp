@@ -14,20 +14,17 @@ using namespace igl;
 
 int SurfaceSmoothing::prev_vertex_count = -1;
 Eigen::MatrixX3d SurfaceSmoothing::vertex_normals(0, 3);
-Eigen::MatrixXi SurfaceSmoothing::EV;
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solver1;
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solver2;
 
+Eigen::VectorXd initial_curvature;
 Eigen::VectorXd SurfaceSmoothing::curvatures(ptrdiff_t(0));
-int ID = -1;
-int iteration = 0;
+int ID = -1, iteration = 0;
+int no_boundary_vertices, no_boundary_adjacent_vertices;
 double SurfaceSmoothing::vertex_weight = 10.0;//1000.0;// 10.0;
 double SurfaceSmoothing::edge_weight = 1.0;// 0.001;// 1.0;
 double SurfaceSmoothing::curvature_vertex_weight = 0.1;
 double SurfaceSmoothing::factor = 1.9;
-int no_boundary_vertices;
-int no_boundary_adjacent_vertices;
-Eigen::VectorXd initial_curvature;
 vector<vector<int>> neighbors;
 
 
@@ -53,7 +50,6 @@ void SurfaceSmoothing::smooth(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::Vec
 	}
 
 	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, ID);
-	igl::edge_topology(m.V, m.F, EV, Eigen::MatrixXi(0,0), Eigen::MatrixXi(0,0));
 	smooth_main(m, BOUNDARY_IS_DIRTY);
 
 	BOUNDARY_IS_DIRTY = false;
@@ -146,7 +142,7 @@ Eigen::VectorXd SurfaceSmoothing::compute_initial_curvature(Mesh &m) {
 Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L, bool BOUNDARY_IS_DIRTY) {
 	Eigen::SparseMatrix<double> A = get_precompute_matrix_for_LM_and_edges(m);
     Eigen::SparseMatrix<double> AT;
-	if(A.rows() == 0 && A.cols() == 0) { //We haven't set up A for this topology yet
+	if(A.rows() == 0 && A.cols() == 0) {
 		A = Eigen::SparseMatrix<double>(m.V.rows()*2, m.V.rows());
 		for(int i = 0; i < m.V.rows(); i++) {
 			for(int j = 0; j < m.V.rows(); j++) {
@@ -243,19 +239,19 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_edge_lengths(Mesh &m, Eigen::Ma
 }
 
 void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eigen::VectorXd &target_LMs, Eigen::VectorXd &target_edge_lengths, bool BOUNDARY_IS_DIRTY) {
-	Eigen::VectorXi on_border = points_on_border(m.sharp_edge);
+	Eigen::VectorXi on_border = points_on_border(m);
 	Eigen::VectorXi laplacian_weights = Eigen::VectorXi::Ones(m.V.rows());
 	for(int i = 0; i < on_border.rows(); i++) {
 		if(on_border[i]) {
-			laplacian_weights[i] *= factor;// 0.0000000001;
+			laplacian_weights[i] *= factor;
 		}
 	}
 
 
 	Eigen::SparseMatrix<double> A = get_precompute_matrix_for_positions(m);
     Eigen::SparseMatrix<double> AT = get_AT_for_positions(m);
-	if((A.rows() == 0 && A.cols() == 0) || BOUNDARY_IS_DIRTY) { //We haven't set up A for this topology or added curves yet
-		A = Eigen::SparseMatrix<double>(m.V.rows() + no_boundary_vertices + no_boundary_adjacent_vertices, m.V.rows());
+	if((A.rows() == 0 && A.cols() == 0) || BOUNDARY_IS_DIRTY) {
+        A = Eigen::SparseMatrix<double>(m.V.rows() + no_boundary_vertices + no_boundary_adjacent_vertices, m.V.rows());
 		int count = 0, count2 = 0;
 		for(int i = 0; i < m.V.rows(); i++) {
 			for(int j = 0; j < m.V.rows(); j++) {
@@ -351,26 +347,10 @@ Eigen::VectorXd SurfaceSmoothing::get_curvatures(Mesh &m) {
 	return curvatures;
 }
 
-/*bool SurfaceSmoothing::on_border(int idx, Eigen::VectorXi &sharp_edge) {
-	int equal_pos;
-	Eigen::VectorXi col1Equals, col2Equals;
-	for (int i = 0; i < neighbors[idx].size(); i++) {
-			col1Equals = EV.col(0).cwiseEqual(std::min(idx, neighbors[idx][i])).cast<int>();
-			col2Equals = EV.col(1).cwiseEqual(std::max(idx, neighbors[idx][i])).cast<int>();
-			(col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
+Eigen::VectorXi SurfaceSmoothing::points_on_border(Mesh& m) {
+    Eigen::MatrixXi EV, FE, EF;
+    igl::edge_topology(m.V, m.F, EV, FE, EF);
 
-			if (sharp_edge[equal_pos]) {
-				return true;
-			}
-		
-	}
-	return false;
-
-	
-
-}*/
-
-Eigen::VectorXi SurfaceSmoothing::points_on_border(Eigen::VectorXi &sharp_edge) {
 	int equal_pos;
 	Eigen::VectorXi col1Equals, col2Equals;
 	Eigen::VectorXi point_on_border(neighbors.size());
@@ -386,7 +366,7 @@ Eigen::VectorXi SurfaceSmoothing::points_on_border(Eigen::VectorXi &sharp_edge) 
 			col2Equals = EV.col(1).cwiseEqual(std::max(i, neighbors[i][j])).cast<int>();
 			int maxval = (col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
 
-			if(sharp_edge[equal_pos]) {
+			if(m.sharp_edge[equal_pos]) {
 				point_on_border[i] = 1;
 				point_on_border[neighbors[i][j]] = 1;
 				break;

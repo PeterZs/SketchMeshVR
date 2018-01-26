@@ -233,7 +233,7 @@ bool callback_mouse_down(Viewer& viewer, int button, int modifier) {
 		}
 
 
-		if(remove_stroke_clicked == 2) { //Mechanism to force the user to click twice on the same stroke before removing it (safeguard)
+		if(remove_stroke_clicked == 2) { //Mechanism to force the user to click twice on the same stroke before removing it
 			stroke_was_removed = true;
 			stroke_collection[closest_stroke_idx].undo_stroke_add(vertex_boundary_markers); //Sets the vertex_boundary_markers for the vertices of this stroke to 0 again
 			stroke_collection.erase(stroke_collection.begin() + closest_stroke_idx);
@@ -400,7 +400,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			//Overlay the drawn stroke
 			int strokeSize = (vertex_boundary_markers.array() > 0).count();
 			Eigen::MatrixXd strokePoints = V.block(0, 0, strokeSize, 3);
-			viewer.data.set_points(strokePoints, Eigen::RowVector3d(1, 0, 0)); //Displays dots
+			viewer.data.set_points(strokePoints, Eigen::RowVector3d(1, 0, 0));
 			viewer.data.set_stroke_points(igl::cat(1, strokePoints, (Eigen::MatrixXd) V.row(0)));
 
 		}
@@ -413,15 +413,11 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			return true;
 		}
 		added_stroke->snap_to_vertices(vertex_boundary_markers);
-		/*	if(!last_add_on_mesh) { //TODO: either remove or fix this. might not be necessary at all
-				//mirror stroke on backside
-				added_stroke->mirror_on_backside(vertex_boundary_markers, backside_vertex_map);
-			}*/
 		stroke_collection.push_back(*added_stroke);
 		draw_all_strokes(viewer);
 	} 
 	else if(tool_mode == REMOVE && stroke_was_removed) { //Only redraw if we actually removed a stroke (otherwise we draw unnecessary)
-		stroke_was_removed = false; //Reset
+		stroke_was_removed = false;
 		dirty_boundary = true;
 
 		draw_all_strokes(viewer);
@@ -522,7 +518,6 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 
 			viewer.data.clear();
 			viewer.data.set_mesh(V, F);
-
 			igl::per_face_normals(V, F, N_Faces);
 			viewer.data.set_normals(N_Faces);
 			viewer.core.align_camera_center(V, F);
@@ -534,7 +529,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 				mouse_has_moved = false;
 				return true;
 			}
-			//extrusion_base->resample_all(); //This will shrink the drawn stroke. Might result in no face being contained inside the stroke
+			
 			dirty_boundary = true;
 			extrusion_base->toLoop();
 			extrusion_base_already_drawn = true;
@@ -614,7 +609,7 @@ int main(int argc, char *argv[]) {
 				added_points = stroke_collection[i].get3DPoints();
 				points_to_hold_back = 1 + !stroke_collection[i].is_loop;
 				viewer.data.add_points(added_points.topRows(added_points.rows() - 1), stroke_collection[i].stroke_color);
-				viewer.data.add_edges(added_points.block(0, 0, added_points.rows() - points_to_hold_back, 3), added_points.block(1, 0, added_points.rows() - points_to_hold_back, 3), stroke_collection[i].stroke_color);// Eigen::RowVector3d(0, 0, 1));
+				viewer.data.add_edges(added_points.block(0, 0, added_points.rows() - points_to_hold_back, 3), added_points.block(1, 0, added_points.rows() - points_to_hold_back, 3), stroke_collection[i].stroke_color);
 			}
 
 		});

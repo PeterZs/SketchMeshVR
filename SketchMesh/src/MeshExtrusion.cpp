@@ -43,13 +43,14 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	Eigen::MatrixXi EV, FE, EF;
 	igl::edge_topology(m.V, m.F, EV, FE, EF);
 
+    //Store the vertex indices for sharp edges in the original mesh
 	Eigen::MatrixXi sharpEV;
 	Eigen::VectorXi sharpEV_row_idx, sharpEV_col_idx(2);
-	sharpEV_row_idx = Eigen::VectorXi::Map(sharp_edge_indices.data(), sharp_edge_indices.size()); //Create an Eigen::VectorXi from a std::vector
+	sharpEV_row_idx = Eigen::VectorXi::Map(sharp_edge_indices.data(), sharp_edge_indices.size());
 	sharpEV_col_idx.col(0) << 0, 1;
-	igl::slice(EV, sharpEV_row_idx, sharpEV_col_idx, sharpEV); //Keep only the sharp edges in the original mesh
+	igl::slice(EV, sharpEV_row_idx, sharpEV_col_idx, sharpEV);
 
-
+    //Compute the real 3D positions of the silhouette stroke
 	Eigen::RowVector3d center(0, 0, 0), pr;
 	Eigen::Vector3d normal(0, 0, 0), source, dir;
 	Eigen::Vector2d tmp0;
@@ -109,19 +110,20 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	Eigen::Vector3d offset = x_vec.cross(y_vec);
 	offset *= 0.05;
 
+    //Generate the two half-domes
 	generate_mesh(m, front_loop3D, center, x_vec*-1, y_vec, offset, silhouette_vertices.rows(), front_loop_base_original_indices, sil_original_indices);
 	reverse(sil_original_indices.begin(), sil_original_indices.end());
 	generate_mesh(m, back_loop3D, center, x_vec*-1, y_vec, offset, silhouette_vertices.rows(), back_loop_base_original_indices, sil_original_indices);
 
+    //Update tracking variables with new vertex indices
 	post_extrude_main_update_points(stroke, silhouette_vertices);
 	post_extrude_main_update_bindings(base, surface_path);
-
 	update_sharp_edges(m, sharpEV);
 }
 
+/** Generates a mesh inside the loop3D vertices. **/
 void MeshExtrusion::generate_mesh(Mesh& m, Eigen::MatrixXd loop3D, Eigen::Vector3d center, Eigen::Vector3d x_vec, Eigen::Vector3d y_vec, Eigen::Vector3d offset, int nr_silhouette_vert, vector<int> loop_base_original_indices, vector<int> sil_original_indices) {
 	int size_before_gen = m.V.rows();
-	//Generate mesh for loop
 	Eigen::MatrixXd loop2D(loop3D.rows(), 2);
 	Eigen::Vector3d vec;
 	Eigen::MatrixXi loop_stroke_edges(loop3D.rows(), 2);
@@ -171,6 +173,7 @@ void MeshExtrusion::get_normal_and_center(Eigen::RowVector3d& center, Eigen::Vec
 	normal.normalize();
 }
 
+/** Computes the left- and rightmost vertex index of the base stroke as seen from how the silhouette stroke was drawn. **/
 void MeshExtrusion::find_left_and_right(int& most_left_vertex_idx, int& most_right_vertex_idx, double& min, double& max, Mesh& m, Eigen::RowVector3d& center, Eigen::VectorXi &boundary_vertices, Eigen::Vector3d& normal2) {
 	Eigen::Vector3d center_to_vertex = m.V.row(boundary_vertices[0]) - center;
 	double dot_prod = normal2.dot(center_to_vertex);
@@ -189,6 +192,7 @@ void MeshExtrusion::find_left_and_right(int& most_left_vertex_idx, int& most_rig
 	}
 }
 
+/** Takes the silhouette's 2D positions as it was drawn and projects it onto the correct plane (more or less parallel to the base stroke). **/
 void MeshExtrusion::compute_silhouette_positions(Eigen::MatrixXd& silhouette_vertices, Stroke& stroke, Eigen::Matrix4f& modelview, Eigen::RowVector3d& center, Eigen::Vector3d& normal2, int min, int max, Eigen::RowVector3d& pop_surface_point, Eigen::Vector3d& pop_surface_normal) {
 	Eigen::RowVector3d v; 
 	Eigen::Vector3d source, dir, center_to_vertex;
@@ -208,6 +212,7 @@ void MeshExtrusion::compute_silhouette_positions(Eigen::MatrixXd& silhouette_ver
 	}
 }
 
+/** Adds the silhouette vertices to the mesh and also inserts their tracking variables. **/
 vector<int> MeshExtrusion::add_silhouette_vertices(Mesh& m, int stroke_ID, Eigen::MatrixXd& silhouette_vertices) {
 	vector<int> sil_original_indices;
 	int size_before_silhouette = m.V.rows();
@@ -223,6 +228,7 @@ vector<int> MeshExtrusion::add_silhouette_vertices(Mesh& m, int stroke_ID, Eigen
 	return sil_original_indices;
 }
 
+/** Creates a loop consisting of the silhouette vertices and half of the base stroke vertices. **/
 void MeshExtrusion::create_loop(Mesh& m, Eigen::MatrixXd& loop3D, Eigen::VectorXi& boundary_vertices, vector<int> &loop_base_original_indices, int start_idx, int end_idx) {
 	int idx = start_idx;
 	while(true) {
@@ -240,6 +246,7 @@ void MeshExtrusion::create_loop(Mesh& m, Eigen::MatrixXd& loop3D, Eigen::VectorX
 
 }
 
+/** Updates the sharp_edge tracker with new edge indices after the mesh topology changed. **/
 void MeshExtrusion::update_sharp_edges(Mesh& m, Eigen::MatrixXi sharpEV) {
 	Eigen::MatrixXi EV, FE, EF;
 	igl::edge_topology(m.V, m.F, EV, FE, EF);
