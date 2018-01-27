@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.6)
-project(SketchMesh)
+project(VR-SketchMesh)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
@@ -60,6 +60,7 @@ endif()
 add_subdirectory("${LIBIGL_INCLUDE_DIR}/../shared/cmake" "libigl")
 
 # libigl information 
+message("using libigl at: ${LIBIGL_INCLUDE_DIR}")
 message("libigl includes: ${LIBIGL_INCLUDE_DIRS}")
 message("libigl libraries: ${LIBIGL_LIBRARIES}")
 message("libigl extra sources: ${LIBIGL_EXTRA_SOURCES}")

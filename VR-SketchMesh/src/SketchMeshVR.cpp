@@ -1,8 +1,13 @@
 #ifdef _WIN32
+#define NOMINMAX
 #include <Windows.h>
 #else
 #include <unistd.h>
 #endif
+#include <igl/viewer/VR_Viewer.h>
+#include <igl/viewer/Viewer.h>
+#include <igl/readOFF.h>
+#include <igl/read_triangle_mesh.h>
 
 
 using namespace std;
@@ -18,7 +23,6 @@ Eigen::MatrixXd N_Faces;
 //General
 enum ToolMode { DRAW, ADD, CUT, EXTRUDE, PULL, REMOVE, CHANGE, SMOOTH, NAVIGATE, NONE };
 ToolMode tool_mode = NAVIGATE;
-Stroke* initial_stroke;
 
 //Mouse interaction
 bool skip_standardcallback = false;
@@ -72,7 +76,7 @@ bool callback_key_down(ViewerVR& viewervr, unsigned char key, int modifiers) {
 }
 
 bool callback_mouse_down(ViewerVR& viewervr, int button, int modifier) {
-	if(button == (int)ViewerVR::MouseButton::Right) {
+	/*if(button == (int)ViewerVR::MouseButton::Right) {
 		return false;
 	}
 	mouse_is_down = true;
@@ -87,7 +91,7 @@ bool callback_mouse_down(ViewerVR& viewervr, int button, int modifier) {
 		initial_stroke->strokeReset();
 		initial_stroke->strokeAddSegment(down_mouse_x, down_mouse_y);
 		skip_standardcallback = true;
-	} /*
+	}*/ /*
 	else if(tool_mode == ADD) { //Adding a new control curve onto an existing mesh
 		added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID);
 		next_added_stroke_ID++;
@@ -189,7 +193,7 @@ bool callback_mouse_move(ViewerVR& viewervr, int mouse_x, int mouse_y) {
 		return false;
 	}
 
-	if(viewervr.down) { //Only consider it to be moving if the button was held down
+	/*if(viewervr.down) { //Only consider it to be moving if the button was held down
 		mouse_has_moved = true;
 	}
 
@@ -197,7 +201,7 @@ bool callback_mouse_move(ViewerVR& viewervr, int mouse_x, int mouse_y) {
 	if(tool_mode == DRAW && viewervr.down) { //If we're still holding the mouse down
 		initial_stroke->strokeAddSegment(mouse_x, mouse_y);
 		return true;
-	} /*
+	}*/ /*
 	else if(tool_mode == ADD && viewer.down) {
 		last_add_on_mesh = added_stroke->strokeAddSegmentAdd(mouse_x, mouse_y);
 		return true;
@@ -270,13 +274,13 @@ bool callback_mouse_up(ViewerVR& viewervr, int button, int modifier) {
 	}
 	mouse_is_down = false;
 
-	if(tool_mode == DRAW) {
+	/*if(tool_mode == DRAW) {
 		if(initial_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
 			//Give some time to show the stroke
 #ifdef _WIN32
 			Sleep(200);
 #else
-			usleep(200000);  /* sleep for 200 milliSeconds */
+			usleep(200000); 
 #endif
 			backside_vertex_map = initial_stroke->generate3DMeshFromStroke(vertex_boundary_markers, part_of_original_stroke);
 			F = viewervr.data.F;
@@ -305,7 +309,7 @@ bool callback_mouse_up(ViewerVR& viewervr, int button, int modifier) {
 
 		}
 		skip_standardcallback = false;
-	}/*
+	}*//*
 	else if(tool_mode == ADD) {
 		dirty_boundary = true;
 		if(!added_stroke->has_points_on_mesh) {
@@ -452,24 +456,26 @@ bool callback_mouse_up(ViewerVR& viewervr, int button, int modifier) {
 
 //TODO: make callback for this in viewer, like in exercise 5 of shapemod
 bool callback_load_mesh(ViewerVR& viewervr, string filename) {
-	igl::readOFF(filename, V, F);
+/*	igl::readOFF(filename, V, F);
 	viewervr.data.clear();
 	viewervr.data.set_mesh(V, F);
 	viewervr.data.compute_normals();
 	viewervr.core.align_camera_center(viewervr.data.V);
 
-	std::cout << filename.substr(filename.find_last_of("/") + 1) << endl;
+	std::cout << filename.substr(filename.find_last_of("/") + 1) << endl;*/
 	return true;
 }
 
 int main(int argc, char *argv[]) {
 	// Show the mesh
 	ViewerVR viewervr;
-	viewervr.callback_key_down = callback_key_down;
+	igl::read_triangle_mesh("../data/cube.off", V, F);
+	viewervr.data.set_mesh(V, F);
+/*	viewervr.callback_key_down = callback_key_down;
 	viewervr.callback_mouse_down = callback_mouse_down;
 	viewervr.callback_mouse_move = callback_mouse_move;
 	viewervr.callback_mouse_up = callback_mouse_up;
-	viewervr.core.point_size = 15;
+	viewervr.core.point_size = 15;*/
 	//viewer.callback_load_mesh = callback_load_mesh;
 
 	/*viewer.callback_init = [&](igl::viewer::Viewer& viewer) {
@@ -523,17 +529,17 @@ int main(int argc, char *argv[]) {
 	};*/
 
 	//Init stroke selector
-	initial_stroke = new Stroke(V, F, viewervr, 0);
+	//initial_stroke = new Stroke(V, F, viewervr, 0);
 	if(argc == 2) {
 		// Read mesh
-		igl::readOFF(argv[1], V, F);
+	//	igl::readOFF(argv[1], V, F);
 		//	callback_load_mesh(viewer, argv[1]);
 	} else {
 		// Read mesh
 		//callback_load_mesh(viewer, "../data/cube.off");
 	}
 
-	callback_key_down(viewervr, '1', 0);
+//	callback_key_down(viewervr, '1', 0);
 
 	//viewer.core.align_camera_center(V);
     viewervr.init();

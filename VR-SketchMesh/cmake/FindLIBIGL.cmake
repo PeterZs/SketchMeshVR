@@ -7,12 +7,13 @@
 #  LIBIGL_SOURCES - the LIBIGL source files
 if(NOT LIBIGL_FOUND)
 
-FIND_PATH(LIBIGL_INCLUDE_DIR igl/readOBJ.h
+FIND_PATH(LIBIGL_INCLUDE_DIR igl/VR_finder.h
+   igl/readOBJ.h
    ${PROJECT_SOURCE_DIR}/../../include
    ${PROJECT_SOURCE_DIR}/../include
    ${PROJECT_SOURCE_DIR}/include
-   ${PROJECT_SOURCE_DIR}/../libigl/include
-   ${PROJECT_SOURCE_DIR}/../../libigl/include
+   ${PROJECT_SOURCE_DIR}/../VR-Viewer/include
+   ${PROJECT_SOURCE_DIR}/../../VR-Viewer/include
    $ENV{LIBIGL}/include
    $ENV{LIBIGLROOT}/include
    $ENV{LIBIGL_ROOT}/include
@@ -20,7 +21,7 @@ FIND_PATH(LIBIGL_INCLUDE_DIR igl/readOBJ.h
    $ENV{LIBIGL_DIR}/inc
    /usr/include
    /usr/local/include
-   /usr/local/igl/libigl/include
+   /usr/local/igl/VR-Viewer/include
 )
 
 
