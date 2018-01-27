@@ -8,6 +8,7 @@
 #include <igl/viewer/Viewer.h>
 #include <igl/readOFF.h>
 #include <igl/read_triangle_mesh.h>
+#include <iostream>
 
 
 using namespace std;
@@ -467,10 +468,12 @@ bool callback_load_mesh(ViewerVR& viewervr, string filename) {
 }
 
 int main(int argc, char *argv[]) {
-	// Show the mesh
 	ViewerVR viewervr;
 	igl::read_triangle_mesh("../data/cube.off", V, F);
+	//cout << V << endl << endl << F << endl;
 	viewervr.data.set_mesh(V, F);
+	cout << viewervr.data.F << endl;
+	getchar();
 /*	viewervr.callback_key_down = callback_key_down;
 	viewervr.callback_mouse_down = callback_mouse_down;
 	viewervr.callback_mouse_move = callback_mouse_move;
@@ -543,7 +546,7 @@ int main(int argc, char *argv[]) {
 
 	//viewer.core.align_camera_center(V);
     viewervr.init();
-	viewervr.launch();
+	//viewervr.launch();
 }
 
 
