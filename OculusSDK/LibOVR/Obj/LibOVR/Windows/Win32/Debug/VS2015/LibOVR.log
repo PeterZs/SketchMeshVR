@@ -2,4 +2,4 @@
   OVR_CAPI_Util.cpp
   OVR_StereoProjection.cpp
 c:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.11.25503\include\cmath(57): warning C4577: 'noexcept' used with no exception handling mode specified; termination on exception is not guaranteed. Specify /EHsc (compiling source file ..\..\..\Shim\OVR_CAPI_Util.cpp)
-  LibOVR.vcxproj -> C:\Users\Floor\Desktop\Thesis Floor\Working folder\OculusSDK\LibOVR\Projects\Windows\VS2015\../../../Lib/Windows/Win32/Debug/VS2015/LibOVR.lib
+  LibOVR.vcxproj -> C:\Users\Floor Verhoeven\Desktop\thesis\OculusSDK\LibOVR\Projects\Windows\VS2015\../../../Lib/Windows/Win32/Debug/VS2015/LibOVR.lib
