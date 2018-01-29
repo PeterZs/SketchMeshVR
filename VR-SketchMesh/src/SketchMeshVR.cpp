@@ -545,6 +545,8 @@ int main(int argc, char *argv[]) {
 	//viewer.core.align_camera_center(V);
     viewervr.init();
 	viewervr.launch();
+	cout << "launch worked" << endl;
+
 }
 
 
