@@ -4,12 +4,13 @@
 #else
 #include <unistd.h>
 #endif
-#include <igl/viewer/VR_Viewer.h>
-#include <igl/viewer/Viewer.h>
+
 #include <igl/readOFF.h>
 #include <igl/read_triangle_mesh.h>
 #include <iostream>
-
+#include <igl/viewer/VR_Viewer.h>
+#include <SketchMeshVR.h>
+#include <Stroke.h>
 
 using namespace std;
 using ViewerVR = igl::viewer::VR_Viewer;
@@ -23,7 +24,12 @@ Eigen::MatrixXd N_Faces;
 
 //General
 enum ToolMode { DRAW, ADD, CUT, EXTRUDE, PULL, REMOVE, CHANGE, SMOOTH, NAVIGATE, NONE };
+
 ToolMode tool_mode = NAVIGATE;
+Stroke* initial_stroke;
+Stroke* added_stroke;
+Stroke* extrusion_base;
+vector<Stroke> stroke_collection;
 
 //Mouse interaction
 bool skip_standardcallback = false;
@@ -31,6 +37,48 @@ int down_mouse_x = -1, down_mouse_y = -1;
 bool mouse_is_down = false; //We need this due to mouse_down not working in the nanogui menu, whilst mouse_up does work there
 bool mouse_has_moved = false;
 
+//Keeps track of the stroke IDs
+int next_added_stroke_ID = 2; //Start at 2 because marker 1 belongs to the original boundary
+
+
+//Variables for removing a control curve
+bool stroke_was_removed = false;
+int remove_stroke_clicked = 0;
+
+//Variables for cutting
+bool cut_stroke_already_drawn = false;
+
+bool button_down(int _pressed_type, Eigen::Vector3f& pos, igl::viewer::VR_Viewer& viewervr) {
+	ToolMode pressed_type = (ToolMode)_pressed_type;
+	if (pressed_type == PULL || pressed_type == ADD || pressed_type == CUT || pressed_type == EXTRUDE) {
+		if (initial_stroke->empty2D()) { //Don't go into these modes when there is no mesh yet
+			return true;
+		}
+	}
+	if (pressed_type == REMOVE) {
+		if (stroke_collection.size() == 0) {
+			return true;
+		}
+		remove_stroke_clicked = 0; //Reset because we might be left with a single click from the last round
+	}
+	else if (pressed_type == CUT) {
+		cut_stroke_already_drawn = false; //Reset because we might have stopped before finishing the cut last time
+	}
+	tool_mode = pressed_type;
+
+	if (tool_mode == DRAW) { //Creating the first curve/mesh
+		viewervr.data.clear();
+		stroke_collection.clear();
+		next_added_stroke_ID = 2;
+		initial_stroke->strokeReset();
+		initial_stroke->strokeAddSegment(pos);
+		skip_standardcallback = true;
+	}
+
+
+
+	return true;
+}
 
 bool callback_key_down(ViewerVR& viewervr, unsigned char key, int modifiers) {
 	if(key == '1') {
@@ -530,7 +578,7 @@ int main(int argc, char *argv[]) {
 	};*/
 
 	//Init stroke selector
-	//initial_stroke = new Stroke(V, F, viewervr, 0);
+	initial_stroke = new Stroke(V, F, viewervr, 0);
 	if(argc == 2) {
 		// Read mesh
 	//	igl::readOFF(argv[1], V, F);
@@ -544,7 +592,8 @@ int main(int argc, char *argv[]) {
 
 	//viewer.core.align_camera_center(V);
     viewervr.init();
+	viewervr.callback_button_down = button_down;
+
 	viewervr.launch();
 }
-
 
