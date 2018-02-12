@@ -10,6 +10,7 @@
 #include <igl/per_face_normals.h>
 #include <igl/cat.h>
 #include <igl/edge_topology.h>
+#include <igl/read_triangle_mesh.h>
 #include "SketchMesh.h"
 #include "Stroke.h"
 #include "SurfaceSmoothing.h"
@@ -565,7 +566,7 @@ bool callback_load_mesh(Viewer& viewer, string filename) {
 int main(int argc, char *argv[]) {
 	// Show the mesh
 	Viewer viewer;
-	viewer.callback_key_down = callback_key_down;
+	/*viewer.callback_key_down = callback_key_down;
 	viewer.callback_mouse_down = callback_mouse_down;
 	viewer.callback_mouse_move = callback_mouse_move;
 	viewer.callback_mouse_up = callback_mouse_up;
@@ -634,8 +635,9 @@ int main(int argc, char *argv[]) {
 		//callback_load_mesh(viewer, "../data/cube.off");
 	}
 
-	callback_key_down(viewer, '1', 0);
-
+	callback_key_down(viewer, '1', 0);*/
+	//igl::read_triangle_mesh("../data/cube.obj", V, F);
+	viewer.load_mesh_from_file("../data/cube.obj");
 	//viewer.core.align_camera_center(V);
 	viewer.launch();
 }

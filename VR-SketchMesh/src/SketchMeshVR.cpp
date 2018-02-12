@@ -595,5 +595,7 @@ int main(int argc, char *argv[]) {
 	viewervr.callback_button_down = button_down;
 
 	viewervr.launch();
+	cout << "launch worked" << endl;
+
 }
 
