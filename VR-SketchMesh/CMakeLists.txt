@@ -28,9 +28,9 @@ endif()
 option(LIBIGL_USE_STATIC_LIBRARY "Use LibIGL as static library" OFF)
 
 # add a customizable menu bar
-option(LIBIGL_VIEWER_WITH_NANOGUI     "Use Nanogui menu"   ON)
-option(LIBIGL_VIEWER_WITH_NANOGUI_IO  "Add mesh IO menu"   ON)
-option(LIBIGL_VIEWER_WITH_NANOGUI_SERIALIZATION  "Enable viewer serialization"   ON)
+option(LIBIGL_VIEWER_WITH_NANOGUI     "Use Nanogui menu"   OFF)
+option(LIBIGL_VIEWER_WITH_NANOGUI_IO  "Add mesh IO menu"   OFF)
+option(LIBIGL_VIEWER_WITH_NANOGUI_SERIALIZATION  "Enable viewer serialization"   OFF)
 
 # libigl options: choose your dependencies (by default everything is OFF except opengl) 
 option(LIBIGL_WITH_VIEWER      "Use OpenGL viewer"  ON)
@@ -44,7 +44,7 @@ option(LIBIGL_WITH_TRIANGLE    "Use Triangle"       ON)
 option(LIBIGL_WITH_XML         "Use XML"            OFF)
 option(LIBIGL_WITH_LIM         "Use LIM"            OFF)
 option(LIBIGL_WITH_COMISO      "Use CoMiso"         OFF)
-option(LIBIGL_WITH_NANOGUI     "Use NanoGUI"        ON) 
+option(LIBIGL_WITH_NANOGUI     "Use NanoGUI"        OFF) 
 option(LIBIGL_WITH_MATLAB      "Use Matlab"         OFF) # This option is not supported yet
 option(LIBIGL_WITH_MOSEK       "Use MOSEK"          OFF) # This option is not supported yet
 option(LIBIGL_WITH_CGAL        "Use CGAL"           OFF)
@@ -68,7 +68,7 @@ message("libigl extra libraries: ${LIBIGL_EXTRA_LIBRARIES}")
 message("libigl definitions: ${LIBIGL_DEFINITIONS}")
 
 # Prepare the build environment
-include_directories(${LIBIGL_INCLUDE_DIRS})
+include_directories(${LIBIGL_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/../OculusSDK/LibOVR/Include ${PROJECT_SOURCE_DIR}/../OculusSDK/LibOVR/Src ${PROJECT_SOURCE_DIR}/src)
 add_definitions(${LIBIGL_DEFINITIONS})
 
 # Add your project files
@@ -80,4 +80,5 @@ else (TRAVISCI_BUILD)
 endif (TRAVISCI_BUILD)
 
 add_executable(${PROJECT_NAME}_bin ${SOURCES} ${LIBIGL_EXTRA_SOURCES})
-target_link_libraries(${PROJECT_NAME}_bin ${LIBIGL_LIBRARIES} ${LIBIGL_EXTRA_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_bin ${LIBIGL_LIBRARIES} ${LIBIGL_EXTRA_LIBRARIES} LibOVR.lib Winmm.lib ws2_32.lib)
+#target_link_libraries(${PROJECT_NAME}_bin Debug ${PROJECT_SOURCE_DIR}/../OculusSDK/LibOVR/Lib/Windows/x64/Debug/VS2015/OVRLib.lib Release ${PROJECT_SOURCE_DIR}/../OculusSDK/LibOVR/Lib/Windows/x64/Release/VS2015/OVRLib.lib)
