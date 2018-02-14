@@ -7,10 +7,15 @@
 
 #include <igl/readOFF.h>
 #include <igl/read_triangle_mesh.h>
+#include <igl/edge_topology.h>
+#include <igl/cat.h>
 #include <iostream>
+#include <unordered_map>
 #include <igl/viewer/VR_Viewer.h>
 #include <SketchMeshVR.h>
 #include <Stroke.h>
+#include "SurfaceSmoothing.h"
+
 
 using namespace std;
 using ViewerVR = igl::viewer::VR_Viewer;
@@ -22,10 +27,20 @@ Eigen::MatrixXi F;
 // Per face normals, #F x3
 Eigen::MatrixXd N_Faces;
 
+//Per vertex indicator of whether vertex is on boundary (on boundary if == 1)
+Eigen::VectorXi vertex_boundary_markers;
+//Per vertex indicator of whether vertex is on original stroke (outline of shape) (on OG stroke if ==1)
+Eigen::VectorXi part_of_original_stroke;
+//Per edge indicator of whether the edge is sharp (if == 1 then sharp, otherwise smooth)
+Eigen::VectorXi sharp_edge;
+//Takes care of index mapping from before a cut/extrusion action to after (since some vertices are removed)
+Eigen::VectorXi new_mapped_indices;
+
 //General
 enum ToolMode { DRAW, ADD, CUT, EXTRUDE, PULL, REMOVE, CHANGE, SMOOTH, NAVIGATE, NONE };
 
 ToolMode tool_mode = NAVIGATE;
+ToolMode prev_tool_mode = NONE;
 Stroke* initial_stroke;
 Stroke* added_stroke;
 Stroke* extrusion_base;
@@ -37,9 +52,19 @@ int down_mouse_x = -1, down_mouse_y = -1;
 bool mouse_is_down = false; //We need this due to mouse_down not working in the nanogui menu, whilst mouse_up does work there
 bool mouse_has_moved = false;
 
+//For smoothing
+int initial_smooth_iter = 8;
+
+
+//Variables for pulling a curve (and removing added control curves)
+int turnNr = 0;
+bool dirty_boundary = false;
+int closest_stroke_ID, prev_closest_stroke_ID;
+
 //Keeps track of the stroke IDs
 int next_added_stroke_ID = 2; //Start at 2 because marker 1 belongs to the original boundary
 
+unordered_map<int, int> backside_vertex_map;
 
 //Variables for removing a control curve
 bool stroke_was_removed = false;
@@ -50,6 +75,53 @@ bool cut_stroke_already_drawn = false;
 
 bool button_down(int _pressed_type, Eigen::Vector3f& pos, igl::viewer::VR_Viewer& viewervr) {
 	ToolMode pressed_type = (ToolMode)_pressed_type;
+	if (pressed_type == NONE) {
+		//Have to finish up as if we're calling mouse_up()
+		if (prev_tool_mode == NONE) {
+			return true;
+		}
+		else if (prev_tool_mode == DRAW) {
+			if (initial_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
+										   //Give some time to show the stroke
+				#ifdef _WIN32
+					Sleep(200);
+				#else
+					usleep(200000);
+				#endif
+
+				backside_vertex_map = initial_stroke->generate3DMeshFromStroke(vertex_boundary_markers, part_of_original_stroke);
+				F = viewervr.data.F;
+				V = viewervr.data.V;
+
+				Eigen::MatrixXi EV, FE, EF;
+				igl::edge_topology(V, F, EV, FE, EF);
+				sharp_edge.resize(EV.rows());
+				sharp_edge.setZero(); //Set all edges to smooth after initial draw
+
+				dirty_boundary = true;
+
+				for (int i = 0; i < initial_smooth_iter; i++) {
+					SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
+				}
+
+
+				viewervr.data.set_mesh(V, F);
+				viewervr.data.compute_normals();
+
+				//Overlay the drawn stroke
+				int strokeSize = (vertex_boundary_markers.array() > 0).count();
+				Eigen::MatrixXd strokePoints = V.block(0, 0, strokeSize, 3);
+				viewervr.data.set_points(strokePoints, Eigen::RowVector3d(1, 0, 0)); //Displays dots
+				viewervr.data.set_stroke_points(igl::cat(1, strokePoints, (Eigen::MatrixXd) V.row(0)));
+
+			}
+			skip_standardcallback = false;
+		}
+
+
+		prev_tool_mode = NONE;
+		return true;
+	}
 	if (pressed_type == PULL || pressed_type == ADD || pressed_type == CUT || pressed_type == EXTRUDE) {
 		if (initial_stroke->empty2D()) { //Don't go into these modes when there is no mesh yet
 			return true;
@@ -67,58 +139,23 @@ bool button_down(int _pressed_type, Eigen::Vector3f& pos, igl::viewer::VR_Viewer
 	tool_mode = pressed_type;
 
 	if (tool_mode == DRAW) { //Creating the first curve/mesh
-		viewervr.data.clear();
-		stroke_collection.clear();
-		next_added_stroke_ID = 2;
-		initial_stroke->strokeReset();
-		initial_stroke->strokeAddSegment(pos);
-		skip_standardcallback = true;
+		if (prev_tool_mode == NONE) {
+			cout << "drawing" << endl;
+			viewervr.data.clear();
+			stroke_collection.clear();
+			next_added_stroke_ID = 2;
+			initial_stroke->strokeReset();
+			initial_stroke->strokeAddSegment(pos);
+			prev_tool_mode = DRAW;
+			skip_standardcallback = true;
+		}
+		else if (prev_tool_mode == DRAW) {
+			//We had already started drawing, continue
+			initial_stroke->strokeAddSegment(pos);
+			return true;
+		}
 	}
 
-
-
-	return true;
-}
-
-bool callback_key_down(ViewerVR& viewervr, unsigned char key, int modifiers) {
-	if(key == '1') {
-		viewervr.data.clear();
-	} else if(key == 'D') { //use capital letters
-		//Draw initial curve/mesh
-		tool_mode = DRAW;
-	} /*else if(key == 'P') {
-		if(initial_stroke->empty2D()) { //Don't go into "pull mode" if there is no mesh yet
-			return true;
-		}
-		tool_mode = PULL;
-	} else if(key == 'N') {
-		//Use navigation
-		tool_mode = NAVIGATE;
-	} else if(key == 'A') {
-		//Add an extra control curve to an existing mesh
-		if(initial_stroke->empty2D()) { //Don't go into "additional curve mode" if there is no mesh yet
-			return true;
-		}
-		tool_mode = ADD;
-	} else if(key == 'R') {
-		if(stroke_collection.size() == 0) { //Don't go into "remove curve mode" if there is no additional curves
-			return true;
-		}
-		remove_stroke_clicked = 0; //Reset because we might be left with a single click from the last round
-		tool_mode = REMOVE;
-	} else if(key == 'C') {
-		if(initial_stroke->empty2D()) { //Don't go into "cut mode" if there is no mesh yet
-			return true;
-		}
-		cut_stroke_already_drawn = false; //Reset because we might have stopped before finishing the cut last time
-		tool_mode = CUT;
-	} else if(key == 'E') {
-		if(initial_stroke->empty2D()) { //Don't go into "extrude mode" if there is no mesh yet
-			return true;
-		}
-		//We need to switch to NAVIGATE in order to draw the silhouette stroke, so we cannot reset extrusion_base_already_drawn here
-		tool_mode = EXTRUDE;
-	}*/
 
 
 	return true;

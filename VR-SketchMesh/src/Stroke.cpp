@@ -4,6 +4,8 @@
 #include <igl/triangle/triangulate.h>
 #include <igl/adjacency_list.h>
 #include <algorithm> 
+#include <unordered_map>
+
 #include <igl/per_face_normals.h>
 #include <igl/per_vertex_normals.h>
 #include <igl/dijkstra.h>
@@ -348,7 +350,7 @@ bool Stroke::toLoop() {
 	return false;
 }
 
-/*
+
 unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke) {
 	counter_clockwise(); //Ensure the stroke is counter-clockwise, handy later
 
@@ -430,9 +432,9 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	igl::per_face_normals(V2, F2, N_Faces);
 	viewervr.data.set_normals(N_Faces);
 
-	viewervr.core.align_camera_center(viewervr.data.V);
+//	viewervr.corevr.align_camera_center(viewervr.data.V);
 	return backside_vertex_map;
-}*/
+}
 
 /** Makes the stroke counter clockwise. **/
 void Stroke::counter_clockwise() {
