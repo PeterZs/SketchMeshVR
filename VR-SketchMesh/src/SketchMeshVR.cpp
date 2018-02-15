@@ -50,7 +50,7 @@ vector<Stroke> stroke_collection;
 bool skip_standardcallback = false;
 int down_mouse_x = -1, down_mouse_y = -1;
 bool mouse_is_down = false; //We need this due to mouse_down not working in the nanogui menu, whilst mouse_up does work there
-bool mouse_has_moved = false;
+bool hand_has_moved = false;
 
 //For smoothing
 int initial_smooth_iter = 8;
@@ -73,13 +73,31 @@ int remove_stroke_clicked = 0;
 //Variables for cutting
 bool cut_stroke_already_drawn = false;
 
-bool button_down(int _pressed_type, Eigen::Vector3f& pos, igl::viewer::VR_Viewer& viewervr) {
-	ToolMode pressed_type = (ToolMode)_pressed_type;
-	if (pressed_type == NONE) {
-		//Have to finish up as if we're calling mouse_up()
+bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewer::VR_Viewer& viewervr) {
+    ToolMode pressed_type;
+    if(pressed == ViewerVR::ButtonCombo::GRIPTRIG){
+        pressed_type = DRAW;
+    }else if(pressed == ViewerVR::ButtonCombo::GRIP){
+        
+    }else if(pressed == ViewerVR::ButtonCombo::TRIG){
+        
+    }else if(pressed == ViewerVR::ButtonCombo::A){
+        
+    }else if(pressed == ViewerVR::ButtonCombo::B){
+        
+    }else if(pressed == ViewerVR::ButtonCombo::X){
+        
+    }else if(pressed == ViewerVR::ButtonCombo::Y){
+        
+    }else if(pressed == ViewerVR::ButtonCombo::NONE){
+        pressed_type = NONE;
+    }
+    
+	if (pressed_type == NONE) {	//Have to finish up as if we're calling mouse_up()
 		if (prev_tool_mode == NONE) {
 			return true;
 		}
+        
 		else if (prev_tool_mode == DRAW) {
 			if (initial_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
 										   //Give some time to show the stroke
@@ -116,7 +134,11 @@ bool button_down(int _pressed_type, Eigen::Vector3f& pos, igl::viewer::VR_Viewer
 
 			}
 			skip_standardcallback = false;
-		}
+        }else if(prev_tool_mode == ADD){
+            
+        }else if(prev_tool_mode == REMOVE && stroke_was_removed){
+            
+        }else if(prev_tool_mode == PULL && handleID != -1 && hand_has_moved) //TODO: take care of hand_has_moved logic
 
 
 		prev_tool_mode = NONE;
