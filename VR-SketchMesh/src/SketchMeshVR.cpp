@@ -51,9 +51,13 @@ bool skip_standardcallback = false;
 int down_mouse_x = -1, down_mouse_y = -1;
 bool mouse_is_down = false; //We need this due to mouse_down not working in the nanogui menu, whilst mouse_up does work there
 bool hand_has_moved = false;
+Eigen::Vector3f prev_pos = Eigen::Vector3f::Zero();
 
 //For smoothing
 int initial_smooth_iter = 8;
+
+//For selecting vertices
+int handleID = -1;
 
 
 //Variables for pulling a curve (and removing added control curves)
@@ -76,11 +80,16 @@ bool cut_stroke_already_drawn = false;
 bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewer::VR_Viewer& viewervr) {
     ToolMode pressed_type;
     if(pressed == ViewerVR::ButtonCombo::GRIPTRIG){
+		cout << "drawing" << endl;
         pressed_type = DRAW;
     }else if(pressed == ViewerVR::ButtonCombo::GRIP){
-        
+		cout << "cutting" << endl;
+
+		pressed_type = CUT;
     }else if(pressed == ViewerVR::ButtonCombo::TRIG){
-        
+		cout << "pulling" << endl;
+
+		pressed_type = PULL;
     }else if(pressed == ViewerVR::ButtonCombo::A){
         
     }else if(pressed == ViewerVR::ButtonCombo::B){
@@ -92,20 +101,58 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
     }else if(pressed == ViewerVR::ButtonCombo::NONE){
         pressed_type = NONE;
     }
+
+	if (!((pos - prev_pos).isZero())) {
+		hand_has_moved = true;
+	}
+	prev_pos = pos;
     
-	if (pressed_type == NONE) {	//Have to finish up as if we're calling mouse_up()
+	if (pressed_type == PULL || pressed_type == ADD || pressed_type == CUT || pressed_type == EXTRUDE) {
+		if (initial_stroke->empty2D()) { //Don't go into these modes when there is no mesh yet
+			return true;
+		}
+	}
+	if (pressed_type == REMOVE) {
+		if (stroke_collection.size() == 0) {
+			return true;
+		}
+		remove_stroke_clicked = 0; //Reset because we might be left with a single click from the last round
+	}
+	else if (pressed_type == CUT) {
+		cut_stroke_already_drawn = false; //Reset because we might have stopped before finishing the cut last time
+	}
+	tool_mode = pressed_type;
+
+	if (tool_mode == DRAW) { //Creating the first curve/mesh
+		if (prev_tool_mode == NONE) {
+			viewervr.data.clear();
+			stroke_collection.clear();
+			next_added_stroke_ID = 2;
+			initial_stroke->strokeReset();
+			initial_stroke->strokeAddSegment(pos);
+			prev_tool_mode = DRAW;
+			skip_standardcallback = true;
+		}
+		else if (prev_tool_mode == DRAW) {
+			//We had already started drawing, continue
+			initial_stroke->strokeAddSegment(pos);
+			return true;
+		}
+	}
+
+	if (tool_mode == NONE) {	//Have to finish up as if we're calling mouse_up()
 		if (prev_tool_mode == NONE) {
 			return true;
 		}
-        
+
 		else if (prev_tool_mode == DRAW) {
 			if (initial_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
 										   //Give some time to show the stroke
-				#ifdef _WIN32
-					Sleep(200);
-				#else
-					usleep(200000);
-				#endif
+#ifdef _WIN32
+				Sleep(200);
+#else
+				usleep(200000);
+#endif
 
 				backside_vertex_map = initial_stroke->generate3DMeshFromStroke(vertex_boundary_markers, part_of_original_stroke);
 				F = viewervr.data.F;
@@ -133,49 +180,20 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 				viewervr.data.set_stroke_points(igl::cat(1, strokePoints, (Eigen::MatrixXd) V.row(0)));
 
 			}
+			hand_has_moved = false;
 			skip_standardcallback = false;
-        }else if(prev_tool_mode == ADD){
-            
-        }else if(prev_tool_mode == REMOVE && stroke_was_removed){
-            
-        }else if(prev_tool_mode == PULL && handleID != -1 && hand_has_moved) //TODO: take care of hand_has_moved logic
+		}
+		else if (prev_tool_mode == ADD) {
 
+		}
+		else if (prev_tool_mode == REMOVE && stroke_was_removed) {
+
+		}
+		else if (prev_tool_mode == PULL && handleID != -1 && hand_has_moved) { //TODO: take care of hand_has_moved logic
+		}
 
 		prev_tool_mode = NONE;
 		return true;
-	}
-	if (pressed_type == PULL || pressed_type == ADD || pressed_type == CUT || pressed_type == EXTRUDE) {
-		if (initial_stroke->empty2D()) { //Don't go into these modes when there is no mesh yet
-			return true;
-		}
-	}
-	if (pressed_type == REMOVE) {
-		if (stroke_collection.size() == 0) {
-			return true;
-		}
-		remove_stroke_clicked = 0; //Reset because we might be left with a single click from the last round
-	}
-	else if (pressed_type == CUT) {
-		cut_stroke_already_drawn = false; //Reset because we might have stopped before finishing the cut last time
-	}
-	tool_mode = pressed_type;
-
-	if (tool_mode == DRAW) { //Creating the first curve/mesh
-		if (prev_tool_mode == NONE) {
-			cout << "drawing" << endl;
-			viewervr.data.clear();
-			stroke_collection.clear();
-			next_added_stroke_ID = 2;
-			initial_stroke->strokeReset();
-			initial_stroke->strokeAddSegment(pos);
-			prev_tool_mode = DRAW;
-			skip_standardcallback = true;
-		}
-		else if (prev_tool_mode == DRAW) {
-			//We had already started drawing, continue
-			initial_stroke->strokeAddSegment(pos);
-			return true;
-		}
 	}
 
 
@@ -302,7 +320,7 @@ bool callback_mouse_move(ViewerVR& viewervr, int mouse_x, int mouse_y) {
 	}
 
 	/*if(viewervr.down) { //Only consider it to be moving if the button was held down
-		mouse_has_moved = true;
+		hand_has_moved = true;
 	}
 
 
@@ -421,7 +439,7 @@ bool callback_mouse_up(ViewerVR& viewervr, int button, int modifier) {
 	else if(tool_mode == ADD) {
 		dirty_boundary = true;
 		if(!added_stroke->has_points_on_mesh) {
-			mouse_has_moved = false;
+			hand_has_moved = false;
 			return true;
 		}
 		added_stroke->snap_to_vertices(vertex_boundary_markers);
@@ -434,7 +452,7 @@ bool callback_mouse_up(ViewerVR& viewervr, int button, int modifier) {
 
 		draw_all_strokes(viewer);
 	} 
-	else if(tool_mode == PULL && handleID != -1 && mouse_has_moved) {
+	else if(tool_mode == PULL && handleID != -1 && hand_has_moved) {
 		for(int i = 0; i < 2; i++) {
 			     SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 		}
@@ -451,7 +469,7 @@ bool callback_mouse_up(ViewerVR& viewervr, int button, int modifier) {
 	} 
 	else if(tool_mode == CUT) {
 		if(!added_stroke->has_points_on_mesh) {
-			mouse_has_moved = false;
+			hand_has_moved = false;
 			return true;
 		}
 		if(cut_stroke_already_drawn) { //User had already drawn the cut stroke and has now drawn the final stroke for removing the part
@@ -539,7 +557,7 @@ bool callback_mouse_up(ViewerVR& viewervr, int button, int modifier) {
 			draw_all_strokes(viewer);
 		} else { //mouse released after extrusion base drawn
 			if(!extrusion_base->has_points_on_mesh) {
-				mouse_has_moved = false;
+				hand_has_moved = false;
 				return true;
 			}
 			//extrusion_base->resample_all(); //This will shrink the drawn stroke. Might result in no face being contained inside the stroke
@@ -558,7 +576,7 @@ bool callback_mouse_up(ViewerVR& viewervr, int button, int modifier) {
 		}
 	}*/
 
-	mouse_has_moved = false;
+	hand_has_moved = false;
 	return skip_standardcallback;
 }
 

@@ -102,7 +102,6 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 	}
 	closest_vert_bindings.push_back(stroke3DPoints.rows() - 1); //In the case of DRAW this will match the vertex indices, since we start from 0
 	viewervr.data.set_stroke_points(stroke3DPoints); //Will remove all previous points but is okay for draw since it's the only points there are
-	cout << stroke3DPoints.row(stroke3DPoints.rows()-1) << endl;
 	_time1 = std::chrono::high_resolution_clock::now();
 }
 
