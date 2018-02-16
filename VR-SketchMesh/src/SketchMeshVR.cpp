@@ -138,9 +138,18 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 			initial_stroke->strokeAddSegment(pos);
 			return true;
 		}
-	}
-
-	if (tool_mode == NONE) {	//Have to finish up as if we're calling mouse_up()
+    }else if(tool_mode == ADD){
+        if(prev_tool_mode == NONE){ //Adding a new control curve onto an existing mesh
+            added_stroke = new Stroke(V, F, viewervr, next_added_stroke_ID);
+            next_added_stroke_ID++;
+            added_stroke->strokeAddSegmentAdd(pos); //If the user starts outside of the mesh, consider the movement as navigation
+         skip_standardcallback = true;
+        }else if(prev_tool_mode == ADD){
+            last_add_on_mesh = added_stroke->strokeAddSegmentAdd(pos);
+            return true;
+        }
+        
+    }else if (tool_mode == NONE) {	//Have to finish up as if we're calling mouse_up()
 		if (prev_tool_mode == NONE) {
 			return true;
 		}
@@ -184,7 +193,15 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 			skip_standardcallback = false;
 		}
 		else if (prev_tool_mode == ADD) {
-
+                dirty_boundary = true;
+                if(!added_stroke->has_points_on_mesh) {
+                    hand_has_moved = false;
+                    return true;
+                }
+                added_stroke->snap_to_vertices(vertex_boundary_markers);
+                stroke_collection.push_back(*added_stroke);
+                draw_all_strokes(viewervr);
+            
 		}
 		else if (prev_tool_mode == REMOVE && stroke_was_removed) {
 
