@@ -68,6 +68,8 @@ int closest_stroke_ID, prev_closest_stroke_ID;
 //Keeps track of the stroke IDs
 int next_added_stroke_ID = 2; //Start at 2 because marker 1 belongs to the original boundary
 
+//Variables for adding control curves
+bool last_add_on_mesh = false;
 unordered_map<int, int> backside_vertex_map;
 
 //Variables for removing a control curve
@@ -76,6 +78,28 @@ int remove_stroke_clicked = 0;
 
 //Variables for cutting
 bool cut_stroke_already_drawn = false;
+
+void draw_all_strokes(ViewerVR& viewervr) {
+	Eigen::MatrixXd added_points;
+	viewervr.data.set_points((Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), Eigen::RowVector3d(1, 0, 0)); //Display the original stroke points and clear all the rest. Don't take the last point
+	viewervr.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0, 0, 1)); //Clear the non-original stroke edges
+
+	if (initial_stroke->is_loop) {
+		viewervr.data.set_stroke_points(igl::cat(1, (Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), (Eigen::MatrixXd) initial_stroke->get3DPoints().row(0))); //Create a loop and draw edges
+	}
+	else { //set_stroke_points always makes a loop, so don't use that when our stroke ain't a loop (anymore)
+		added_points = initial_stroke->get3DPoints();
+		viewervr.data.add_edges(added_points.block(0, 0, added_points.rows() - 2, 3), added_points.block(1, 0, added_points.rows() - 2, 3), Eigen::RowVector3d(1, 0, 0));
+	}
+
+	int points_to_hold_back;
+	for (int i = 0; i < stroke_collection.size(); i++) {
+		added_points = stroke_collection[i].get3DPoints();
+		points_to_hold_back = 1 + !stroke_collection[i].is_loop;
+		viewervr.data.add_points(added_points, stroke_collection[i].stroke_color);
+		viewervr.data.add_edges(added_points.block(0, 0, added_points.rows() - points_to_hold_back, 3), added_points.block(1, 0, added_points.rows() - points_to_hold_back, 3), stroke_collection[i].stroke_color);
+	}
+}
 
 bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewer::VR_Viewer& viewervr) {
     ToolMode pressed_type;

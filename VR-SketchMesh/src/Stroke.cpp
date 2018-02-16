@@ -106,16 +106,24 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 }
 
 /** Used for ADD. Will add a new 2D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its unprojection onto the existing mesh as a 3D point. After adding the new point it will restart the timer. **/
-/*bool Stroke::strokeAddSegmentAdd(int mouse_x, int mouse_y) {
+bool Stroke::strokeAddSegmentAdd(Eigen::Vector3f& pos) {
 	bool result = false;
 	//OpenGL has origin at left bottom, window(s) has origin at left top
-	double x = mouse_x;
+	/*double x = mouse_x;
 	double y = viewervr.core.viewport(3) - mouse_y;
 	if(!empty2D() && x == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && y == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) { //Check that the point is new compared to last time
 		return result;
+	}*/
+
+	//TODO: get x and y from touch position
+	double x = 0.0;
+	double y = 0.0;
+
+	if (!stroke3DPoints.isZero() && pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
+		return true;
 	}
 
-	if(!empty2D()) {
+	if(!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
 		if(timePast < 10000000) {
@@ -123,12 +131,12 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 		}
 	}
 
-	Eigen::Matrix4f modelview = viewervr.core.view * viewervr.core.model;
+	Eigen::Matrix4f modelview = viewervr.corevr.view * viewervr.corevr.model;
 	Eigen::RowVector3d pt(0, 0, 0);
 	int faceID = -1;
 
 	Eigen::Vector3f bc;
-	if(igl::unproject_onto_mesh(Eigen::Vector2f(x, y), modelview, viewervr.core.proj, viewervr.core.viewport, V, F, faceID, bc)) {
+	if(igl::unproject_onto_mesh(Eigen::Vector2f(x, y), modelview, viewervr.corevr.proj, viewervr.corevr.viewport, V, F, faceID, bc)) {
 		pt = V.row(F(faceID, 0))*bc(0) + V.row(F(faceID, 1))*bc(1) + V.row(F(faceID, 2))*bc(2);
 		double cur_dist, min_dist = INFINITY;
 		int closest_vert_idx;
@@ -146,13 +154,9 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 
 		has_points_on_mesh = true;
 
-		if(stroke2DPoints.rows() == 1 && empty2D()) {
-            stroke2DPoints.row(0) << x, y;
+		if(stroke3DPoints.rows() == 1 && stroke3DPoints.isZero()) {
 			stroke3DPoints.row(0) << pt[0], pt[1], pt[2];
 		} else {
-			stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
-			stroke2DPoints.row(stroke2DPoints.rows() - 1) << x, y;
-
 			stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
 			stroke3DPoints.row(stroke3DPoints.rows() - 1) << pt[0], pt[1], pt[2];
 		}
@@ -165,7 +169,7 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 
 	_time1 = std::chrono::high_resolution_clock::now();
 	return result;
-}*/
+}
 
 
 /** Used for CUT. Will add a new 2D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its unprojection onto the existing as a 3D point. If the unprojection isn't on the mesh, it will unproject it and use it as the start or end point. After adding the new point it will restart the timer. **/
