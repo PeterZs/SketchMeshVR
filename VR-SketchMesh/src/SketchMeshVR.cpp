@@ -149,7 +149,8 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 
 	if (tool_mode == DRAW) { //Creating the first curve/mesh
 		if (prev_tool_mode == NONE) {
-			viewervr.data.clear();
+			cout << "coming here:" << endl;
+			viewervr.data.clear_without_floor();
 			stroke_collection.clear();
 			next_added_stroke_ID = 2;
 			initial_stroke->strokeReset();
@@ -188,8 +189,8 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 #endif
 
 				backside_vertex_map = initial_stroke->generate3DMeshFromStroke(vertex_boundary_markers, part_of_original_stroke);
-				F = viewervr.data.F;
-				V = viewervr.data.V;
+				F = viewervr.data.F.block(0,0,viewervr.data.F.rows()-2, viewervr.data.F.cols()); //Don't consider the last 2 faces because they belong to the floor
+				V = viewervr.data.V.block(0, 0, viewervr.data.V.rows() - 4, viewervr.data.V.cols()); //Don't consider the last 4 vertices because they belong to the floor
 
 				Eigen::MatrixXi EV, FE, EF;
 				igl::edge_topology(V, F, EV, FE, EF);
@@ -203,7 +204,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 				}
 
 
-				viewervr.data.set_mesh(V, F);
+				viewervr.data.set_mesh_with_floor(V, F);
 				viewervr.data.compute_normals();
 
 				//Overlay the drawn stroke
@@ -637,7 +638,7 @@ int main(int argc, char *argv[]) {
 	ViewerVR viewervr;
 	igl::read_triangle_mesh("../data/cube.off", V, F);
 	//cout << V << endl << endl << F << endl;
-	viewervr.data.set_mesh(V, F);
+	viewervr.data.set_mesh_with_floor(V, F);
 /*	viewervr.callback_key_down = callback_key_down;
 	viewervr.callback_mouse_down = callback_mouse_down;
 	viewervr.callback_mouse_move = callback_mouse_move;

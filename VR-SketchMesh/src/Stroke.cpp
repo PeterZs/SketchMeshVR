@@ -429,8 +429,8 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 		}
 	}
 
-	viewervr.data.clear();
-	viewervr.data.set_mesh(V2, F2);
+	viewervr.data.clear_all();
+	viewervr.data.set_mesh_with_floor(V2, F2);
 	
 	igl::per_face_normals(V2, F2, N_Faces);
 	viewervr.data.set_normals(N_Faces);
