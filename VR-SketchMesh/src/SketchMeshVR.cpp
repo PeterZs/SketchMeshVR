@@ -104,7 +104,6 @@ void draw_all_strokes(ViewerVR& viewervr) {
 bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewer::VR_Viewer& viewervr) {
     ToolMode pressed_type;
     if(pressed == ViewerVR::ButtonCombo::GRIPTRIG){
-		cout << "drawing" << endl;
         pressed_type = DRAW;
     }else if(pressed == ViewerVR::ButtonCombo::GRIP){
 		cout << "cutting" << endl;
@@ -149,7 +148,6 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 
 	if (tool_mode == DRAW) { //Creating the first curve/mesh
 		if (prev_tool_mode == NONE) {
-			cout << "coming here:" << endl;
 			viewervr.data.clear_without_floor();
 			stroke_collection.clear();
 			next_added_stroke_ID = 2;
@@ -159,6 +157,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 			skip_standardcallback = true;
 		}
 		else if (prev_tool_mode == DRAW) {
+			cout << "adding to stroke" << endl;
 			//We had already started drawing, continue
 			initial_stroke->strokeAddSegment(pos);
 			return true;
@@ -174,12 +173,14 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
             return true;
         }
         
-    }else if (tool_mode == NONE) {	//Have to finish up as if we're calling mouse_up()
+    }
+	else if (tool_mode == NONE) {	//Have to finish up as if we're calling mouse_up()
 		if (prev_tool_mode == NONE) {
 			return true;
 		}
 
 		else if (prev_tool_mode == DRAW) {
+			cout << "rounding up " << endl;
 			if (initial_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
 										   //Give some time to show the stroke
 #ifdef _WIN32
@@ -187,7 +188,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 #else
 				usleep(200000);
 #endif
-
+				cout << "made looop " << endl;
 				backside_vertex_map = initial_stroke->generate3DMeshFromStroke(vertex_boundary_markers, part_of_original_stroke);
 				F = viewervr.data.F.block(0,0,viewervr.data.F.rows()-2, viewervr.data.F.cols()); //Don't consider the last 2 faces because they belong to the floor
 				V = viewervr.data.V.block(0, 0, viewervr.data.V.rows() - 4, viewervr.data.V.cols()); //Don't consider the last 4 vertices because they belong to the floor

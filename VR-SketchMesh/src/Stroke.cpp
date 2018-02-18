@@ -74,14 +74,15 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 		return;
 	}*/
 	if (!stroke3DPoints.isZero() && pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
+		cout << "same" << endl;
 		return;
 	}
 
 	if(!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if(timePast < 10000000) {
-			return;
+		if(timePast < 1000) {
+			//return;
 		}
 	}
 
@@ -92,6 +93,7 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 	//if(stroke2DPoints.rows() == 1 && empty2D()) {
 	if(stroke3DPoints.rows()==1 && stroke3DPoints.isZero()){
 		//stroke2DPoints.row(0) << x, y;
+		cout << "setting first" << endl;
 		stroke3DPoints.row(0) << pos[0], pos[1], pos[2];
 	} else {
 		//stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
@@ -340,7 +342,8 @@ void Stroke::strokeReset() {
 }
 
 bool Stroke::toLoop() {
-	if(stroke2DPoints.rows() > 2) { //Don't do anything if we have only 1 line segment
+	cout << stroke3DPoints.rows() << endl;
+	if(stroke3DPoints.rows() > 2) { //Don't do anything if we have only 1 line segment
 		stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
 		stroke3DPoints.row(stroke3DPoints.rows() - 1) << stroke3DPoints.row(0);
 		if(closest_vert_bindings.size() > 0) {
