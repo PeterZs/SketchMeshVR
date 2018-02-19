@@ -1,6 +1,7 @@
 #include "Stroke.h"
 #include <igl/unproject_onto_mesh.h>
 #include <igl/unproject.h>
+#include <igl/project.h>
 #include <igl/triangle/triangulate.h>
 #include <igl/adjacency_list.h>
 #include <algorithm> 
@@ -68,13 +69,8 @@ Stroke::~Stroke() {}
 /** Used for DRAW. Will add a new 2D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its unprojection as a 3D point with a z-value of 0. After adding the new point it will restart the timer. **/
 void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 	//OpenGL has origin at left bottom, window(s) has origin at left top
-	/*double x = mouse_x;
-	double y = viewervr.core.viewport(3) - mouse_y;
-	if(!empty2D() && x == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && y == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) { //Check that the point is new compared to last time
-		return;
-	}*/
+
 	if (!stroke3DPoints.isZero() && pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
-		cout << "same" << endl;
 		return;
 	}
 
@@ -85,19 +81,18 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 			//return;
 		}
 	}
-
-	//Eigen::Matrix4f modelview = viewervr.core.view * viewervr.core.model;
-	//Eigen::RowVector3d pt(0, 0, 0);
-
-	//pt = igl::unproject(Eigen::Vector3f(x, y, 0.0f), modelview, viewervr.core.proj, viewervr.core.viewport).transpose().cast<double>();
-	//if(stroke2DPoints.rows() == 1 && empty2D()) {
+	Eigen::RowVector3d pt2D;
+	Eigen::Matrix4f modelview = viewervr.corevr.view * viewervr.corevr.model;
+	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
+	igl::project(pos_in, modelview, viewervr.corevr.proj, viewervr.corevr.viewport, pt2D);
+	dep = pt2D[2];
+	cout << "test" << dep << endl;
 	if(stroke3DPoints.rows()==1 && stroke3DPoints.isZero()){
-		//stroke2DPoints.row(0) << x, y;
-		cout << "setting first" << endl;
 		stroke3DPoints.row(0) << pos[0], pos[1], pos[2];
+		stroke2DPoints.row(0) << pt2D[0], pt2D[1];
 	} else {
-		//stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
-	//	stroke2DPoints.row(stroke2DPoints.rows() - 1) << x, y;
+		stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
+		stroke2DPoints.row(stroke2DPoints.rows() - 1) << pt2D[0], pt2D[1];
 
 		stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
 		stroke3DPoints.row(stroke3DPoints.rows() - 1) << pos[0], pos[1], pos[2];
@@ -111,11 +106,7 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 bool Stroke::strokeAddSegmentAdd(Eigen::Vector3f& pos) {
 	bool result = false;
 	//OpenGL has origin at left bottom, window(s) has origin at left top
-	/*double x = mouse_x;
-	double y = viewervr.core.viewport(3) - mouse_y;
-	if(!empty2D() && x == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && y == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) { //Check that the point is new compared to last time
-		return result;
-	}*/
+	
 
 	//TODO: get x and y from touch position
 	double x = 0.0;
@@ -359,9 +350,10 @@ bool Stroke::toLoop() {
 
 unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke) {
 	counter_clockwise(); //Ensure the stroke is counter-clockwise, handy later
-
+	cout << "original 2d" << stroke2DPoints << endl << endl;
 	Eigen::MatrixXd original_stroke2DPoints = stroke2DPoints;
 	stroke2DPoints = resample_stroke2D(original_stroke2DPoints);
+	cout << endl << "new 2d" << stroke2DPoints << endl << endl;
 
 	Eigen::MatrixXd V2_tmp, V2;
 	Eigen::MatrixXi F2, F2_back, vertex_markers, edge_markers;
@@ -369,12 +361,11 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	for(int i = 0; i < stroke2DPoints.rows(); i++) {
 		stroke_edges.row(i) << i, ((i + 1) % stroke2DPoints.rows());
 	}
-	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "YQq25", V2_tmp, F2, vertex_markers, edge_markers);
-	V2 = Eigen::MatrixXd::Zero(V2_tmp.rows(), V2_tmp.cols() + 1);
 
-	//zero mean in x and y
-	V2_tmp.col(0) = V2_tmp.col(0).array() - V2_tmp.col(0).mean();
-	V2_tmp.col(1) = V2_tmp.col(1).array() - V2_tmp.col(1).mean();
+	cout << "3dPoints"<< endl<< stroke3DPoints << endl << endl;
+	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq45", V2_tmp, F2, vertex_markers, edge_markers); //TODO: CHange this back to minimum angle of 25 degrees
+	double mean_Z = stroke3DPoints.col(2).mean();
+	V2 = Eigen::MatrixXd::Constant(V2_tmp.rows(), V2_tmp.cols() + 1, mean_Z);
 
 	V2.block(0, 0, V2_tmp.rows(), 2) = V2_tmp;
 
@@ -396,8 +387,8 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 		}
 	}
 
-	V2.col(0) = V2.col(0).array() - V2.col(0).mean();
-	V2.col(1) = V2.col(1).array() - V2.col(1).mean();
+	//V2.col(0) = V2.col(0).array() - V2.col(0).mean();//TODO; check that this is still what i wanna do, since it will move the mesh to a different position in space from where it was drawn
+	//V2.col(1) = V2.col(1).array() - V2.col(1).mean();//TODO; check that this is still what i wanna do, since it will move the mesh to a different position in space from where it was drawn
 
 	//Add backside faces, using original vertices for boundary and copied vertices for interior
 	original_size = F2_back.rows();
@@ -423,7 +414,8 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 			if(vertex_markers(i) == 1) { //Don't change boundary vertices
 				vertex_boundary_markers[i] = 1;
 				part_of_original_stroke[i] = 1;
-				stroke3DPoints.row(i) = V2.row(i);
+				//Don't need to change stroke3DPoints here because they're the same as V2's points.
+
 				continue;
 			}
 			V2.row(i) = V2.row(i) + 0.1*N_Vertices.row(i);
@@ -432,13 +424,18 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 		}
 	}
 
+	Eigen::Matrix4f modelview = viewervr.corevr.view * viewervr.corevr.model;
+	for (int i = 0; i < V2.rows(); i++) {
+		V2.row(i).leftCols(2) = igl::unproject(Eigen::Vector3f(V2(i, 0), V2(i, 1), dep), modelview, viewervr.corevr.proj, viewervr.corevr.viewport).cast<double>().topRows(2);
+	
+	}
+	cout << V2 << "test" << endl;
 	viewervr.data.clear_all();
 	viewervr.data.set_mesh_with_floor(V2, F2);
 	
-	igl::per_face_normals(V2, F2, N_Faces);
-	viewervr.data.set_normals(N_Faces);
+	viewervr.data.set_face_based(true);
+	viewervr.data.compute_normals();
 
-//	viewervr.corevr.align_camera_center(viewervr.data.V);
 	return backside_vertex_map;
 }
 

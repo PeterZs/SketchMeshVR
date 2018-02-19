@@ -181,6 +181,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 
 		else if (prev_tool_mode == DRAW) {
 			cout << "rounding up " << endl;
+			initial_stroke->strokeAddSegment(pos);
 			if (initial_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
 										   //Give some time to show the stroke
 #ifdef _WIN32
@@ -193,7 +194,8 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 				F = viewervr.data.F.block(0,0,viewervr.data.F.rows()-2, viewervr.data.F.cols()); //Don't consider the last 2 faces because they belong to the floor
 				V = viewervr.data.V.block(0, 0, viewervr.data.V.rows() - 4, viewervr.data.V.cols()); //Don't consider the last 4 vertices because they belong to the floor
 
-				Eigen::MatrixXi EV, FE, EF;
+				//TODO: enable this once mesh is a manifold again
+			/*	Eigen::MatrixXi EV, FE, EF;
 				igl::edge_topology(V, F, EV, FE, EF);
 				sharp_edge.resize(EV.rows());
 				sharp_edge.setZero(); //Set all edges to smooth after initial draw
@@ -203,7 +205,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 				for (int i = 0; i < initial_smooth_iter; i++) {
 					SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 				}
-
+				*/
 
 				viewervr.data.set_mesh_with_floor(V, F);
 				viewervr.data.compute_normals();
