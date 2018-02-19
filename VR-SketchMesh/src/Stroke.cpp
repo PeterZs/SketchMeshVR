@@ -23,6 +23,7 @@ Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::viewer
 	stroke_ID(stroke_ID_) {
 	stroke2DPoints = Eigen::MatrixXd::Zero(1, 2);
 	stroke3DPoints = Eigen::MatrixX3d::Zero(1, 3);
+	dep = Eigen::VectorXd::Zero(0);
 	_time1 = std::chrono::high_resolution_clock::now();
 	closest_vert_bindings.clear();
 	has_points_on_mesh = false;
@@ -37,11 +38,11 @@ Stroke::Stroke(const Stroke& origin) :
 	stroke_ID(origin.stroke_ID),
 	stroke2DPoints(origin.stroke2DPoints),
 	stroke3DPoints(origin.stroke3DPoints),
+	dep(origin.dep),
 	closest_vert_bindings(origin.closest_vert_bindings),
 	has_points_on_mesh(origin.has_points_on_mesh),
 	has_been_reversed(origin.has_been_reversed),
 	stroke_color(origin.stroke_color),
-	dep(origin.dep),
 	is_loop(origin.is_loop) {
 	_time1 = std::chrono::high_resolution_clock::now();
 }
@@ -85,17 +86,21 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 	Eigen::Matrix4f modelview = viewervr.corevr.view * viewervr.corevr.model;
 	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
 	igl::project(pos_in, modelview, viewervr.corevr.proj, viewervr.corevr.viewport, pt2D);
-	dep = pt2D[2];
-	cout << "test" << dep << endl;
+	double dep_val = pt2D[2];
+
 	if(stroke3DPoints.rows()==1 && stroke3DPoints.isZero()){
 		stroke3DPoints.row(0) << pos[0], pos[1], pos[2];
 		stroke2DPoints.row(0) << pt2D[0], pt2D[1];
+		dep[0] = dep_val;
 	} else {
 		stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
 		stroke2DPoints.row(stroke2DPoints.rows() - 1) << pt2D[0], pt2D[1];
 
 		stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
 		stroke3DPoints.row(stroke3DPoints.rows() - 1) << pos[0], pos[1], pos[2];
+
+		dep.conservativeResize(dep.rows() + 1, Eigen::NoChange);
+		dep[dep.rows() - 1] = dep_val;
 	}
 	closest_vert_bindings.push_back(stroke3DPoints.rows() - 1); //In the case of DRAW this will match the vertex indices, since we start from 0
 	viewervr.data.set_stroke_points(stroke3DPoints); //Will remove all previous points but is okay for draw since it's the only points there are
@@ -326,7 +331,8 @@ void Stroke::strokeReset() {
 	stroke2DPoints.setZero();
 	stroke3DPoints.resize(1, 3);
 	stroke3DPoints.setZero();
-	dep = -1;
+	dep.resize(1);
+	dep.setZero();
 	_time1 = std::chrono::high_resolution_clock::now();
 	closest_vert_bindings.clear();
 	has_been_reversed = false;
@@ -347,13 +353,10 @@ bool Stroke::toLoop() {
 	return false;
 }
 
-
 unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke) {
 	counter_clockwise(); //Ensure the stroke is counter-clockwise, handy later
-	cout << "original 2d" << stroke2DPoints << endl << endl;
 	Eigen::MatrixXd original_stroke2DPoints = stroke2DPoints;
-	stroke2DPoints = resample_stroke2D(original_stroke2DPoints);
-	cout << endl << "new 2d" << stroke2DPoints << endl << endl;
+	//stroke2DPoints = resample_stroke2D(original_stroke2DPoints); //TODO: decide on whether to include this or not. Might give a discrepancy between what is drawn and the result you get
 
 	Eigen::MatrixXd V2_tmp, V2;
 	Eigen::MatrixXi F2, F2_back, vertex_markers, edge_markers;
@@ -362,7 +365,6 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 		stroke_edges.row(i) << i, ((i + 1) % stroke2DPoints.rows());
 	}
 
-	cout << "3dPoints"<< endl<< stroke3DPoints << endl << endl;
 	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq45", V2_tmp, F2, vertex_markers, edge_markers); //TODO: CHange this back to minimum angle of 25 degrees
 	double mean_Z = stroke3DPoints.col(2).mean();
 	V2 = Eigen::MatrixXd::Constant(V2_tmp.rows(), V2_tmp.cols() + 1, mean_Z);
@@ -424,12 +426,19 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 		}
 	}
 
-	Eigen::Matrix4f modelview = viewervr.corevr.view * viewervr.corevr.model;
-	for (int i = 0; i < V2.rows(); i++) {
-		V2.row(i).leftCols(2) = igl::unproject(Eigen::Vector3f(V2(i, 0), V2(i, 1), dep), modelview, viewervr.corevr.proj, viewervr.corevr.viewport).cast<double>().topRows(2);
+
+	Eigen::VectorXd dep_tmp = Eigen::VectorXd::Constant(V2.rows(), dep.mean());
+	dep_tmp.topRows(stroke2DPoints.rows()) = dep;
+
+	Eigen::MatrixXd V2_unproj, V2_with_dep(V2.rows(), V2.cols());
+	V2_with_dep.leftCols(2) = V2.leftCols(2);
+	V2_with_dep.col(2) = dep_tmp;
 	
-	}
-	cout << V2 << "test" << endl;
+	Eigen::Matrix4f modelview = viewervr.corevr.view * viewervr.corevr.model;
+	igl::unproject(V2_with_dep, modelview, viewervr.corevr.proj, viewervr.corevr.viewport, V2_unproj);
+	V2.leftCols(2) = V2_unproj.leftCols(2);
+	
+
 	viewervr.data.clear_all();
 	viewervr.data.set_mesh_with_floor(V2, F2);
 	

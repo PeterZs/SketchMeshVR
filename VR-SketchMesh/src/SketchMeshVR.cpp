@@ -157,7 +157,6 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 			skip_standardcallback = true;
 		}
 		else if (prev_tool_mode == DRAW) {
-			cout << "adding to stroke" << endl;
 			//We had already started drawing, continue
 			initial_stroke->strokeAddSegment(pos);
 			return true;
@@ -180,7 +179,6 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 		}
 
 		else if (prev_tool_mode == DRAW) {
-			cout << "rounding up " << endl;
 			initial_stroke->strokeAddSegment(pos);
 			if (initial_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
 										   //Give some time to show the stroke
@@ -189,7 +187,6 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 #else
 				usleep(200000);
 #endif
-				cout << "made looop " << endl;
 				backside_vertex_map = initial_stroke->generate3DMeshFromStroke(vertex_boundary_markers, part_of_original_stroke);
 				F = viewervr.data.F.block(0,0,viewervr.data.F.rows()-2, viewervr.data.F.cols()); //Don't consider the last 2 faces because they belong to the floor
 				V = viewervr.data.V.block(0, 0, viewervr.data.V.rows() - 4, viewervr.data.V.cols()); //Don't consider the last 4 vertices because they belong to the floor

@@ -62,7 +62,7 @@ private:
 	Eigen::RowVector3d cut_stroke_final_point; //Only used for cutting strokes. First point outside of the mesh
 	Eigen::RowVectorXd cut_stroke_final_point_2D;
 	bool just_came_from_mesh; //Used for cutting strokes only. Indicates whether this is the first point outside of the mesh after we've been drawing on the mesh
-	double dep = -1;
+	Eigen::VectorXd dep;
 
 	std::vector<int> closest_vert_bindings;
 
