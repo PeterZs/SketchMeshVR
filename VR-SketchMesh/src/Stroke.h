@@ -16,7 +16,7 @@ public:
     
 	void strokeAddSegment(Eigen::Vector3f& pos);
 	bool strokeAddSegmentAdd(Eigen::Vector3f & pos);
-	void strokeAddSegmentCut(int mouse_x, int mouse_y);
+	void strokeAddSegmentCut(Eigen::Vector3f & pos);
 	void strokeAddSegmentExtrusionBase(int mouse_x, int mouse_y);
 	void strokeAddSegmentExtrusionSilhouette(int mouse_x, int mouse_y);
     void append_final_point();

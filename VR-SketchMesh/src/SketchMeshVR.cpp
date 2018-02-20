@@ -141,14 +141,14 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 		}
 		remove_stroke_clicked = 0; //Reset because we might be left with a single click from the last round
 	}
-	else if (pressed_type == CUT) {
-		cut_stroke_already_drawn = false; //Reset because we might have stopped before finishing the cut last time
-	}
+	
 	tool_mode = pressed_type;
 
 	if (tool_mode == DRAW) { //Creating the first curve/mesh
 		if (prev_tool_mode == NONE) {
+			cout << "start drawing" << endl;
 			viewervr.data.clear_without_floor();
+			viewervr.start_draw_view = viewervr.corevr.view;
 			stroke_collection.clear();
 			next_added_stroke_ID = 2;
 			initial_stroke->strokeReset();
@@ -158,27 +158,47 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 		}
 		else if (prev_tool_mode == DRAW) {
 			//We had already started drawing, continue
+			cout << "keep drawing" << endl;
 			initial_stroke->strokeAddSegment(pos);
 			return true;
 		}
-    }else if(tool_mode == ADD){
+    }
+	else if(tool_mode == ADD){
         if(prev_tool_mode == NONE){ //Adding a new control curve onto an existing mesh
             added_stroke = new Stroke(V, F, viewervr, next_added_stroke_ID);
             next_added_stroke_ID++;
             added_stroke->strokeAddSegmentAdd(pos); //If the user starts outside of the mesh, consider the movement as navigation
-         skip_standardcallback = true;
+			skip_standardcallback = true;
         }else if(prev_tool_mode == ADD){
             last_add_on_mesh = added_stroke->strokeAddSegmentAdd(pos);
             return true;
         }
-        
-    }
+	}
+	else if (tool_mode == CUT) {
+		if (prev_tool_mode == NONE) {
+			if (cut_stroke_already_drawn) { //clicked while cut stroke already drawn
+				return true;
+			}
+			//clicked with no cut stroke drawn yet
+			added_stroke = new Stroke(V, F, viewervr, next_added_stroke_ID);
+			next_added_stroke_ID++;
+			added_stroke->strokeAddSegmentCut(pos);
+			skip_standardcallback = true;
+		}
+		else if (prev_tool_mode == CUT) {
+			if (!cut_stroke_already_drawn) {
+				added_stroke->strokeAddSegmentCut(pos);
+			}
+			return true;
+		}
+	}
 	else if (tool_mode == NONE) {	//Have to finish up as if we're calling mouse_up()
 		if (prev_tool_mode == NONE) {
 			return true;
 		}
 
 		else if (prev_tool_mode == DRAW) {
+			cout << "Stop drawing" << endl;
 			initial_stroke->strokeAddSegment(pos);
 			if (initial_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
 										   //Give some time to show the stroke
@@ -187,12 +207,12 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 #else
 				usleep(200000);
 #endif
+
 				backside_vertex_map = initial_stroke->generate3DMeshFromStroke(vertex_boundary_markers, part_of_original_stroke);
-				F = viewervr.data.F.block(0,0,viewervr.data.F.rows()-2, viewervr.data.F.cols()); //Don't consider the last 2 faces because they belong to the floor
+				F = viewervr.data.F.block(0, 0, viewervr.data.F.rows() - 2, viewervr.data.F.cols()); //Don't consider the last 2 faces because they belong to the floor
 				V = viewervr.data.V.block(0, 0, viewervr.data.V.rows() - 4, viewervr.data.V.cols()); //Don't consider the last 4 vertices because they belong to the floor
 
-				//TODO: enable this once mesh is a manifold again
-			/*	Eigen::MatrixXi EV, FE, EF;
+				Eigen::MatrixXi EV, FE, EF;
 				igl::edge_topology(V, F, EV, FE, EF);
 				sharp_edge.resize(EV.rows());
 				sharp_edge.setZero(); //Set all edges to smooth after initial draw
@@ -202,7 +222,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 				for (int i = 0; i < initial_smooth_iter; i++) {
 					SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 				}
-				*/
+				
 
 				viewervr.data.set_mesh_with_floor(V, F);
 				viewervr.data.compute_normals();
@@ -232,6 +252,54 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 
 		}
 		else if (prev_tool_mode == PULL && handleID != -1 && hand_has_moved) { //TODO: take care of hand_has_moved logic
+		}
+		else if (prev_tool_mode == CUT) {
+			if (!added_stroke->has_points_on_mesh) {
+				hand_has_moved = false;
+				return true;
+			}
+			if (cut_stroke_already_drawn) { //User had already drawn the cut stroke and has now drawn the final stroke for removing the part
+				dirty_boundary = true;
+				added_stroke->append_final_point();
+				added_stroke->toLoop();
+				/*MeshCut::cut(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, *added_stroke);
+				stroke_collection.push_back(*added_stroke);
+
+				initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers);//Don't test if the initial one dies, cause then we have mayhem anyway? TODO
+
+				int nr_removed = 0, original_collection_size = stroke_collection.size();
+				for (int i = 0; i < original_collection_size; i++) {
+					if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, vertex_boundary_markers)) {
+						//Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist
+						stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
+						nr_removed++;
+						dirty_boundary = true;
+						continue; //Go to the next stroke, don't update this ones' positions
+					}
+				}
+
+				for (int i = 0; i < 2; i++) {
+					SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
+				}
+
+				//Update the stroke positions after smoothing, in case their positions have changed (although they really shouldn't)
+				initial_stroke->update_Positions(V);
+				for (int i = 0; i < stroke_collection.size(); i++) {
+					stroke_collection[i].update_Positions(V);
+				}
+
+				viewervr.data.clear();
+				viewervr.data.set_mesh(V, F);
+				igl::per_face_normals(V, F, N_Faces);
+				viewer.data.set_normals(N_Faces);
+				viewer.core.align_camera_center(V, F);*/
+
+				cut_stroke_already_drawn = false; //Reset
+				draw_all_strokes(viewervr);
+			}
+			else { //We're finished drawing the cut stroke, prepare for when user draws the final stroke to remove the part
+				cut_stroke_already_drawn = true;
+			}
 		}
 
 		prev_tool_mode = NONE;

@@ -67,9 +67,8 @@ void Stroke::swap(Stroke & tmp) {//The pointers to V and F will always be the sa
 
 Stroke::~Stroke() {}
 
-/** Used for DRAW. Will add a new 2D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its unprojection as a 3D point with a z-value of 0. After adding the new point it will restart the timer. **/
+/** Used for DRAW. Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its projection as a 2D point (and stores the projected z-value). After adding the new point it will restart the timer. **/
 void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
-	//OpenGL has origin at left bottom, window(s) has origin at left top
 
 	if (!stroke3DPoints.isZero() && pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
 		return;
@@ -78,12 +77,13 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 	if(!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if(timePast < 1000) {
-			//return;
+		if(timePast < 30000000) {
+			return;
 		}
 	}
 	Eigen::RowVector3d pt2D;
-	Eigen::Matrix4f modelview = viewervr.corevr.view * viewervr.corevr.model;
+	Eigen::Matrix4f modelview = viewervr.start_draw_view * viewervr.corevr.model;
+
 	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
 	igl::project(pos_in, modelview, viewervr.corevr.proj, viewervr.corevr.viewport, pt2D);
 	double dep_val = pt2D[2];
@@ -171,24 +171,40 @@ bool Stroke::strokeAddSegmentAdd(Eigen::Vector3f& pos) {
 
 
 /** Used for CUT. Will add a new 2D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its unprojection onto the existing as a 3D point. If the unprojection isn't on the mesh, it will unproject it and use it as the start or end point. After adding the new point it will restart the timer. **/
-/*void Stroke::strokeAddSegmentCut(int mouse_x, int mouse_y) {
-	//OpenGL has origin at left bottom, window(s) has origin at left top
-	double x = mouse_x;
-	double y = viewervr.core.viewport(3) - mouse_y;
-	if(!empty2D() && x == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && y == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) { //Check that the point is new compared to last time
+void Stroke::strokeAddSegmentCut(Eigen::Vector3f& pos) {
+	if (!stroke3DPoints.isZero() && pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
 		return;
 	}
 
-	if(!empty2D()) {
+	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if(timePast < 10000000) {
+		if (timePast < 30000000) {
 			return;
 		}
 	}
 
-	Eigen::Matrix4f modelview = viewervr.core.view * viewervr.core.model;
-	Eigen::RowVector3d pt(0, 0, 0);
+
+	Eigen::RowVector3d pt2D;
+	Eigen::Matrix4f modelview = viewervr.start_draw_view * viewervr.corevr.model;
+
+	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
+	igl::project(pos_in, modelview, viewervr.corevr.proj, viewervr.corevr.viewport, pt2D); //Get projected 2D point
+	double dep_val = pt2D[2];
+
+
+	Eigen::Vector3f s, dir;
+	Eigen::Vector2f point_in = pt2D.leftCols(2).cast<float>();
+	modelview = viewervr.corevr.view * viewervr.corevr.model;
+	igl::unproject_ray(point_in, modelview, viewervr.corevr.proj, viewervr.corevr.viewport, s, dir); //Gives a ray straight from left eye to screen point
+
+	Eigen::MatrixX3d ray_points(2, 3);
+	ray_points.row(0) = s.cast<double>();
+	ray_points.row(1) = (s + dir * 2).cast<double>();
+	viewervr.data.set_stroke_points(ray_points);
+
+
+	/*Eigen::RowVector3d pt(0, 0, 0);
 	int faceID = -1;
 
 	Eigen::Vector3f bc;
@@ -223,11 +239,11 @@ bool Stroke::strokeAddSegmentAdd(Eigen::Vector3f& pos) {
 		stroke2DPoints.row(0) << x, y;
 		stroke3DPoints.row(0) = tmp;
 		stroke_color = Eigen::RowVector3d(1, 0, 0);
-	}
+	}*/
 
 	_time1 = std::chrono::high_resolution_clock::now();
 	return;
-}*/
+}
 
 /** Used for EXTRUDE. Extrusion base strokes need to be drawn entirely on the mesh (points outside of it will be ignored) and needs to surround at least one whole triangle. Will add a new 2D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its unprojection onto the existing mesh as a 3D point. After adding the new point it will restart the timer. The closest vertex bindings are handled in SurfacePath. **/
 /*void Stroke::strokeAddSegmentExtrusionBase(int mouse_x, int mouse_y) {
@@ -356,7 +372,7 @@ bool Stroke::toLoop() {
 unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke) {
 	counter_clockwise(); //Ensure the stroke is counter-clockwise, handy later
 	Eigen::MatrixXd original_stroke2DPoints = stroke2DPoints;
-	//stroke2DPoints = resample_stroke2D(original_stroke2DPoints); //TODO: decide on whether to include this or not. Might give a discrepancy between what is drawn and the result you get
+	stroke2DPoints = resample_stroke2D(original_stroke2DPoints); //TODO: decide on whether to include this or not. Might give a discrepancy between what is drawn and the result you get
 
 	Eigen::MatrixXd V2_tmp, V2;
 	Eigen::MatrixXi F2, F2_back, vertex_markers, edge_markers;
@@ -365,7 +381,7 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 		stroke_edges.row(i) << i, ((i + 1) % stroke2DPoints.rows());
 	}
 
-	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq45", V2_tmp, F2, vertex_markers, edge_markers); //TODO: CHange this back to minimum angle of 25 degrees
+	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "Yq25", V2_tmp, F2, vertex_markers, edge_markers); //TODO: CHange this back to minimum angle of 25 degrees
 	double mean_Z = stroke3DPoints.col(2).mean();
 	V2 = Eigen::MatrixXd::Constant(V2_tmp.rows(), V2_tmp.cols() + 1, mean_Z);
 
@@ -434,7 +450,9 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	V2_with_dep.leftCols(2) = V2.leftCols(2);
 	V2_with_dep.col(2) = dep_tmp;
 	
-	Eigen::Matrix4f modelview = viewervr.corevr.view * viewervr.corevr.model;
+//	Eigen::Matrix4f modelview = viewervr.corevr.view * viewervr.corevr.model;
+	Eigen::Matrix4f modelview = viewervr.start_draw_view * viewervr.corevr.model;
+
 	igl::unproject(V2_with_dep, modelview, viewervr.corevr.proj, viewervr.corevr.viewport, V2_unproj);
 	V2.leftCols(2) = V2_unproj.leftCols(2);
 	
