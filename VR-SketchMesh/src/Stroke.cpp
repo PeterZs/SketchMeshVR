@@ -184,26 +184,45 @@ void Stroke::strokeAddSegmentCut(Eigen::Vector3f& pos) {
 		}
 	}
 
+	Eigen::Vector3d hit_pos;
+	vector<igl::Hit> hits;
+	cout << "original pos : " << pos << endl;
+	pos[0] += viewervr.current_eye_pos[0];
+	pos[2] += viewervr.current_eye_pos[2];
+	cout << "shiftedeye   " << viewervr.current_eye_pos << endl << endl;
+	if (igl::ray_mesh_intersect(pos, viewervr.right_touch_direction, V, F, hits)) {
+		hit_pos = V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v;
+		/*
+			Eigen::RowVector3d pt2D;
+			Eigen::Matrix4f modelview = viewervr.start_draw_view * viewervr.corevr.model;
 
-	Eigen::RowVector3d pt2D;
-	Eigen::Matrix4f modelview = viewervr.start_draw_view * viewervr.corevr.model;
-
-	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
-	igl::project(pos_in, modelview, viewervr.corevr.proj, viewervr.corevr.viewport, pt2D); //Get projected 2D point
-	double dep_val = pt2D[2];
+			Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
+			igl::project(pos_in, modelview, viewervr.corevr.proj, viewervr.corevr.viewport, pt2D); //Get projected 2D point
+			double dep_val = pt2D[2];
 
 
-	Eigen::Vector3f s, dir;
-	Eigen::Vector2f point_in = pt2D.leftCols(2).cast<float>();
-	modelview = viewervr.corevr.view * viewervr.corevr.model;
-	igl::unproject_ray(point_in, modelview, viewervr.corevr.proj, viewervr.corevr.viewport, s, dir); //Gives a ray straight from left eye to screen point
+			Eigen::Vector3f s, dir;
+			Eigen::Vector2f point_in = pt2D.leftCols(2).cast<float>();
+			modelview = viewervr.corevr.view * viewervr.corevr.model;
+			igl::unproject_ray(point_in, modelview, viewervr.corevr.proj, viewervr.corevr.viewport, s, dir); //Gives a ray straight from left eye to screen point
+
+			Eigen::MatrixX3d ray_points(2, 3);
+			ray_points.row(0) = s.cast<double>();
+			ray_points.row(1) = (s + dir * 2).cast<double>();
+			viewervr.data.set_stroke_points(ray_points);
+			*/
+
+		
+	}
+	else {
+		hit_pos = (pos + 1000*viewervr.right_touch_direction).cast<double>();
+	}
+	cout << "result pos " << pos << endl;
 
 	Eigen::MatrixX3d ray_points(2, 3);
-	ray_points.row(0) = s.cast<double>();
-	ray_points.row(1) = (s + dir * 2).cast<double>();
+	ray_points.row(0) = pos.cast<double>();
+	ray_points.row(1) = hit_pos;
 	viewervr.data.set_stroke_points(ray_points);
-
-
 	/*Eigen::RowVector3d pt(0, 0, 0);
 	int faceID = -1;
 
@@ -381,7 +400,7 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 		stroke_edges.row(i) << i, ((i + 1) % stroke2DPoints.rows());
 	}
 
-	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "Yq25", V2_tmp, F2, vertex_markers, edge_markers); //TODO: CHange this back to minimum angle of 25 degrees
+	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq25", V2_tmp, F2, vertex_markers, edge_markers); //TODO: CHange this back to minimum angle of 25 degrees
 	double mean_Z = stroke3DPoints.col(2).mean();
 	V2 = Eigen::MatrixXd::Constant(V2_tmp.rows(), V2_tmp.cols() + 1, mean_Z);
 

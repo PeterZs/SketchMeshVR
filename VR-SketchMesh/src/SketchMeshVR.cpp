@@ -146,7 +146,6 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 
 	if (tool_mode == DRAW) { //Creating the first curve/mesh
 		if (prev_tool_mode == NONE) {
-			cout << "start drawing" << endl;
 			viewervr.data.clear_without_floor();
 			viewervr.start_draw_view = viewervr.corevr.view;
 			stroke_collection.clear();
@@ -158,7 +157,6 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 		}
 		else if (prev_tool_mode == DRAW) {
 			//We had already started drawing, continue
-			cout << "keep drawing" << endl;
 			initial_stroke->strokeAddSegment(pos);
 			return true;
 		}
@@ -232,6 +230,8 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 				Eigen::MatrixXd strokePoints = V.block(0, 0, strokeSize, 3);
 				viewervr.data.set_points(strokePoints, Eigen::RowVector3d(1, 0, 0)); //Displays dots
 				viewervr.data.set_stroke_points(igl::cat(1, strokePoints, (Eigen::MatrixXd) V.row(0)));
+
+				cout << "V " << V << endl;
 
 			}
 			hand_has_moved = false;
