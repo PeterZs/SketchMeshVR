@@ -15,6 +15,7 @@
 #include <SketchMeshVR.h>
 #include <Stroke.h>
 #include "SurfaceSmoothing.h"
+#include "MeshCut.h"
 
 
 using namespace std;
@@ -106,12 +107,8 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
     if(pressed == ViewerVR::ButtonCombo::GRIPTRIG){
         pressed_type = DRAW;
     }else if(pressed == ViewerVR::ButtonCombo::GRIP){
-		cout << "cutting" << endl;
-
 		pressed_type = CUT;
     }else if(pressed == ViewerVR::ButtonCombo::TRIG){
-		cout << "pulling" << endl;
-
 		pressed_type = PULL;
     }else if(pressed == ViewerVR::ButtonCombo::A){
         
@@ -147,7 +144,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 	if (tool_mode == DRAW) { //Creating the first curve/mesh
 		if (prev_tool_mode == NONE) {
 			viewervr.data.clear_without_floor();
-			viewervr.start_draw_view = viewervr.corevr.view;
+			viewervr.start_action_view = viewervr.corevr.view;
 			stroke_collection.clear();
 			next_added_stroke_ID = 2;
 			initial_stroke->strokeReset();
@@ -166,6 +163,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
             added_stroke = new Stroke(V, F, viewervr, next_added_stroke_ID);
             next_added_stroke_ID++;
             added_stroke->strokeAddSegmentAdd(pos); //If the user starts outside of the mesh, consider the movement as navigation
+			prev_tool_mode = ADD;
 			skip_standardcallback = true;
         }else if(prev_tool_mode == ADD){
             last_add_on_mesh = added_stroke->strokeAddSegmentAdd(pos);
@@ -175,12 +173,16 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 	else if (tool_mode == CUT) {
 		if (prev_tool_mode == NONE) {
 			if (cut_stroke_already_drawn) { //clicked while cut stroke already drawn
+				cout << "return after second click" << endl;
+				prev_tool_mode = CUT;
 				return true;
 			}
 			//clicked with no cut stroke drawn yet
 			added_stroke = new Stroke(V, F, viewervr, next_added_stroke_ID);
+			viewervr.start_action_view = viewervr.corevr.view;
 			next_added_stroke_ID++;
 			added_stroke->strokeAddSegmentCut(pos);
+			prev_tool_mode = CUT;
 			skip_standardcallback = true;
 		}
 		else if (prev_tool_mode == CUT) {
@@ -196,7 +198,6 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 		}
 
 		else if (prev_tool_mode == DRAW) {
-			cout << "Stop drawing" << endl;
 			initial_stroke->strokeAddSegment(pos);
 			if (initial_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
 										   //Give some time to show the stroke
@@ -230,9 +231,6 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 				Eigen::MatrixXd strokePoints = V.block(0, 0, strokeSize, 3);
 				viewervr.data.set_points(strokePoints, Eigen::RowVector3d(1, 0, 0)); //Displays dots
 				viewervr.data.set_stroke_points(igl::cat(1, strokePoints, (Eigen::MatrixXd) V.row(0)));
-
-				cout << "V " << V << endl;
-
 			}
 			hand_has_moved = false;
 			skip_standardcallback = false;
@@ -254,15 +252,23 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 		else if (prev_tool_mode == PULL && handleID != -1 && hand_has_moved) { //TODO: take care of hand_has_moved logic
 		}
 		else if (prev_tool_mode == CUT) {
+			cout << " ending cut" << endl;
 			if (!added_stroke->has_points_on_mesh) {
+				cout << "no points on mesh" << endl;
 				hand_has_moved = false;
 				return true;
 			}
 			if (cut_stroke_already_drawn) { //User had already drawn the cut stroke and has now drawn the final stroke for removing the part
+				cout << " get here" << endl;
 				dirty_boundary = true;
+				cout << "before" << added_stroke->get3DPoints() << endl << endl << added_stroke->get_stroke2DPoints() << endl << endl;
+
+				added_stroke->prepend_first_point();
 				added_stroke->append_final_point();
 				added_stroke->toLoop();
-				/*MeshCut::cut(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, *added_stroke);
+
+				cout << added_stroke->get3DPoints() << endl << endl << added_stroke->get_stroke2DPoints() << endl << endl;
+				MeshCut::cut(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, *added_stroke);
 				stroke_collection.push_back(*added_stroke);
 
 				initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers);//Don't test if the initial one dies, cause then we have mayhem anyway? TODO
@@ -288,16 +294,15 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 					stroke_collection[i].update_Positions(V);
 				}
 
-				viewervr.data.clear();
-				viewervr.data.set_mesh(V, F);
-				igl::per_face_normals(V, F, N_Faces);
-				viewer.data.set_normals(N_Faces);
-				viewer.core.align_camera_center(V, F);*/
+				viewervr.data.clear_all();
+				viewervr.data.set_mesh_with_floor(V, F);
+				viewervr.data.compute_normals(); 
 
 				cut_stroke_already_drawn = false; //Reset
 				draw_all_strokes(viewervr);
 			}
 			else { //We're finished drawing the cut stroke, prepare for when user draws the final stroke to remove the part
+				cout << "setting already drawwn" << endl;
 				cut_stroke_already_drawn = true;
 			}
 		}

@@ -19,7 +19,8 @@ public:
 	void strokeAddSegmentCut(Eigen::Vector3f & pos);
 	void strokeAddSegmentExtrusionBase(int mouse_x, int mouse_y);
 	void strokeAddSegmentExtrusionSilhouette(int mouse_x, int mouse_y);
-    void append_final_point();
+	void prepend_first_point();
+	void append_final_point();
     void counter_clockwise();
     void strokeReset();
     void snap_to_vertices(Eigen::VectorXi & vertex_boundary_markers);
@@ -61,6 +62,10 @@ private:
 	Eigen::MatrixXd stroke2DPoints; //Used for early checking if point is new (in screen coordinates)
 	Eigen::RowVector3d cut_stroke_final_point; //Only used for cutting strokes. First point outside of the mesh
 	Eigen::RowVectorXd cut_stroke_final_point_2D;
+	Eigen::Vector3d pos_before_cut;
+	Eigen::Vector3d dir_before_cut;
+	Eigen::Vector3d pos_after_cut;
+	Eigen::Vector3d dir_after_cut;
 	bool just_came_from_mesh; //Used for cutting strokes only. Indicates whether this is the first point outside of the mesh after we've been drawing on the mesh
 	Eigen::VectorXd dep;
 
