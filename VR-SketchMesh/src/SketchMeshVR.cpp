@@ -102,14 +102,29 @@ void draw_all_strokes(ViewerVR& viewervr) {
 	}
 }
 
-bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewer::VR_Viewer& viewervr) {
-    ToolMode pressed_type;
+void select_dragging_handle(Eigen::Vector3f& pos) {
+    double closest_dist = INFINITY;
+    handleID = initial_stroke->selectClosestVertex(pos, closest_dist);
+    double current_closest = closest_dist;
+    closest_stroke_ID = -1;
+    int tmp_handleID;
+    for(int i = 0; i < stroke_collection.size(); i++) { //Additional strokes that cross the original stroke will never be selected as the pulled curve when the user clicks a vertex that also belongs to the original boundary, since their vertex positions are the same and we check for SMALLER distances
+        tmp_handleID = stroke_collection[i].selectClosestVertex(down_mouse_x, down_mouse_y, closest_dist); //Returns the index into stroke3DPoints of the closest point
+        if((closest_dist < current_closest) && (tmp_handleID != -1)) {
+            current_closest = closest_dist;
+            handleID = tmp_handleID;
+            closest_stroke_ID = i;
+        }
+    }
+}
+
+ToolMode get_chosen_mode(ViewerVR::ButtonCombo pressed){
     if(pressed == ViewerVR::ButtonCombo::GRIPTRIG){
-        pressed_type = DRAW;
+        return DRAW;
     }else if(pressed == ViewerVR::ButtonCombo::GRIP){
-		pressed_type = CUT;
+        return CUT;
     }else if(pressed == ViewerVR::ButtonCombo::TRIG){
-		pressed_type = PULL;
+        return PULL;
     }else if(pressed == ViewerVR::ButtonCombo::A){
         
     }else if(pressed == ViewerVR::ButtonCombo::B){
@@ -119,8 +134,13 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
     }else if(pressed == ViewerVR::ButtonCombo::Y){
         
     }else if(pressed == ViewerVR::ButtonCombo::NONE){
-        pressed_type = NONE;
+        return NONE;
     }
+}
+
+bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewer::VR_Viewer& viewervr) {
+    ToolMode pressed_type = get_chosen_mode;
+    
 
 	if (!((pos - prev_pos).isZero())) {
 		hand_has_moved = true;
@@ -192,6 +212,66 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 			return true;
 		}
 	}
+    else if (tool_mode == PULL){ //Dragging an existing curve
+        if(prev_tool_mode == NONE){
+        select_dragging_handle(pos);
+        
+        if(handleID == -1) {//User clicked too far from any of the stroke vertices
+            return false;
+        }
+        if(closest_stroke_ID == -1) {
+            CurveDeformation::startPullCurve(*initial_stroke, handleID);
+        } else {
+            CurveDeformation::startPullCurve(stroke_collection[closest_stroke_ID], handleID);
+        }
+        skip_standardcallback = true;
+        }
+        else if(prev_tool_mode == PULL){
+            Eigen::Matrix4f modelview = viewer.core.view * viewer.core.model;
+            int global_handleID;
+            if(closest_stroke_ID == -1) {
+                global_handleID = initial_stroke->get_vertex_idx_for_point(handleID);
+            } else {
+                global_handleID = stroke_collection[closest_stroke_ID].get_vertex_idx_for_point(handleID);
+            }
+            
+            //TODO: think about how to handle this in VR. Probably best to grab close to mesh and use the hands actual 3D position. Using a ray cast won't work because Z-axis information will not be taken into account, which makes you lose some of the extra possibilites that VR gives
+            Eigen::RowVector3f pt1(viewervr.data.V(global_handleID, 0), viewervr.data.V(global_handleID, 1), viewervr.data.V(global_handleID, 2));
+            
+            Eigen::RowVector3f pr;
+            igl::project(pt1, modelview, viewer.core.proj, viewer.core.viewport, pr);
+            Eigen::RowVector3d pt = igl::unproject(Eigen::Vector3f(x, y, pr[2]), modelview, viewer.core.proj, viewer.core.viewport).transpose().cast<double>();
+            
+            if(turnNr == 0) { //increase the number to smooth less often
+                CurveDeformation::pullCurve(pt, V, part_of_original_stroke);
+                if(dirty_boundary) { //Smooth an extra time if the boundary is dirty, because smoothing once with a dirty boundary results in a flat mesh
+                    for(int i = 0; i < 2; i++) {
+                        SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
+                    }
+                }
+                SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
+                
+                turnNr++;
+            } else {
+                turnNr++;
+                if(turnNr == 4) {
+                    turnNr = 0;
+                }
+            }
+            
+            initial_stroke->update_Positions(V);
+            for(int i = 0; i < stroke_collection.size(); i++) {
+                stroke_collection[i].update_Positions(V);
+            }
+            
+            viewervr.data.set_mesh_with_floor(V, F); //TODO: check that this does the right thing with regards to the floor
+            viewervr.data.compute_normals();
+            draw_all_strokes(viewervr);
+            
+            return true;
+        }
+
+    }
 	else if (tool_mode == NONE) {	//Have to finish up as if we're calling mouse_up()
 		if (prev_tool_mode == NONE) {
 			return true;
@@ -317,22 +397,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 }
 
 bool callback_mouse_down(ViewerVR& viewervr, int button, int modifier) {
-	/*if(button == (int)ViewerVR::MouseButton::Right) {
-		return false;
-	}
-	mouse_is_down = true;
-
-	down_mouse_x = viewervr.current_mouse_x;
-	down_mouse_y = viewervr.current_mouse_y;
-
-	if(tool_mode == DRAW) { //Creating the first curve/mesh
-		viewervr.data.clear();
-		stroke_collection.clear();
-		next_added_stroke_ID = 2;
-		initial_stroke->strokeReset();
-		initial_stroke->strokeAddSegment(down_mouse_x, down_mouse_y);
-		skip_standardcallback = true;
-	}*/ /*
+	/*
 	else if(tool_mode == ADD) { //Adding a new control curve onto an existing mesh
 		added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID);
 		next_added_stroke_ID++;
@@ -402,17 +467,7 @@ bool callback_mouse_down(ViewerVR& viewervr, int button, int modifier) {
 	} 
 	else if(tool_mode == NAVIGATE) { //Navigate through the screen
 		skip_standardcallback = false; //We do want to use the navigation functionality
-	} 
-	else if(tool_mode == CUT) {
-		if(cut_stroke_already_drawn) { //clicked while cut stroke already drawn
-			return true;
-		}
-		//clicked with no cut stroke drawn yet
-		added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID);
-		next_added_stroke_ID++;
-		added_stroke->strokeAddSegmentCut(down_mouse_x, down_mouse_y);
-		skip_standardcallback = true;
-	} 
+	}
 	else if(tool_mode == EXTRUDE) {
 		if(extrusion_base_already_drawn) { //clicked while the extrude base was already drawn
 			added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID);
@@ -433,16 +488,7 @@ bool callback_mouse_move(ViewerVR& viewervr, int mouse_x, int mouse_y) {
 	if(!skip_standardcallback) {
 		return false;
 	}
-
-	/*if(viewervr.down) { //Only consider it to be moving if the button was held down
-		hand_has_moved = true;
-	}
-
-
-	if(tool_mode == DRAW && viewervr.down) { //If we're still holding the mouse down
-		initial_stroke->strokeAddSegment(mouse_x, mouse_y);
-		return true;
-	}*/ /*
+/*
 	else if(tool_mode == ADD && viewer.down) {
 		last_add_on_mesh = added_stroke->strokeAddSegmentAdd(mouse_x, mouse_y);
 		return true;
@@ -499,12 +545,7 @@ bool callback_mouse_move(ViewerVR& viewervr, int mouse_x, int mouse_y) {
 
 		return true;
 	} 
-	else if(tool_mode == CUT && viewer.down) {
-		if(!cut_stroke_already_drawn) {
-			added_stroke->strokeAddSegmentCut(mouse_x, mouse_y);
-		}
-		return true;
-	}*/
+	*/
 
 	return false;
 }
@@ -515,42 +556,7 @@ bool callback_mouse_up(ViewerVR& viewervr, int button, int modifier) {
 	}
 	mouse_is_down = false;
 
-	/*if(tool_mode == DRAW) {
-		if(initial_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
-			//Give some time to show the stroke
-#ifdef _WIN32
-			Sleep(200);
-#else
-			usleep(200000); 
-#endif
-			backside_vertex_map = initial_stroke->generate3DMeshFromStroke(vertex_boundary_markers, part_of_original_stroke);
-			F = viewervr.data.F;
-			V = viewervr.data.V;
-
-			Eigen::MatrixXi EV, FE, EF;
-			igl::edge_topology(V, F, EV, FE, EF);
-			sharp_edge.resize(EV.rows());
-			sharp_edge.setZero(); //Set all edges to smooth after initial draw
-
-			dirty_boundary = true;
-
-			for(int i = 0; i < initial_smooth_iter; i++) {
-				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
-			}
-
-
-			viewervr.data.set_mesh(V, F);
-			viewervr.data.compute_normals();
-
-			//Overlay the drawn stroke
-			int strokeSize = (vertex_boundary_markers.array() > 0).count();
-			Eigen::MatrixXd strokePoints = V.block(0, 0, strokeSize, 3);
-			viewervr.data.set_points(strokePoints, Eigen::RowVector3d(1, 0, 0)); //Displays dots
-			viewervr.data.set_stroke_points(igl::cat(1, strokePoints, (Eigen::MatrixXd) V.row(0)));
-
-		}
-		skip_standardcallback = false;
-	}*//*
+	/*
 	else if(tool_mode == ADD) {
 		dirty_boundary = true;
 		if(!added_stroke->has_points_on_mesh) {
@@ -710,64 +716,12 @@ bool callback_load_mesh(ViewerVR& viewervr, string filename) {
 int main(int argc, char *argv[]) {
 	ViewerVR viewervr;
 	igl::read_triangle_mesh("../data/cube.off", V, F);
-	//cout << V << endl << endl << F << endl;
 	viewervr.data.set_mesh_with_floor(V, F);
-/*	viewervr.callback_key_down = callback_key_down;
-	viewervr.callback_mouse_down = callback_mouse_down;
-	viewervr.callback_mouse_move = callback_mouse_move;
-	viewervr.callback_mouse_up = callback_mouse_up;
-	viewervr.core.point_size = 15;*/
+
+	//viewervr.core.point_size = 15;
 	//viewer.callback_load_mesh = callback_load_mesh;
 
-	/*viewer.callback_init = [&](igl::viewer::Viewer& viewer) {
-		// Add new group
-		viewer.ngui->addGroup("Inflation");
-
-		// Expose a variable directly ...
-		viewer.ngui->addVariable("Vertex Weights", SurfaceSmoothing::vertex_weight);
-		viewer.ngui->addVariable("Edge Weights", SurfaceSmoothing::edge_weight);
-
-
-		// Expose a variable directly ...
-		viewer.ngui->addVariable("Initial smoothing iterations", initial_smooth_iter);
-
-
-		// Add a button
-		viewer.ngui->addButton("Perform 1 smoothing iteration", [&viewer]() {
-			SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
-			viewer.data.set_mesh(V, F);
-			viewer.data.compute_normals();
-
-
-			for(int i = 0; i < stroke_collection.size(); i++) {
-				stroke_collection[i].update_Positions(V);
-			}
-
-			//Overlay the updated stroke
-			initial_stroke->update_Positions(V);
-			Eigen::MatrixXd init_points = initial_stroke->get3DPoints();
-			viewer.data.set_points(init_points.topRows(init_points.rows() - 1), Eigen::RowVector3d(1, 0, 0));
-			viewer.data.set_stroke_points(init_points);
-
-			viewer.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0, 0, 1));
-			Eigen::MatrixXd added_points;
-			int points_to_hold_back;
-			for(int i = 0; i < stroke_collection.size(); i++) {
-				added_points = stroke_collection[i].get3DPoints();
-				points_to_hold_back = 1 + !stroke_collection[i].is_loop;
-				viewer.data.add_points(added_points.topRows(added_points.rows() - 1), stroke_collection[i].stroke_color);
-				viewer.data.add_edges(added_points.block(0, 0, added_points.rows() - points_to_hold_back, 3), added_points.block(1, 0, added_points.rows() - points_to_hold_back, 3), stroke_collection[i].stroke_color);// Eigen::RowVector3d(0, 0, 1));
-			}
-
-		});
-
-		viewer.ngui->addGroup("Curve deformation");
-		viewer.ngui->addVariable<bool>("Smooth deformation", CurveDeformation::smooth_deform_mode);
-
-		// call to generate menu
-		viewer.screen->performLayout();
-		return false;
-	};*/
+	
 
 	//Init stroke selector
 	initial_stroke = new Stroke(V, F, viewervr, 0);
@@ -782,7 +736,6 @@ int main(int argc, char *argv[]) {
 
 //	callback_key_down(viewervr, '1', 0);
 
-	//viewer.core.align_camera_center(V);
     viewervr.init();
 	viewervr.callback_button_down = button_down;
 

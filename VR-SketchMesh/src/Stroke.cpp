@@ -557,12 +557,45 @@ void Stroke::generate_backfaces(Eigen::MatrixXi &faces, Eigen::MatrixXi &back_fa
 }
 
 /** Returns the ID of the stroke's 3D point that is closest to where the user clicked. Stores the distance to this point in closest_distance. If the user clicked too far away from any of the stroke's points, it will return -1. **/
-/*int Stroke::selectClosestVertex(int mouse_x, int mouse_y, double& closest_distance) {
-	double x = mouse_x;
-	double y = viewervr.core.viewport(3) - mouse_y;
+int Stroke::selectClosestVertex(Eigen::Vector3f& pos, double& closest_distance) {
+    //First try to unproject the ray onto the mesh. If there is a hit, then take that as the point to compare with all the stroke points (in 3D)
+    //If we do not hit the mesh, then loop over all stroke points and for each of them find the closest point along the ray. Compare all distances and keep the closest.
+    
+    double closest_dist = INFINITY, dist;
+    int closest_ID;
+    
+    Eigen::RowVector3d hit_pos;
+    vector<igl::Hit> hits;
+    pos[0] += viewervr.current_eye_pos[0];
+    pos[2] += viewervr.current_eye_pos[2];
+    
+    if (igl::ray_mesh_intersect(pos, viewervr.right_touch_direction, V, F, hits)){
+        hit_pos = V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v;
+        
+        for(int i=0;i<stroke3DPoints.rows();i++){
+            dist = (stroke3DPoints.row(i) - hit_pos).squaredNorm();
+            if(dist < closest_dist){
+                closest_dist = dist;
+                closest_ID = i;
+            }
+        }
+        
 
-	Eigen::Matrix4f modelview = viewervr.start_action_view * viewervr.core.model;
-	Eigen::RowVector3d pt, vert, clicked_pt(x, y, 0);
+    }else{
+        Eigen::Vector3d test_point;
+        for(int i=0;i<stroke3DPoints.rows();i++){
+            test_point = pos + (stroke3DPoints.row(i).transpose() - pos).dot(viewervr.right_touch_direction.normalized()) * viewervr.right_touch_direction.normalized(); //The closest point Pr along a line that starts from P1 and does in direction dir to point P2 is as follows: Pr = P1 + (P2 - P1).dot(dir) * dir with dir normalized
+            dist = (stroke3DPoints.row(i).transpose() - test_point).squaredNorm();
+            if(dist < closest_dist){
+                closest_dist = dist;
+                closest_ID = i;
+            }
+        }
+    }
+    
+    
+    
+	/*Eigen::RowVector3d pt, vert, clicked_pt(x, y, 0);
 	double closest_dist = INFINITY, dist;
 	int closest_ID;
 
@@ -574,7 +607,7 @@ void Stroke::generate_backfaces(Eigen::MatrixXi &faces, Eigen::MatrixXi &back_fa
 			closest_dist = dist;
 			closest_ID = i;
 		}
-	}
+	}*/
 
 	closest_dist = sqrt(closest_dist);
 	double stroke_diag = compute_stroke_diag();
@@ -585,7 +618,7 @@ void Stroke::generate_backfaces(Eigen::MatrixXi &faces, Eigen::MatrixXi &back_fa
 		return -1;
 	}
 	return closest_ID;
-}*/
+}
 
 double Stroke::compute_stroke_diag() {
 	Eigen::Vector3d maxBB = stroke3DPoints.colwise().maxCoeff();
