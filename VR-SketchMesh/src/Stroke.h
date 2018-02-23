@@ -17,8 +17,8 @@ public:
 	void strokeAddSegment(Eigen::Vector3f& pos);
 	bool strokeAddSegmentAdd(Eigen::Vector3f & pos);
 	void strokeAddSegmentCut(Eigen::Vector3f & pos);
-	void strokeAddSegmentExtrusionBase(int mouse_x, int mouse_y);
-	void strokeAddSegmentExtrusionSilhouette(int mouse_x, int mouse_y);
+	void strokeAddSegmentExtrusionBase(Eigen::Vector3f & pos);
+	void strokeAddSegmentExtrusionSilhouette(Eigen::Vector3f & pos);
 	void prepend_first_point();
 	void append_final_point();
     void counter_clockwise();
@@ -39,6 +39,8 @@ public:
     Eigen::MatrixXi get_F() const;
     Eigen::MatrixXd get_stroke2DPoints() const;
     Eigen::MatrixX3d get3DPoints();
+	Eigen::MatrixX3d get3DPointsBack();
+	Eigen::MatrixXi get_hit_faces();
 	std::vector<int> get_closest_vert_bindings();
     void set3DPoints(Eigen::MatrixX3d new_3DPoints);
     void set_closest_vert_bindings(std::vector<int> new_vert_bindings);
@@ -59,7 +61,9 @@ private:
 	int stroke_ID; //Non-const for the sake of copy assignment operator 
 
 	Eigen::MatrixX3d stroke3DPoints;
+	Eigen::MatrixX3d stroke3DPointsBack;
 	Eigen::MatrixXd stroke2DPoints; //Used for early checking if point is new (in screen coordinates)
+	Eigen::MatrixXi faces_hit;
 	Eigen::RowVector3d cut_stroke_final_point; //Only used for cutting strokes. First point outside of the mesh
 	Eigen::RowVectorXd cut_stroke_final_point_2D;
 	Eigen::Vector3d pos_before_cut;

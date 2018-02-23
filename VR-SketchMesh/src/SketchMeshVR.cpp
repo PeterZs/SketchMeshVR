@@ -16,6 +16,8 @@
 #include <Stroke.h>
 #include "SurfaceSmoothing.h"
 #include "MeshCut.h"
+#include "CurveDeformation.h"
+#include "MeshExtrusion.h"
 
 
 using namespace std;
@@ -80,6 +82,12 @@ int remove_stroke_clicked = 0;
 //Variables for cutting
 bool cut_stroke_already_drawn = false;
 
+//Variables for extrusion
+bool extrusion_base_already_drawn = false;
+SurfacePath base_surface_path;
+Eigen::Matrix4f base_model, base_view, base_proj;
+Eigen::Vector4f base_viewport;
+
 void draw_all_strokes(ViewerVR& viewervr) {
 	Eigen::MatrixXd added_points;
 	viewervr.data.set_points((Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), Eigen::RowVector3d(1, 0, 0)); //Display the original stroke points and clear all the rest. Don't take the last point
@@ -109,7 +117,7 @@ void select_dragging_handle(Eigen::Vector3f& pos) {
     closest_stroke_ID = -1;
     int tmp_handleID;
     for(int i = 0; i < stroke_collection.size(); i++) { //Additional strokes that cross the original stroke will never be selected as the pulled curve when the user clicks a vertex that also belongs to the original boundary, since their vertex positions are the same and we check for SMALLER distances
-        tmp_handleID = stroke_collection[i].selectClosestVertex(down_mouse_x, down_mouse_y, closest_dist); //Returns the index into stroke3DPoints of the closest point
+        tmp_handleID = stroke_collection[i].selectClosestVertex(pos, closest_dist); //Returns the index into stroke3DPoints of the closest point
         if((closest_dist < current_closest) && (tmp_handleID != -1)) {
             current_closest = closest_dist;
             handleID = tmp_handleID;
@@ -126,7 +134,7 @@ ToolMode get_chosen_mode(ViewerVR::ButtonCombo pressed){
     }else if(pressed == ViewerVR::ButtonCombo::TRIG){
         return PULL;
     }else if(pressed == ViewerVR::ButtonCombo::A){
-        
+		return EXTRUDE; //TODO: change so this is toggled with cut
     }else if(pressed == ViewerVR::ButtonCombo::B){
         
     }else if(pressed == ViewerVR::ButtonCombo::X){
@@ -139,7 +147,7 @@ ToolMode get_chosen_mode(ViewerVR::ButtonCombo pressed){
 }
 
 bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewer::VR_Viewer& viewervr) {
-    ToolMode pressed_type = get_chosen_mode;
+    ToolMode pressed_type = get_chosen_mode(pressed);
     
 
 	if (!((pos - prev_pos).isZero())) {
@@ -192,9 +200,9 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 	}
 	else if (tool_mode == CUT) {
 		if (prev_tool_mode == NONE) {
+			prev_tool_mode = CUT;
 			if (cut_stroke_already_drawn) { //clicked while cut stroke already drawn
 				cout << "return after second click" << endl;
-				prev_tool_mode = CUT;
 				return true;
 			}
 			//clicked with no cut stroke drawn yet
@@ -202,12 +210,36 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 			viewervr.start_action_view = viewervr.corevr.view;
 			next_added_stroke_ID++;
 			added_stroke->strokeAddSegmentCut(pos);
-			prev_tool_mode = CUT;
 			skip_standardcallback = true;
 		}
 		else if (prev_tool_mode == CUT) {
 			if (!cut_stroke_already_drawn) {
 				added_stroke->strokeAddSegmentCut(pos);
+			}
+			return true;
+		}
+	}
+	else if (tool_mode == EXTRUDE) {
+		if (prev_tool_mode == NONE) {
+			prev_tool_mode = EXTRUDE;
+			if (extrusion_base_already_drawn) { //clicked while the extrude base was already drawn
+				added_stroke = new Stroke(V, F, viewervr, next_added_stroke_ID);
+				next_added_stroke_ID++;
+				added_stroke->strokeAddSegmentExtrusionSilhouette(pos);
+			}
+			else { //clicked with no extrude base yet
+				extrusion_base = new Stroke(V, F, viewervr, next_added_stroke_ID);
+				next_added_stroke_ID++;
+				extrusion_base->strokeAddSegmentExtrusionBase(pos);
+			}
+			skip_standardcallback = true;
+		}
+		else if (prev_tool_mode == EXTRUDE) {
+			if (extrusion_base_already_drawn) {
+				added_stroke->strokeAddSegmentExtrusionSilhouette(pos);
+			}
+			else {
+				extrusion_base->strokeAddSegmentExtrusionBase(pos);
 			}
 			return true;
 		}
@@ -227,7 +259,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
         skip_standardcallback = true;
         }
         else if(prev_tool_mode == PULL){
-            Eigen::Matrix4f modelview = viewer.core.view * viewer.core.model;
+           /* Eigen::Matrix4f modelview = viewer.core.view * viewer.core.model;
             int global_handleID;
             if(closest_stroke_ID == -1) {
                 global_handleID = initial_stroke->get_vertex_idx_for_point(handleID);
@@ -268,7 +300,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
             viewervr.data.compute_normals();
             draw_all_strokes(viewervr);
             
-            return true;
+            return true;*/
         }
 
     }
@@ -386,6 +418,67 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 				cut_stroke_already_drawn = true;
 			}
 		}
+		else if (prev_tool_mode == EXTRUDE) {
+			if (extrusion_base_already_drawn) { //User has drawn the silhouette stroke for extrusion
+				dirty_boundary = true;
+				cout << "mouse released after extrusion silhouette drawn" << endl;
+				added_stroke->toLoop();
+				MeshExtrusion::extrude_main(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, base_surface_path, *added_stroke, *extrusion_base, base_model, base_view, base_proj, base_viewport);
+				stroke_collection.push_back(*extrusion_base);
+				stroke_collection.push_back(*added_stroke);
+
+				initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers);
+
+				int nr_removed = 0, original_collection_size = stroke_collection.size();
+				for (int i = 0; i < original_collection_size - 1; i++) { //Skip the newly added stroke since it is already updated inside extrude_main()
+					if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, vertex_boundary_markers)) {
+						//Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist (or in case of non-loop strokes that have a middle portion removed, the undo_stroke_add is done inside of the update_vert_bindings
+						stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
+						nr_removed++;
+						dirty_boundary = true;
+						continue; //Go to the next stroke, don't update this ones' positions
+					}
+				}
+
+				for (int i = 0; i < 3; i++) {
+					SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
+				}
+
+				//Update the stroke positions after smoothing, in case their positions have changed (although they really shouldn't)
+				initial_stroke->update_Positions(V);
+				for (int i = 0; i < stroke_collection.size() - 1; i++) {
+					stroke_collection[i].update_Positions(V);
+				}
+
+				viewervr.data.clear_without_floor();
+				viewervr.data.set_mesh(V, F); //TODO check that this works
+
+				viewervr.data.compute_normals(); //TODO: check that this uses face-based normals
+
+				extrusion_base_already_drawn = false; //Reset
+				draw_all_strokes(viewervr);
+			}
+			else { //mouse released after extrusion base drawn
+				if (!extrusion_base->has_points_on_mesh) {
+					hand_has_moved = false;
+					return true;
+				}
+				//extrusion_base->resample_all(); //This will shrink the drawn stroke. Might result in no face being contained inside the stroke
+				dirty_boundary = true;
+				extrusion_base->toLoop();
+				extrusion_base_already_drawn = true;
+				MeshExtrusion::extrude_prepare(*extrusion_base, base_surface_path); //Don't need to update all strokes here, since it didn't remove any vertices
+
+				base_model = extrusion_base->viewervr.corevr.model;
+				base_view = extrusion_base->viewervr.corevr.view;
+				base_proj = extrusion_base->viewervr.corevr.proj;
+				base_viewport = extrusion_base->viewervr.corevr.viewport;
+
+				draw_all_strokes(viewervr);
+				draw_extrusion_base(viewervr); //Need to draw the extrusion base separately, since it isn't added to the stroke_collection yet.
+			}
+		}
+
 
 		prev_tool_mode = NONE;
 		return true;
@@ -468,17 +561,7 @@ bool callback_mouse_down(ViewerVR& viewervr, int button, int modifier) {
 	else if(tool_mode == NAVIGATE) { //Navigate through the screen
 		skip_standardcallback = false; //We do want to use the navigation functionality
 	}
-	else if(tool_mode == EXTRUDE) {
-		if(extrusion_base_already_drawn) { //clicked while the extrude base was already drawn
-			added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID);
-			next_added_stroke_ID++;
-			added_stroke->strokeAddSegmentExtrusionSilhouette(down_mouse_x, down_mouse_y);
-		} else { //clicked with no extrude base yet
-			extrusion_base = new Stroke(V, F, viewer, next_added_stroke_ID);
-			next_added_stroke_ID++;
-			extrusion_base->strokeAddSegmentExtrusionBase(down_mouse_x, down_mouse_y);
-		}
-		skip_standardcallback = true;
+	
 	}*/
 
 	return skip_standardcallback; //Will make sure that we use standard navigation responses if we didn't do special actions and vice versa
@@ -491,14 +574,6 @@ bool callback_mouse_move(ViewerVR& viewervr, int mouse_x, int mouse_y) {
 /*
 	else if(tool_mode == ADD && viewer.down) {
 		last_add_on_mesh = added_stroke->strokeAddSegmentAdd(mouse_x, mouse_y);
-		return true;
-	} 
-	else if(tool_mode == EXTRUDE && viewer.down) {
-		if(extrusion_base_already_drawn) {
-			added_stroke->strokeAddSegmentExtrusionSilhouette(mouse_x, mouse_y);
-		} else {
-			extrusion_base->strokeAddSegmentExtrusionBase(mouse_x, mouse_y);
-		}
 		return true;
 	} 
 	else if(tool_mode == PULL && viewer.down && handleID != -1) {
@@ -588,113 +663,7 @@ bool callback_mouse_up(ViewerVR& viewervr, int button, int modifier) {
 		draw_all_strokes(viewer);
 
 	} 
-	else if(tool_mode == CUT) {
-		if(!added_stroke->has_points_on_mesh) {
-			hand_has_moved = false;
-			return true;
-		}
-		if(cut_stroke_already_drawn) { //User had already drawn the cut stroke and has now drawn the final stroke for removing the part
-			dirty_boundary = true;
-			added_stroke->append_final_point();
-			added_stroke->toLoop();
-			MeshCut::cut(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, *added_stroke);
-			stroke_collection.push_back(*added_stroke);
 
-			initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers);//Don't test if the initial one dies, cause then we have mayhem anyway? TODO
-			
-			int nr_removed = 0, original_collection_size = stroke_collection.size();
-			for(int i = 0; i < original_collection_size; i++) {
-				if(!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, vertex_boundary_markers)) {
-					//Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist
-					stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
-					nr_removed++;
-					dirty_boundary = true;
-					continue; //Go to the next stroke, don't update this ones' positions
-				}
-			}
-
-			for(int i = 0; i < 2; i++) {
-				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
-			}
-
-			//Update the stroke positions after smoothing, in case their positions have changed (although they really shouldn't)
-			initial_stroke->update_Positions(V);
-			for(int i = 0; i < stroke_collection.size(); i++) {
-				stroke_collection[i].update_Positions(V);
-			}
-
-			viewer.data.clear();
-			viewer.data.set_mesh(V, F);
-			igl::per_face_normals(V, F, N_Faces);
-			viewer.data.set_normals(N_Faces);
-			viewer.core.align_camera_center(V, F);
-
-			cut_stroke_already_drawn = false; //Reset
-			draw_all_strokes(viewer);
-		} else { //We're finished drawing the cut stroke, prepare for when user draws the final stroke to remove the part
-			cut_stroke_already_drawn = true;
-		}
-	} 
-	else if(tool_mode == EXTRUDE) {
-		if(extrusion_base_already_drawn) { //User has drawn the silhouette stroke for extrusion
-			dirty_boundary = true;
-			cout << "mouse released after extrusion silhouette drawn" << endl;
-			added_stroke->toLoop();
-			MeshExtrusion::extrude_main(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, base_surface_path, *added_stroke, *extrusion_base, base_model, base_view, base_proj, base_viewport);
-			stroke_collection.push_back(*extrusion_base);
-			stroke_collection.push_back(*added_stroke);
-
-			initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers);
-
-			int nr_removed = 0, original_collection_size = stroke_collection.size();
-			for(int i = 0; i < original_collection_size - 1; i++) { //Skip the newly added stroke since it is already updated inside extrude_main()
-				if(!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, vertex_boundary_markers)) {
-					//Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist (or in case of non-loop strokes that have a middle portion removed, the undo_stroke_add is done inside of the update_vert_bindings
-					stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
-					nr_removed++;
-					dirty_boundary = true;
-					continue; //Go to the next stroke, don't update this ones' positions
-				}
-			}
-
-			for(int i = 0; i < 3; i++) {
-				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
-			}
-
-			//Update the stroke positions after smoothing, in case their positions have changed (although they really shouldn't)
-			initial_stroke->update_Positions(V);
-			for(int i = 0; i < stroke_collection.size()-1; i++) {
-				stroke_collection[i].update_Positions(V);
-			}
-
-			viewer.data.clear();
-			viewer.data.set_mesh(V, F);
-
-			igl::per_face_normals(V, F, N_Faces);
-			viewer.data.set_normals(N_Faces);
-			viewer.core.align_camera_center(V, F);
-
-			extrusion_base_already_drawn = false; //Reset
-			draw_all_strokes(viewer);
-		} else { //mouse released after extrusion base drawn
-			if(!extrusion_base->has_points_on_mesh) {
-				hand_has_moved = false;
-				return true;
-			}
-			//extrusion_base->resample_all(); //This will shrink the drawn stroke. Might result in no face being contained inside the stroke
-			dirty_boundary = true;
-			extrusion_base->toLoop();
-			extrusion_base_already_drawn = true;
-			MeshExtrusion::extrude_prepare(*extrusion_base, base_surface_path); //Don't need to update all strokes here, since it didn't remove any vertices
-
-			base_model = extrusion_base->viewer.core.model;
-			base_view = extrusion_base->viewer.core.view;
-			base_proj = extrusion_base->viewer.core.proj;
-			base_viewport = extrusion_base->viewer.core.viewport;
-
-			draw_all_strokes(viewer);
-			draw_extrusion_base(viewer); //Need to draw the extrusion base separately, since it isn't added to the stroke_collection yet.
-		}
 	}*/
 
 	hand_has_moved = false;
@@ -718,7 +687,7 @@ int main(int argc, char *argv[]) {
 	igl::read_triangle_mesh("../data/cube.off", V, F);
 	viewervr.data.set_mesh_with_floor(V, F);
 
-	//viewervr.core.point_size = 15;
+	viewervr.corevr.point_size = 15;
 	//viewer.callback_load_mesh = callback_load_mesh;
 
 	

@@ -19,13 +19,15 @@ public:
 
 private:
 	int extend_path(int prev_p, int next_p, int faceID, bool& forward, Eigen::Matrix4f modelview);
-	int find_next_edge(std::pair<int, int> strokeEdge, int prev_edge, int polygon, Eigen::Matrix4f modelview);
+	int find_next_edge(std::pair<int, int> strokeEdge, int prev_edge, int polygon, bool on_front_side);
     int cross_prod2D(Eigen::Vector2d vec0, Eigen::Vector2d vec1);
 	bool edges2D_cross(std::pair<Eigen::Vector2d, Eigen::Vector2d> edge1, std::pair<Eigen::Vector2d, Eigen::Vector2d> edge2);
 	bool front_facing(int faceID);
 	bool is_counter_clockwise(int faceID);
 	bool is_projected_inside(Eigen::RowVector2d v, int face, Eigen::Matrix4f modelview);
 	Eigen::Vector3d unproject_onto_polygon(Eigen::Vector2d, int faceID, Eigen::Matrix4f modelview);
+
+	Eigen::MatrixX3d create_loop_from_front_and_back(Eigen::MatrixX3d & front_3DPoints, Eigen::MatrixX3d & back_3DPoints);
 
 	std::vector<PathElement> path;
 };
