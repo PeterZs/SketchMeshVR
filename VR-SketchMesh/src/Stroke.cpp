@@ -314,7 +314,7 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 			stroke3DPoints.row(stroke3DPoints.rows() - 1) << hit_pos[0], hit_pos[1], hit_pos[2];
 
 			faces_hit.conservativeResize(faces_hit.rows() + 1, Eigen::NoChange);
-			faces_hit.row(faces_hit.rows() - 1) << hits[0].id, hits[1].id, hits[2].id;
+			faces_hit.row(faces_hit.rows() - 1) << hits[0].id, hits[1].id;
 			cout << "faces hit: " << hits[0].id << " " << hits[1].id << endl;
 
 		}
@@ -611,7 +611,7 @@ int Stroke::selectClosestVertex(Eigen::Vector3f& pos, double& closest_distance) 
     pos[0] += viewervr.current_eye_pos[0];
     pos[2] += viewervr.current_eye_pos[2];
     
-    if (igl::ray_mesh_intersect(pos, viewervr.right_touch_direction, V, F, hits)){
+  /*  if (igl::ray_mesh_intersect(pos, viewervr.right_touch_direction, V, F, hits)){
         hit_pos = V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v;
         
         for(int i=0;i<stroke3DPoints.rows();i++){
@@ -623,17 +623,18 @@ int Stroke::selectClosestVertex(Eigen::Vector3f& pos, double& closest_distance) 
         }
         
 
-    }else{
+    }else{*/
         Eigen::Vector3f test_point;
+		test_point = pos;
         for(int i=0;i<stroke3DPoints.rows();i++){
-            test_point = pos + (stroke3DPoints.row(i).transpose().cast<float>() - pos).dot(viewervr.right_touch_direction.normalized()) * viewervr.right_touch_direction.normalized(); //The closest point Pr along a line that starts from P1 and does in direction dir to point P2 is as follows: Pr = P1 + (P2 - P1).dot(dir) * dir with dir normalized
+          //  test_point = pos + (stroke3DPoints.row(i).transpose().cast<float>() - pos).dot(viewervr.right_touch_direction.normalized()) * viewervr.right_touch_direction.normalized(); //The closest point Pr along a line that starts from P1 and does in direction dir to point P2 is as follows: Pr = P1 + (P2 - P1).dot(dir) * dir with dir normalized
             dist = (stroke3DPoints.row(i).transpose().cast<float>() - test_point).squaredNorm();
             if(dist < closest_dist){
                 closest_dist = dist;
                 closest_ID = i;
             }
         }
-    }
+    //}
     
     
     

@@ -110,6 +110,14 @@ void draw_all_strokes(ViewerVR& viewervr) {
 	}
 }
 
+void draw_extrusion_base(ViewerVR& viewervr) {
+	int points_to_hold_back;
+	Eigen::MatrixXd added_points = extrusion_base->get3DPoints();
+	points_to_hold_back = 1 + extrusion_base->is_loop;
+	viewervr.data.add_points(added_points, extrusion_base->stroke_color);
+	viewervr.data.add_edges(added_points.block(0, 0, added_points.rows() - points_to_hold_back, 3), added_points.block(1, 0, added_points.rows() - points_to_hold_back, 3), extrusion_base->stroke_color);
+}
+
 void select_dragging_handle(Eigen::Vector3f& pos) {
     double closest_dist = INFINITY;
     handleID = initial_stroke->selectClosestVertex(pos, closest_dist);
@@ -450,8 +458,8 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 					stroke_collection[i].update_Positions(V);
 				}
 
-				viewervr.data.clear_without_floor();
-				viewervr.data.set_mesh(V, F); //TODO check that this works
+				viewervr.data.clear_all();
+				viewervr.data.set_mesh_with_floor(V, F); //TODO check that this works
 
 				viewervr.data.compute_normals(); //TODO: check that this uses face-based normals
 

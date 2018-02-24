@@ -12,14 +12,16 @@ public:
 
 	SurfacePath();
 	void create_from_stroke_extrude(const Stroke & stroke);
-	void create_from_stroke(const Stroke& stroke);
+	void create_from_stroke_cut(const Stroke& stroke);
 	int get_origin_stroke_ID();
     std::vector<PathElement> get_path();
 	PathElement& get_path_element(int i);
 
 private:
-	int extend_path(int prev_p, int next_p, int faceID, bool& forward, Eigen::Matrix4f modelview);
-	int find_next_edge(std::pair<int, int> strokeEdge, int prev_edge, int polygon, bool on_front_side);
+	int extend_path_cut(int prev_p, int next_p, int faceID, bool & on_front_side);
+	int find_next_edge_cut(std::pair<int, int> strokeEdge, int prev_edge, int polygon, bool on_front_side);
+	int extend_path_extrude(int prev_p, int next_p, int faceID, Eigen::Matrix4f & modelview);
+	int find_next_edge_extrude(int next_p, int prev_edge, int polygon);
     int cross_prod2D(Eigen::Vector2d vec0, Eigen::Vector2d vec1);
 	bool edges2D_cross(std::pair<Eigen::Vector2d, Eigen::Vector2d> edge1, std::pair<Eigen::Vector2d, Eigen::Vector2d> edge2);
 	bool front_facing(int faceID);
