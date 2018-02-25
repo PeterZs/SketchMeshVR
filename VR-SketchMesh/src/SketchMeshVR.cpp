@@ -236,6 +236,124 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 			return true;
 		}
 	}
+	else if (tool_mode == REMOVE) {
+		if (prev_tool_mode == NONE) {
+			//TODO: HERE WE ACTUALLY WANT TO USE RAY CASTING, LIKE IN CUT
+			double closest_dist = INFINITY;
+			double current_closest = closest_dist;
+			int tmp_handleID, closest_stroke_idx;
+			handleID = -1;
+			for (int i = 0; i < stroke_collection.size(); i++) {
+				tmp_handleID = stroke_collection[i].selectClosestVertex(pos, closest_dist);
+				if ((closest_dist < current_closest) && (tmp_handleID != -1)) {
+					current_closest = closest_dist;
+					handleID = tmp_handleID;
+					closest_stroke_ID = stroke_collection[i].get_ID();
+					closest_stroke_idx = i;
+				}
+			}
+
+			if (handleID == -1) {//User clicked too far from any of the stroke vertices
+				return false;
+			}
+			if (closest_stroke_ID == prev_closest_stroke_ID) {
+				remove_stroke_clicked++;
+			}
+			else {
+				remove_stroke_clicked = 1; //Start from 1
+				prev_closest_stroke_ID = closest_stroke_ID;
+			}
+
+			//Redraw the original stroke and all added strokes, where the selected stroke is drawn in black.
+			Eigen::MatrixXd init_points = initial_stroke->get3DPoints();
+			viewervr.data.set_points(init_points.topRows(init_points.rows() - 1), Eigen::RowVector3d(1, 0, 0));
+			Eigen::MatrixXd added_points = stroke_collection[closest_stroke_idx].get3DPoints();
+			viewervr.data.add_points(added_points.topRows(added_points.rows() - 1), Eigen::RowVector3d(0, 0, 0));
+			for (int i = 0; i < stroke_collection.size(); i++) {
+				if (stroke_collection[i].get_ID() == closest_stroke_ID) {
+					continue;
+				}
+				added_points = stroke_collection[i].get3DPoints();
+				viewervr.data.add_points(added_points.topRows(added_points.rows() - 1), stroke_collection[i].stroke_color);
+			}
+
+
+			if (remove_stroke_clicked == 2) { //Mechanism to force the user to click twice on the same stroke before removing it (safeguard)
+				stroke_was_removed = true;
+				stroke_collection[closest_stroke_idx].undo_stroke_add(vertex_boundary_markers); //Sets the vertex_boundary_markers for the vertices of this stroke to 0 again
+				stroke_collection.erase(stroke_collection.begin() + closest_stroke_idx);
+				remove_stroke_clicked = 0; //Reset
+			}
+
+			skip_standardcallback = true;
+		}
+		if (prev_tool_mode == REMOVE) {
+			return true; //For REMOVE we only take action upon button press and release 
+		}
+	else if (tool_mode == PULL) { //Dragging an existing curve
+		if (prev_tool_mode == NONE) {
+			select_dragging_handle(pos);
+
+			if (handleID == -1) {//User clicked too far from any of the stroke vertices
+				return false;
+			}
+			if (closest_stroke_ID == -1) {
+				CurveDeformation::startPullCurve(*initial_stroke, handleID);
+			}
+			else {
+				CurveDeformation::startPullCurve(stroke_collection[closest_stroke_ID], handleID);
+			}
+			prev_tool_mode = PULL;
+			skip_standardcallback = true;
+		}
+		else if (prev_tool_mode == PULL) {
+			// Eigen::Matrix4f modelview = viewer.core.view * viewer.core.model;
+			int global_handleID;
+			if (closest_stroke_ID == -1) {
+				global_handleID = initial_stroke->get_vertex_idx_for_point(handleID);
+			}
+			else {
+				global_handleID = stroke_collection[closest_stroke_ID].get_vertex_idx_for_point(handleID);
+			}
+
+			//TODO: think about how to handle this in VR. Probably best to grab close to mesh and use the hands actual 3D position. Using a ray cast won't work because Z-axis information will not be taken into account, which makes you lose some of the extra possibilites that VR gives
+			//	 Eigen::RowVector3f pt1(viewervr.data.V(global_handleID, 0), viewervr.data.V(global_handleID, 1), viewervr.data.V(global_handleID, 2));
+
+			//	 Eigen::RowVector3f pr;
+			// igl::project(pt1, modelview, viewer.core.proj, viewer.core.viewport, pr);
+			//	 Eigen::RowVector3d pt = igl::unproject(Eigen::Vector3f(x, y, pr[2]), modelview, viewer.core.proj, viewer.core.viewport).transpose().cast<double>();
+
+			if (turnNr == 0) { //increase the number to smooth less often
+				CurveDeformation::pullCurve(pos.transpose().cast<double>(), V, part_of_original_stroke);
+				if (dirty_boundary) { //Smooth an extra time if the boundary is dirty, because smoothing once with a dirty boundary results in a flat mesh
+					for (int i = 0; i < 2; i++) {
+						SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
+					}
+				}
+				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
+
+				turnNr++;
+			}
+			else {
+				turnNr++;
+				if (turnNr == 4) {
+					turnNr = 0;
+				}
+			}
+
+			initial_stroke->update_Positions(V);
+			for (int i = 0; i < stroke_collection.size(); i++) {
+				stroke_collection[i].update_Positions(V);
+			}
+
+			viewervr.data.set_mesh_with_floor(V, F); //TODO: check that this does the right thing with regards to the floor
+			viewervr.data.compute_normals();
+			draw_all_strokes(viewervr);
+
+			return true;
+		}
+
+	}
 	else if (tool_mode == CUT) {
 		if (prev_tool_mode == NONE) {
 			prev_tool_mode = CUT;
@@ -281,68 +399,6 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 			}
 			return true;
 		}
-	}
-	else if (tool_mode == PULL) { //Dragging an existing curve
-		if (prev_tool_mode == NONE) {
-			select_dragging_handle(pos);
-
-			if (handleID == -1) {//User clicked too far from any of the stroke vertices
-				return false;
-			}
-			if (closest_stroke_ID == -1) {
-				CurveDeformation::startPullCurve(*initial_stroke, handleID);
-			}
-			else {
-				CurveDeformation::startPullCurve(stroke_collection[closest_stroke_ID], handleID);
-			}
-			prev_tool_mode = PULL;
-			skip_standardcallback = true;
-		}
-		else if (prev_tool_mode == PULL) {
-			// Eigen::Matrix4f modelview = viewer.core.view * viewer.core.model;
-			 int global_handleID;
-			 if(closest_stroke_ID == -1) {
-				 global_handleID = initial_stroke->get_vertex_idx_for_point(handleID);
-			 } else {
-				 global_handleID = stroke_collection[closest_stroke_ID].get_vertex_idx_for_point(handleID);
-			 }
-
-			 //TODO: think about how to handle this in VR. Probably best to grab close to mesh and use the hands actual 3D position. Using a ray cast won't work because Z-axis information will not be taken into account, which makes you lose some of the extra possibilites that VR gives
-		//	 Eigen::RowVector3f pt1(viewervr.data.V(global_handleID, 0), viewervr.data.V(global_handleID, 1), viewervr.data.V(global_handleID, 2));
-
-		//	 Eigen::RowVector3f pr;
-			// igl::project(pt1, modelview, viewer.core.proj, viewer.core.viewport, pr);
-		//	 Eigen::RowVector3d pt = igl::unproject(Eigen::Vector3f(x, y, pr[2]), modelview, viewer.core.proj, viewer.core.viewport).transpose().cast<double>();
-
-			 if(turnNr == 0) { //increase the number to smooth less often
-				 CurveDeformation::pullCurve(pos.transpose().cast<double>(), V, part_of_original_stroke);
-				 if(dirty_boundary) { //Smooth an extra time if the boundary is dirty, because smoothing once with a dirty boundary results in a flat mesh
-					 for(int i = 0; i < 2; i++) {
-						 SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
-					 }
-				 }
-				 SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
-
-				 turnNr++;
-			 } else {
-				 turnNr++;
-				 if(turnNr == 4) {
-					 turnNr = 0;
-				 }
-			 }
-
-			 initial_stroke->update_Positions(V);
-			 for(int i = 0; i < stroke_collection.size(); i++) {
-				 stroke_collection[i].update_Positions(V);
-			 }
-
-			 viewervr.data.set_mesh_with_floor(V, F); //TODO: check that this does the right thing with regards to the floor
-			 viewervr.data.compute_normals();
-			 draw_all_strokes(viewervr);
-
-			 return true;
-		}
-
 	}
 	else if (tool_mode == NONE) {	//Have to finish up as if we're calling mouse_up()
 		if (prev_tool_mode == NONE) {
@@ -396,10 +452,12 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 			added_stroke->snap_to_vertices(vertex_boundary_markers);
 			stroke_collection.push_back(*added_stroke);
 			draw_all_strokes(viewervr);
-
 		}
-		else if (prev_tool_mode == REMOVE && stroke_was_removed) {
+		else if (prev_tool_mode == REMOVE && stroke_was_removed) { //Only redraw if we actually removed a stroke (otherwise we draw unnecessary)
+			stroke_was_removed = false; //Reset
+			dirty_boundary = true;
 
+			draw_all_strokes(viewervr);
 		}
 		else if (prev_tool_mode == PULL && handleID != -1) { //TODO: do we need hand_has_moved logic?
 			for (int i = 0; i < 2; i++) {
@@ -542,115 +600,6 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 	return true;
 }
 
-bool callback_mouse_down(ViewerVR& viewervr, int button, int modifier) {
-	/*
-	else if(tool_mode == ADD) { //Adding a new control curve onto an existing mesh
-		added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID);
-		next_added_stroke_ID++;
-		added_stroke->strokeAddSegmentAdd(down_mouse_x, down_mouse_y); //If the user starts outside of the mesh, consider the movement as navigation
-		skip_standardcallback = true;
-	}
-	else if(tool_mode == REMOVE) {
-		double closest_dist = INFINITY;
-		double current_closest = closest_dist;
-		int tmp_handleID, closest_stroke_idx;
-		handleID = -1;
-		for(int i = 0; i < stroke_collection.size(); i++) {
-			tmp_handleID = stroke_collection[i].selectClosestVertex(down_mouse_x, down_mouse_y, closest_dist);
-			if((closest_dist < current_closest) && (tmp_handleID != -1)) {
-				current_closest = closest_dist;
-				handleID = tmp_handleID;
-				closest_stroke_ID = stroke_collection[i].get_ID();
-				closest_stroke_idx = i;
-			}
-		}
-
-		if(handleID == -1) {//User clicked too far from any of the stroke vertices
-			return false;
-		}
-		if(closest_stroke_ID == prev_closest_stroke_ID) {
-			remove_stroke_clicked++;
-		} else {
-			remove_stroke_clicked = 1; //Start from 1
-			prev_closest_stroke_ID = closest_stroke_ID;
-		}
-
-		//Redraw the original stroke and all added strokes, where the selected stroke is drawn in black.
-		Eigen::MatrixXd init_points = initial_stroke->get3DPoints();
-		viewer.data.set_points(init_points.topRows(init_points.rows() - 1), Eigen::RowVector3d(1, 0, 0));
-		Eigen::MatrixXd added_points = stroke_collection[closest_stroke_idx].get3DPoints();
-		viewer.data.add_points(added_points.topRows(added_points.rows() - 1), Eigen::RowVector3d(0, 0, 0));
-		for(int i = 0; i < stroke_collection.size(); i++) {
-			if(stroke_collection[i].get_ID() == closest_stroke_ID) {
-				continue;
-			}
-			added_points = stroke_collection[i].get3DPoints();
-			viewer.data.add_points(added_points.topRows(added_points.rows() - 1), stroke_collection[i].stroke_color);
-		}
-
-
-		if(remove_stroke_clicked == 2) { //Mechanism to force the user to click twice on the same stroke before removing it (safeguard)
-			stroke_was_removed = true;
-			stroke_collection[closest_stroke_idx].undo_stroke_add(vertex_boundary_markers); //Sets the vertex_boundary_markers for the vertices of this stroke to 0 again
-			stroke_collection.erase(stroke_collection.begin() + closest_stroke_idx);
-			remove_stroke_clicked = 0; //Reset
-		}
-
-		skip_standardcallback = true;
-	}
-	
-	else if(tool_mode == NAVIGATE) { //Navigate through the screen
-		skip_standardcallback = false; //We do want to use the navigation functionality
-	}
-
-	}*/
-
-	return skip_standardcallback; //Will make sure that we use standard navigation responses if we didn't do special actions and vice versa
-}
-
-bool callback_mouse_move(ViewerVR& viewervr, int mouse_x, int mouse_y) {
-	
-	/*
-		else if(tool_mode == ADD && viewer.down) {
-			last_add_on_mesh = added_stroke->strokeAddSegmentAdd(mouse_x, mouse_y);
-			return true;
-		}
-		
-		
-		*/
-
-	return false;
-}
-
-bool callback_mouse_up(ViewerVR& viewervr, int button, int modifier) {
-	if (!mouse_is_down) {
-		return true;
-	}
-	mouse_is_down = false;
-
-	/*
-	else if(tool_mode == ADD) {
-		dirty_boundary = true;
-		if(!added_stroke->has_points_on_mesh) {
-			hand_has_moved = false;
-			return true;
-		}
-		added_stroke->snap_to_vertices(vertex_boundary_markers);
-		stroke_collection.push_back(*added_stroke);
-		draw_all_strokes(viewer);
-	}
-	else if(tool_mode == REMOVE && stroke_was_removed) { //Only redraw if we actually removed a stroke (otherwise we draw unnecessary)
-		stroke_was_removed = false; //Reset
-		dirty_boundary = true;
-
-		draw_all_strokes(viewer);
-	}
-	
-	}*/
-
-	hand_has_moved = false;
-	return skip_standardcallback;
-}
 
 //TODO: make callback for this in viewer, like in exercise 5 of shapemod
 bool callback_load_mesh(ViewerVR& viewervr, string filename) {

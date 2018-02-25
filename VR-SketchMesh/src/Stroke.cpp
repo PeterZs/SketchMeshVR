@@ -119,10 +119,6 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 bool Stroke::strokeAddSegmentAdd(Eigen::Vector3f& pos) {
 	bool result = false;
 
-	//TODO: get x and y from touch position
-	double x = 0.0;
-	double y = 0.0;
-
 	if (!stroke3DPoints.isZero() && pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
 		return true;
 	}
