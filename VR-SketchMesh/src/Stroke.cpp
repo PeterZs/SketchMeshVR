@@ -147,7 +147,7 @@ bool Stroke::strokeAddSegmentAdd(Eigen::Vector3f& pos) {
 		double cur_dist, min_dist = INFINITY;
 		int closest_vert_idx;
 		for(int i = 0; i < 3; i++) {
-			cur_dist = (hit_pos - V.row(F(hits[0].id, i))).norm();
+			cur_dist = (hit_pos.transpose() - V.row(F(hits[0].id, i))).norm();
 			if(cur_dist < min_dist) {
 				min_dist = cur_dist;
 				closest_vert_idx = F(hits[0].id, i);

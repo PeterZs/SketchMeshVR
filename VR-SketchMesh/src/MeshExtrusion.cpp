@@ -229,20 +229,20 @@ void MeshExtrusion::get_normal_and_center(Eigen::RowVector3d& center, Eigen::Vec
 }
 
 void MeshExtrusion::find_left_and_right(int& most_left_vertex_idx, int& most_right_vertex_idx, Mesh& m, Eigen::VectorXi &boundary_vertices, const Eigen::RowVector3d& sil_start, const Eigen::RowVector3d& sil_end) {
-	double dist = (m.V.row(boundary_vertices.row[0]) - sil_start).squaredNorm();
+	double dist = (m.V.row(boundary_vertices[0]) - sil_start).squaredNorm();
 	double min_dist_start = dist;
-	dist = (m.V.row(boundary_vertices.row[0]) - sil_end).squaredNorm();
+	dist = (m.V.row(boundary_vertices[0]) - sil_end).squaredNorm();
 	double min_dist_end = dist;
 
 	most_left_vertex_idx = 0;
 	most_right_vertex_idx = 0;
 	for (int i = 1; i < boundary_vertices.rows(); i++) {
-		dist = (m.V.row(boundary_vertices.row[i]) - sil_start).squaredNorm();
+		dist = (m.V.row(boundary_vertices[i]) - sil_start).squaredNorm();
 		if (dist < min_dist_start) {
 			min_dist_start = dist;
 			most_left_vertex_idx = i;
 		}
-		dist = (m.V.row(boundary_vertices.row[i]) - sil_end).squaredNorm();
+		dist = (m.V.row(boundary_vertices[i]) - sil_end).squaredNorm();
 		if (dist < min_dist_end) {
 			min_dist_end = dist;
 			most_right_vertex_idx = i;

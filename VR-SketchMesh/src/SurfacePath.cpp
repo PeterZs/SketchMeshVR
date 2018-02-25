@@ -55,7 +55,7 @@ void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 	//pt = unproject_onto_polygon(stroke.get_stroke2DPoints().row(start_p), faceID, modelview);
 	PathElement lastElement(faceID, PathElement::FACE, pt);
 	path.push_back(lastElement);
-
+	
 }
 
 /** Creates a SurfacePath that contains both the original points in stroke, and new points at the locations where stroke segments cross face edges. Also wraps around to the backside of the mesh. Used for cutting **/
@@ -153,7 +153,7 @@ int SurfacePath::extend_path_cut(int prev_p, int next_p, int faceID, bool& on_fr
 			on_front_side = !on_front_side;
 			return faceID;
 		}
-	}
+	} 
 }
 
 /** Finds and returns the edge ID of the edge that is being crossed by the segment from strokeEdge.start to strokeEdge.end. Returns -1 if no such edge exists. **/
@@ -202,12 +202,11 @@ int SurfacePath::find_next_edge_cut(pair<int, int> strokeEdge, int prev_edge, in
 
 }
 
-
 int SurfacePath::extend_path_extrude(int prev_p, int next_p, int faceID, Eigen::Matrix4f& modelview) {
-	Eigen::RowVector3d src, dir;
+	Eigen::Vector3d src, dir;
 	Eigen::Vector2d tmp = origin_stroke->get_stroke2DPoints().row(prev_p);
 	igl::unproject_ray(tmp, modelview, origin_stroke->viewervr.corevr.proj, origin_stroke->viewervr.corevr.viewport, src, dir);
-	::Plane cutPlane(src, looped_3DPoints.row(prev_p), looped_3DPoints.row(next_p));
+	::Plane cutPlane(src.transpose(), looped_3DPoints.row(prev_p), looped_3DPoints.row(next_p));
 
 	int edge = -1;
 	
