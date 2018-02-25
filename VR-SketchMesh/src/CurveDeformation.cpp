@@ -36,7 +36,7 @@ void CurveDeformation::startPullCurve(Stroke& _stroke, int _handle_ID) {
 }
 
 //pos is the unprojection from the position to where the user dragged the vertex
-void CurveDeformation::pullCurve(Eigen::RowVector3d& pos, Eigen::MatrixXd& V, Eigen::VectorXi& part_of_original_stroke) {
+void CurveDeformation::pullCurve(const Eigen::RowVector3d& pos, Eigen::MatrixXd& V, Eigen::VectorXi& part_of_original_stroke) {
 	double drag_size = (pos - start_pos).norm();
 	drag_size /= curve_diag_length;
 	bool ROI_is_updated = false;
@@ -83,6 +83,7 @@ bool CurveDeformation::update_ROI(double drag_size) {
 }
 
 void CurveDeformation::compute_ROI_boundaries(int& ROI_1, int& ROI_2) {
+	cout << "Reminder to test if extrusion silhouette stroke is seen as a loop (it shouldn't)  " << stroke_is_loop << endl; //TODO
 	if(stroke_is_loop) {
 		ROI_1 = (((handle_ID - no_ROI_vert) + no_vertices) % no_vertices);
 		ROI_2 = (((handle_ID + no_ROI_vert) + no_vertices) % no_vertices);

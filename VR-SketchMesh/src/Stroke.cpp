@@ -624,11 +624,11 @@ int Stroke::selectClosestVertex(Eigen::Vector3f& pos, double& closest_distance) 
         
 
     }else{*/
-        Eigen::Vector3f test_point;
-		test_point = pos;
+      //  Eigen::Vector3f test_point;
+	//	test_point = pos;
         for(int i=0;i<stroke3DPoints.rows();i++){
           //  test_point = pos + (stroke3DPoints.row(i).transpose().cast<float>() - pos).dot(viewervr.right_touch_direction.normalized()) * viewervr.right_touch_direction.normalized(); //The closest point Pr along a line that starts from P1 and does in direction dir to point P2 is as follows: Pr = P1 + (P2 - P1).dot(dir) * dir with dir normalized
-            dist = (stroke3DPoints.row(i).transpose().cast<float>() - test_point).squaredNorm();
+            dist = (stroke3DPoints.row(i).transpose().cast<float>() - pos).squaredNorm();
             if(dist < closest_dist){
                 closest_dist = dist;
                 closest_ID = i;

@@ -17,7 +17,7 @@ void MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &verte
 	}
 	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, ID);
 	SurfacePath surface_path;
-	surface_path.create_from_stroke(stroke); //Prepares the drawn stroke (inserts extra points at the edges that it crosses)
+	surface_path.create_from_stroke_cut(stroke); //Prepares the drawn stroke (inserts extra points at the edges that it crosses)
 	cut_main(m, surface_path, stroke);
 
 	post_cut_update_points(stroke, surface_path);
