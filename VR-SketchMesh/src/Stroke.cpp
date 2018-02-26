@@ -258,7 +258,7 @@ void Stroke::strokeAddSegmentCut(Eigen::Vector3f& pos) {
 	Eigen::MatrixX3d ray_points(2, 3);
 	ray_points.row(0) = pos.cast<double>();
 	ray_points.row(1) = hit_pos;
-	viewervr.data.set_stroke_points(ray_points); //TODO: will need to change this out since this will remove any stroke points (e.g. also the original stroke). OPTION is to create separate set_laser_points
+	viewervr.data.set_laser_points(ray_points); //TODO: will need to change this out since this will remove any stroke points (e.g. also the original stroke). OPTION is to create separate set_laser_points
 
 	_time1 = std::chrono::high_resolution_clock::now();
 	return;

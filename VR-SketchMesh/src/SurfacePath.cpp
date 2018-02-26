@@ -20,17 +20,16 @@ void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 	path.clear();
 	Eigen::Matrix4f modelview = stroke.viewervr.start_action_view * stroke.viewervr.corevr.model;
 	
-	//Eigen::Vector3f bc;
-	//int faceID = -1;
 	int prev_p = stroke.get_stroke2DPoints().rows() - 1;
 	int start_p = prev_p;
 	int next_p;
 
 	int faceID = origin_stroke->get_hit_faces()(prev_p, 0);
-	//igl::unproject_onto_mesh(stroke.get_stroke2DPoints().row(prev_p).cast<float>(), modelview, stroke.viewervr.corevr.proj, stroke.viewervr.corevr.viewport, stroke.get_V(), stroke.get_F(), faceID, bc);
 	int start_face = faceID;
 	int n = 0;
 	Eigen::RowVector3d pt(0, 0, 0);
+
+	looped_3DPoints = origin_stroke->get3DPoints().topRows(origin_stroke->get3DPoints().rows() - 1);//TODO: check how to fix. Need something like we had before in extend path or so (due to order change after counter_clock after to_loop)
 
 	igl::edge_topology(stroke.get_V(), stroke.get_F(), EV, FE, EF);
 
@@ -38,7 +37,7 @@ void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 		next_p = n;
 
 		pt = origin_stroke->get3DPoints().row(prev_p);
-		//pt = unproject_onto_polygon(stroke.get_stroke2DPoints().row(prev_p), faceID, modelview);
+		//TODO: check if we need to use get_hit_faces like for cut
 		PathElement newElement(faceID, PathElement::FACE, pt);
 		path.push_back(newElement);
 
@@ -48,11 +47,10 @@ void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 			break;
 		}
 
-		n = (next_p + 1) % looped_3DPoints.rows();
+		n = (next_p + 1) % origin_stroke->get3DPoints().rows(); //TODO: optimize this, put nr rows in var
 		prev_p = next_p;
 	}
 	pt = origin_stroke->get3DPoints().row(start_p); //TODO: check why this is needed
-	//pt = unproject_onto_polygon(stroke.get_stroke2DPoints().row(start_p), faceID, modelview);
 	PathElement lastElement(faceID, PathElement::FACE, pt);
 	path.push_back(lastElement);
 	
@@ -62,7 +60,6 @@ void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 void SurfacePath::create_from_stroke_cut(const Stroke & stroke) {
 	origin_stroke = new Stroke(stroke);
 	path.clear();
-	//Eigen::Matrix4f modelview = stroke.viewervr.start_action_view * stroke.viewervr.corevr.model;
 
 	int prev_p = 1; //Start at point 1, because point 0 is defined to be the last point at the beginning of the stroke to lie outside of the mesh
 	int start_p = prev_p, next_p;
@@ -81,7 +78,6 @@ void SurfacePath::create_from_stroke_cut(const Stroke & stroke) {
 		next_p = n;
 
 
-		pt = looped_3DPoints.row(prev_p);
 		prev_faceID = faceID;
 		int prev_p_tmp = (prev_p > looped_3DPoints.rows() / 2) ? looped_3DPoints.rows() - prev_p : prev_p;
 		faceID = origin_stroke->get_hit_faces()(prev_p_tmp, !on_front_side);
@@ -90,6 +86,7 @@ void SurfacePath::create_from_stroke_cut(const Stroke & stroke) {
 			//We're dealing with one of the 2 off-mesh vertices
 			faceID = prev_faceID; //Reset to the previous faceID
 		} else {
+			pt = looped_3DPoints.row(prev_p);
 			PathElement newElement(faceID, PathElement::FACE, pt);
 			path.push_back(newElement);
 		}
@@ -160,33 +157,11 @@ int SurfacePath::extend_path_cut(int prev_p, int next_p, int faceID, bool& on_fr
 
 /** Finds and returns the edge ID of the edge that is being crossed by the segment from strokeEdge.start to strokeEdge.end. Returns -1 if no such edge exists. **/
 int SurfacePath::find_next_edge_cut(pair<int, int> strokeEdge, int prev_edge, int polygon, bool on_front_side) {
-	/*Eigen::MatrixX2d stroke2DPoints = origin_stroke->get_stroke2DPoints();
-	Eigen::RowVector2d stroke_start = stroke2DPoints.row(strokeEdge.first).transpose();
-	Eigen::RowVector2d stroke_end = stroke2DPoints.row(strokeEdge.second).transpose();
-	Eigen::RowVector3d start, end;
-	Eigen::RowVector3d tmp;
-	for(int i = 0; i < 3; i++) {
-		int edge = FE(polygon, i);
-		if(edge != prev_edge) {
-			tmp = origin_stroke->get_V().row(EV(edge, 0));
-			igl::project(tmp, modelview, origin_stroke->viewervr.corevr.proj, origin_stroke->viewervr.corevr.viewport, start);
-
-			tmp = origin_stroke->get_V().row(EV(edge, 1));
-			igl::project(tmp, modelview, origin_stroke->viewervr.corevr.proj, origin_stroke->viewervr.corevr.viewport, end);
-
-			if(edges2D_cross({stroke_start, stroke_end}, {start.block(0,0,1,2).transpose(), end.block(0,0,1,2).transpose()})) {
-				return edge;
-			}
-		}
-	}
-	return -1;*/
-
 	cout << "hit faces: " << endl << origin_stroke->get_hit_faces() << endl << endl;
 	//polygon is the faceID of prev_p
 	int next_faceID;
 	if (origin_stroke->get_hit_faces()(strokeEdge.second, !on_front_side) == -1) { //Next point is a point outside of the mesh. Find the edge with prev_p's hit on the other side instead
 		int final_prev = (strokeEdge.first > looped_3DPoints.rows() / 2) ? looped_3DPoints.rows() - strokeEdge.first : strokeEdge.first;
-		cout << "stroke edge first" << strokeEdge.first << " " << "final prev" << final_prev << endl;
 		next_faceID = origin_stroke->get_hit_faces()(final_prev, on_front_side);
 	}
 	else {
@@ -214,7 +189,6 @@ int SurfacePath::extend_path_extrude(int prev_p, int next_p, int faceID, Eigen::
 
 	int edge = -1;
 	
-
 	while (true) {
 	
 		if (origin_stroke->get_hit_faces()(next_p, 0) == faceID) { //next_p is in same face as prev_p

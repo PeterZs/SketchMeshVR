@@ -93,7 +93,7 @@ bool button_B_is_set = false;
 bool button_thumb_is_set = false;
 
 std::chrono::steady_clock::time_point _start_time, _end_time;
-
+bool has_recentered = false;
 
 void draw_all_strokes(ViewerVR& viewervr) {
 	Eigen::MatrixXd added_points;
@@ -234,16 +234,30 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 
 	tool_mode = pressed_type;
 
+	Eigen::MatrixX3d LP(2, 3);
+	Eigen::Vector3f pos_tmp = pos;
+	pos_tmp[0] += viewervr.current_eye_pos[0];
+	pos_tmp[2] += viewervr.current_eye_pos[2];
+	LP.row(0) = pos_tmp.cast<double>();
+	LP.row(1) = (pos + 1000 * viewervr.right_touch_direction).cast<double>();
+	viewervr.data.set_laser_points(LP);
+
 	if (tool_mode == DRAW) { //Creating the first curve/mesh
 		if (prev_tool_mode == NONE) {
-			viewervr.data.clear_without_floor();
-			viewervr.start_action_view = viewervr.corevr.view;
-			stroke_collection.clear();
-			next_added_stroke_ID = 2;
-			initial_stroke->strokeReset();
-			initial_stroke->strokeAddSegment(pos);
-			prev_tool_mode = DRAW;
-			skip_standardcallback = true;
+			if (has_recentered) {
+				viewervr.start_action_view = viewervr.corevr.view;
+				stroke_collection.clear();
+				next_added_stroke_ID = 2;
+				initial_stroke->strokeReset();
+				initial_stroke->strokeAddSegment(pos);
+				prev_tool_mode = DRAW;
+				skip_standardcallback = true;
+			}
+			else {
+				viewervr.data.clear_without_floor();
+				viewervr.request_recenter();
+				has_recentered = true;
+			}
 		}
 		else if (prev_tool_mode == DRAW) {
 			//We had already started drawing, continue
@@ -430,6 +444,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 		}
 	}
 	else if (tool_mode == NONE) {	//Have to finish up as if we're calling mouse_up()
+		has_recentered = false;
 		if (prev_tool_mode == NONE) {
 			return true;
 		}
