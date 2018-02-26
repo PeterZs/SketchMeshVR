@@ -92,6 +92,9 @@ bool button_A_is_set = false;
 bool button_B_is_set = false;
 bool button_thumb_is_set = false;
 
+std::chrono::steady_clock::time_point _start_time, _end_time;
+
+
 void draw_all_strokes(ViewerVR& viewervr) {
 	Eigen::MatrixXd added_points;
 	viewervr.data.set_points((Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), Eigen::RowVector3d(1, 0, 0)); //Display the original stroke points and clear all the rest. Don't take the last point
@@ -141,39 +144,64 @@ void select_dragging_handle(Eigen::Vector3f& pos) {
 ToolMode get_chosen_mode(ViewerVR::ButtonCombo pressed) {
 	if (pressed == ViewerVR::ButtonCombo::GRIPTRIG) {
 		if (button_B_is_set) {
+			cout << "pull mode" << endl;
 			return PULL;
 		}
 		else {
+			cout << "draw mode" << endl;
 			return DRAW;
 		}
 	}
 	else if (pressed == ViewerVR::ButtonCombo::GRIP) {
 		if (button_A_is_set) {
+			cout << "extrude mode" << endl;
 			return EXTRUDE;
 		}
 		else {
+			cout << "cut mode" << endl;
+
 			return CUT;
 		}
 	}
 	else if (pressed == ViewerVR::ButtonCombo::TRIG) {
 		if (button_thumb_is_set) {
+			cout << "remove mode" << endl;
 			return REMOVE;
 		}
 		else {
+			cout << "Add mode" << endl;
 			return ADD;
 		}
 	}
 	else if (pressed == ViewerVR::ButtonCombo::A) {
-		button_A_is_set = !button_A_is_set;
-		return TOGGLE;
+		_start_time = _end_time; //Set timer 1 to be the previous time of when we came here
+		_end_time = std::chrono::high_resolution_clock::now();
+		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_end_time - _start_time).count();
+		if (timePast > 100000000) {
+			button_A_is_set = !button_A_is_set;
+			cout << "switching buttonA" << endl;
+			return TOGGLE;
+		}
 	}
 	else if (pressed == ViewerVR::ButtonCombo::B) {
-		button_B_is_set = !button_B_is_set;
-		return TOGGLE;
+		_start_time = _end_time; //Set timer 1 to be the previous time of when we came here
+		_end_time = std::chrono::high_resolution_clock::now();
+		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_end_time - _start_time).count();
+		if (timePast > 100000000) {
+			button_B_is_set = !button_B_is_set;
+			cout << "switching buttonB" << endl;
+			return TOGGLE;
+		}
 	}
 	else if (pressed == ViewerVR::ButtonCombo::THUMB) {
-		button_thumb_is_set = !button_thumb_is_set;
-		return TOGGLE;
+		_start_time = _end_time; //Set timer 1 to be the previous time of when we came here
+		_end_time = std::chrono::high_resolution_clock::now();
+		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_end_time - _start_time).count();
+		if (timePast > 100000000) {
+			button_thumb_is_set = !button_thumb_is_set;
+			cout << "switching thumb button" << endl;
+			return TOGGLE;
+		}
 	}
 	else if (pressed == ViewerVR::ButtonCombo::NONE) {
 		return NONE;
@@ -290,6 +318,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 		if (prev_tool_mode == REMOVE) {
 			return true; //For REMOVE we only take action upon button press and release 
 		}
+	}
 	else if (tool_mode == PULL) { //Dragging an existing curve
 		if (prev_tool_mode == NONE) {
 			select_dragging_handle(pos);

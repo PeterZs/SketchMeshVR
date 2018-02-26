@@ -228,7 +228,7 @@ void Stroke::strokeAddSegmentCut(Eigen::Vector3f& pos) {
 
 
 			faces_hit.conservativeResize(faces_hit.rows() + 1, Eigen::NoChange);
-			faces_hit.row(faces_hit.rows() - 1) << hits[0].id, hits[1].id, hits[2].id;
+			faces_hit.row(faces_hit.rows() - 1) << hits[0].id, hits[1].id;
 			cout << "faces hit: " << hits[0].id << " " << hits[1].id << endl;
 
 		}
@@ -385,8 +385,8 @@ void Stroke::prepend_first_point() {
 	stroke3DPoints.row(0) = first_point;
 
 	faces_hit.conservativeResize(faces_hit.rows() + 1, Eigen::NoChange);
-	Eigen::MatrixXi old_faces_hit = faces_hit.block(0, 0, faces_hit.rows() - 1, 3);
-	faces_hit.block(1, 0, faces_hit.rows() - 1, 3) = old_faces_hit;
+	Eigen::MatrixXi old_faces_hit = faces_hit.block(0, 0, faces_hit.rows() - 1, 2);
+	faces_hit.block(1, 0, faces_hit.rows() - 1, 2) = old_faces_hit;
 	faces_hit.row(0) << -1, -1;
 
 

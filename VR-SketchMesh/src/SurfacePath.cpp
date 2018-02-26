@@ -83,7 +83,8 @@ void SurfacePath::create_from_stroke_cut(const Stroke & stroke) {
 
 		pt = looped_3DPoints.row(prev_p);
 		prev_faceID = faceID;
-		faceID = origin_stroke->get_hit_faces()(prev_p, !on_front_side);
+		int prev_p_tmp = (prev_p > looped_3DPoints.rows() / 2) ? looped_3DPoints.rows() - prev_p : prev_p;
+		faceID = origin_stroke->get_hit_faces()(prev_p_tmp, !on_front_side);
 		cout << "check if faceIDs are the same:" << prev_faceID << "  " << faceID << endl;
 		if (faceID == -1) {
 			//We're dealing with one of the 2 off-mesh vertices
@@ -116,7 +117,8 @@ int SurfacePath::extend_path_cut(int prev_p, int next_p, int faceID, bool& on_fr
 	//int next_p3D = origin_stroke->has_been_reversed ? next_p + 1 : next_p;
 	Eigen::RowVector3d plane_point;
 	//Don't need to create the cutPlane if prev_p is outside of the mesh, because next_p will be in the same faceID
-	if (origin_stroke->get_hit_faces()(prev_p, 0) == -1) {
+	int tmp_prev_p = (prev_p > looped_3DPoints.rows() / 2) ? looped_3DPoints.rows() - prev_p : prev_p;
+	if (origin_stroke->get_hit_faces()(tmp_prev_p, 0) == -1) {
 		plane_point = Eigen::RowVector3d(0, 0, 0);
 	}
 	else {
@@ -126,7 +128,6 @@ int SurfacePath::extend_path_cut(int prev_p, int next_p, int faceID, bool& on_fr
 	::Plane cutPlane(plane_point, looped_3DPoints.row(prev_p), looped_3DPoints.row(next_p));
 
 	int edge = -1;
-	pair<int, int> strokeEdge(prev_p, next_p);
 
 	while(true) {
 		next_p = (next_p > looped_3DPoints.rows() / 2) ? looped_3DPoints.rows() - next_p : next_p; //next_p is used to index into hit_faces, which only has data stored for "the front half" and then has the info for the "back half" in the second column
@@ -136,6 +137,7 @@ int SurfacePath::extend_path_cut(int prev_p, int next_p, int faceID, bool& on_fr
 			return faceID;
 		}
 
+		pair<int, int> strokeEdge(prev_p, next_p);
 		edge = find_next_edge_cut(strokeEdge, edge, faceID, on_front_side);
 		if(edge == -1) {
 			cout << "This (maybe) shouldn't happen" << endl; //TODO
@@ -179,15 +181,17 @@ int SurfacePath::find_next_edge_cut(pair<int, int> strokeEdge, int prev_edge, in
 	}
 	return -1;*/
 
-	int final_next = (strokeEdge.second > looped_3DPoints.rows() / 2) ? looped_3DPoints.rows() - strokeEdge.second : strokeEdge.second; //We don't have hit_face info stored for the backside points (it's in the second index corresponding to the frontside point), so go the frontside
-	cout << "stroke edge second" << strokeEdge.second << " " << "final next" << final_next << endl;
-
+	cout << "hit faces: " << endl << origin_stroke->get_hit_faces() << endl << endl;
 	//polygon is the faceID of prev_p
-	int next_faceID = origin_stroke->get_hit_faces()(final_next, !on_front_side);
-	if (next_faceID == -1) { //Next point is a point outside of the mesh. Find the edge with prev_p's hit on the other side instead
+	int next_faceID;
+	if (origin_stroke->get_hit_faces()(strokeEdge.second, !on_front_side) == -1) { //Next point is a point outside of the mesh. Find the edge with prev_p's hit on the other side instead
 		int final_prev = (strokeEdge.first > looped_3DPoints.rows() / 2) ? looped_3DPoints.rows() - strokeEdge.first : strokeEdge.first;
 		cout << "stroke edge first" << strokeEdge.first << " " << "final prev" << final_prev << endl;
 		next_faceID = origin_stroke->get_hit_faces()(final_prev, on_front_side);
+	}
+	else {
+		int final_next = (strokeEdge.second > looped_3DPoints.rows() / 2) ? looped_3DPoints.rows() - strokeEdge.second : strokeEdge.second; //We don't have hit_face info stored for the backside points (it's in the second index corresponding to the frontside point), so go the frontside
+		next_faceID = origin_stroke->get_hit_faces()(final_next, !on_front_side);
 	}
 	for (int i = 0; i < 3; i++) {
 		int edge = FE(polygon, i);
@@ -347,10 +351,9 @@ Eigen::Vector3d SurfacePath::unproject_onto_polygon(Eigen::Vector2d point, int f
 }
 
 Eigen::MatrixX3d SurfacePath::create_loop_from_front_and_back(Eigen::MatrixX3d& front_3DPoints, Eigen::MatrixX3d& back_3DPoints) {
-	cout << "front: " << front_3DPoints << endl << endl << "back" << back_3DPoints << endl << endl;
-	Eigen::MatrixX3d result(front_3DPoints.rows() + back_3DPoints.rows() - 3, 3);
-	result << front_3DPoints.topRows(front_3DPoints.rows() - 1), back_3DPoints.block(1, 0, back_3DPoints.rows() - 2, 3).reverseInPlace();
-	cout << "Result:" << endl << result << endl;
+	cout << "front " << front_3DPoints << endl << endl << "back " <<back_3DPoints << endl << endl;
+	Eigen::MatrixX3d result(front_3DPoints.rows() -1 + back_3DPoints.rows(), 3); //Take all of 3DPointsBack, because we never add back-points for the points that are off the mesh
+	result << front_3DPoints.topRows(front_3DPoints.rows() - 1), back_3DPoints.colwise().reverse().eval();
 	return result;
 }
 
