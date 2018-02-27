@@ -92,6 +92,8 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 	Eigen::RowVector3d pt2D;
 	Eigen::Matrix4f modelview = viewervr.start_action_view * viewervr.corevr.model;
 
+	pos[0] += viewervr.current_eye_pos[0];
+	pos[2] += viewervr.current_eye_pos[2];
 	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
 	igl::project(pos_in, modelview, viewervr.corevr.proj, viewervr.corevr.viewport, pt2D);
 	double dep_val = pt2D[2];
@@ -213,7 +215,6 @@ void Stroke::strokeAddSegmentCut(Eigen::Vector3f& pos) {
 			stroke3DPoints.row(0) << hit_pos[0], hit_pos[1], hit_pos[2];
 			stroke3DPointsBack.row(0) << hit_pos_back[0], hit_pos_back[1], hit_pos_back[2];
 			faces_hit.row(0) << hits[0].id, hits[1].id;
-			cout << "faces hit: " << hits[0].id << " " << hits[1].id << endl;
 			stroke_color = Eigen::RowVector3d(1, 0, 0);
 		}
 		else {
@@ -229,8 +230,6 @@ void Stroke::strokeAddSegmentCut(Eigen::Vector3f& pos) {
 
 			faces_hit.conservativeResize(faces_hit.rows() + 1, Eigen::NoChange);
 			faces_hit.row(faces_hit.rows() - 1) << hits[0].id, hits[1].id;
-			cout << "faces hit: " << hits[0].id << " " << hits[1].id << endl;
-
 		}
 
 		viewervr.data.add_points(stroke3DPoints.row(stroke3DPoints.rows() - 1), Eigen::RowVector3d(1, 0, 1));
@@ -274,7 +273,7 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if(timePast < 50000000) {
+		if(timePast < 30000000) { //TODO: make sure this is small enough such that every triangle that is traversed actually contains a sampled point
             return;
 		}
 	}
@@ -299,7 +298,6 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 			stroke2DPoints.row(0) << hit_pos2D[0], hit_pos2D[1];
 			stroke3DPoints.row(0) << hit_pos[0], hit_pos[1], hit_pos[2];
 			faces_hit.row(0) << hits[0].id, hits[1].id;
-			cout << "faces hit: " << hits[0].id << " " << hits[1].id << endl;
 			stroke_color = Eigen::RowVector3d(1, 0, 0);
 		}
 		else {
@@ -311,7 +309,6 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 
 			faces_hit.conservativeResize(faces_hit.rows() + 1, Eigen::NoChange);
 			faces_hit.row(faces_hit.rows() - 1) << hits[0].id, hits[1].id;
-			cout << "faces hit: " << hits[0].id << " " << hits[1].id << endl;
 
 		}
 	}
@@ -336,7 +333,7 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if(timePast < 50000000) {
+		if(timePast < 90000000) {
             return;
 		}
 	}
@@ -344,6 +341,8 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 	Eigen::RowVector3d pt2D;
 	Eigen::Matrix4f modelview = viewervr.start_action_view * viewervr.corevr.model;
 
+	pos[0] += viewervr.current_eye_pos[0];
+	pos[2] += viewervr.current_eye_pos[2];
 	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
 	igl::project(pos_in, modelview, viewervr.corevr.proj, viewervr.corevr.viewport, pt2D);
 
@@ -436,7 +435,7 @@ void Stroke::strokeReset() {
 }
 
 bool Stroke::toLoop() {
-	cout << stroke3DPoints.rows() << endl;
+
 	if(stroke3DPoints.rows() > 2) { //Don't do anything if we have only 1 line segment
 		stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
 		stroke3DPoints.row(stroke3DPoints.rows() - 1) << stroke3DPoints.row(0);
@@ -666,10 +665,12 @@ double Stroke::compute_stroke_diag() {
 }
 
 void Stroke::update_Positions(Eigen::MatrixXd V) {
+	cout << "before" << stroke3DPoints << endl;
 	stroke3DPoints.resize(closest_vert_bindings.size(), Eigen::NoChange);
 	for(int i = 0; i < closest_vert_bindings.size(); i++) { //Iterate over the (updated) closest_vert_bindings instead of over stroke3DPoints
 		stroke3DPoints.row(i) = V.row(closest_vert_bindings[i]);
 	}
+	cout << endl << "after" << stroke3DPoints << endl;
 
 	//In the case of extrusion silhouette strokes, closest_vert_bindings isn't looped. Don't make stroke3DPoints looped, because we already account for it not being a loop when drawing the curves
 }

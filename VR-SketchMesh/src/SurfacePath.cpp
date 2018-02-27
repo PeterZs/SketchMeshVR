@@ -32,7 +32,7 @@ void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 	looped_3DPoints = origin_stroke->get3DPoints().topRows(origin_stroke->get3DPoints().rows() - 1);//TODO: check how to fix. Need something like we had before in extend path or so (due to order change after counter_clock after to_loop)
 
 	igl::edge_topology(stroke.get_V(), stroke.get_F(), EV, FE, EF);
-
+	
 	while(true) {
 		next_p = n;
 
@@ -55,6 +55,52 @@ void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 	path.push_back(lastElement);
 	
 }
+
+int SurfacePath::extend_path_extrude(int prev_p, int next_p, int faceID, Eigen::Matrix4f& modelview) {
+	Eigen::Vector3d src, dir;
+	Eigen::Vector2d tmp = origin_stroke->get_stroke2DPoints().row(prev_p);
+	igl::unproject_ray(tmp, modelview, origin_stroke->viewervr.corevr.proj, origin_stroke->viewervr.corevr.viewport, src, dir);
+	::Plane cutPlane(src.transpose(), looped_3DPoints.row(prev_p), looped_3DPoints.row(next_p));
+
+	int edge = -1;
+
+	while (true) {
+
+		if (origin_stroke->get_hit_faces()(next_p, 0) == faceID) { //next_p is in same face as prev_p
+			return faceID;
+		}
+
+		edge = find_next_edge_extrude(next_p, edge, faceID);
+		if (edge == -1) {
+			cout << "This (maybe) shouldn't happen" << endl; //TODO
+			return -1;
+		}
+
+		Eigen::Vector3d v = cutPlane.cross_point(origin_stroke->get_V().row(EV(edge, 0)), origin_stroke->get_V().row(EV(edge, 1)));
+		PathElement newElement(edge, PathElement::EDGE, v);
+		path.push_back(newElement);
+
+		faceID = (EF(edge, 0) == faceID) ? EF(edge, 1) : EF(edge, 0); //get the polygon on the other side of the edge
+	}
+}
+
+//Find out the edge index of the edge to cross in order to get from polygon to next_p
+int SurfacePath::find_next_edge_extrude(int next_p, int prev_edge, int polygon) {
+	//polygon is the faceID of prev_p
+	int next_faceID = origin_stroke->get_hit_faces()(next_p, 0);
+
+	for (int i = 0; i < 3; i++) {
+		int edge = FE(polygon, i);
+		if (edge != prev_edge) {
+			int other_faceID = (EF(edge, 0) == polygon) ? EF(edge, 1) : EF(edge, 0);
+			if (other_faceID == next_faceID) {
+				return edge;
+			}
+		}
+	}
+	return -1;//shouldn't happen
+}
+
 
 /** Creates a SurfacePath that contains both the original points in stroke, and new points at the locations where stroke segments cross face edges. Also wraps around to the backside of the mesh. Used for cutting **/
 void SurfacePath::create_from_stroke_cut(const Stroke & stroke) {
@@ -81,7 +127,7 @@ void SurfacePath::create_from_stroke_cut(const Stroke & stroke) {
 		prev_faceID = faceID;
 		int prev_p_tmp = (prev_p > looped_3DPoints.rows() / 2) ? looped_3DPoints.rows() - prev_p : prev_p;
 		faceID = origin_stroke->get_hit_faces()(prev_p_tmp, !on_front_side);
-		cout << "check if faceIDs are the same:" << prev_faceID << "  " << faceID << endl;
+
 		if (faceID == -1) {
 			//We're dealing with one of the 2 off-mesh vertices
 			faceID = prev_faceID; //Reset to the previous faceID
@@ -157,7 +203,6 @@ int SurfacePath::extend_path_cut(int prev_p, int next_p, int faceID, bool& on_fr
 
 /** Finds and returns the edge ID of the edge that is being crossed by the segment from strokeEdge.start to strokeEdge.end. Returns -1 if no such edge exists. **/
 int SurfacePath::find_next_edge_cut(pair<int, int> strokeEdge, int prev_edge, int polygon, bool on_front_side) {
-	cout << "hit faces: " << endl << origin_stroke->get_hit_faces() << endl << endl;
 	//polygon is the faceID of prev_p
 	int next_faceID;
 	if (origin_stroke->get_hit_faces()(strokeEdge.second, !on_front_side) == -1) { //Next point is a point outside of the mesh. Find the edge with prev_p's hit on the other side instead
@@ -181,54 +226,9 @@ int SurfacePath::find_next_edge_cut(pair<int, int> strokeEdge, int prev_edge, in
 
 }
 
-int SurfacePath::extend_path_extrude(int prev_p, int next_p, int faceID, Eigen::Matrix4f& modelview) {
-	Eigen::Vector3d src, dir;
-	Eigen::Vector2d tmp = origin_stroke->get_stroke2DPoints().row(prev_p);
-	igl::unproject_ray(tmp, modelview, origin_stroke->viewervr.corevr.proj, origin_stroke->viewervr.corevr.viewport, src, dir);
-	::Plane cutPlane(src.transpose(), looped_3DPoints.row(prev_p), looped_3DPoints.row(next_p));
-
-	int edge = -1;
-	
-	while (true) {
-	
-		if (origin_stroke->get_hit_faces()(next_p, 0) == faceID) { //next_p is in same face as prev_p
-			return faceID;
-		}
-
-		edge = find_next_edge_extrude(next_p, edge, faceID);
-		if (edge == -1) {
-			cout << "This (maybe) shouldn't happen" << endl; //TODO
-			return -1;
-		}
-
-		Eigen::Vector3d v = cutPlane.cross_point(origin_stroke->get_V().row(EV(edge, 0)), origin_stroke->get_V().row(EV(edge, 1)));
-		PathElement newElement(edge, PathElement::EDGE, v);
-		path.push_back(newElement);
-
-		faceID = (EF(edge, 0) == faceID) ? EF(edge, 1) : EF(edge, 0); //get the polygon on the other side of the edge
-	}
-}
-
-//Find out the edge index of the edge to cross in order to get from polygon to next_p
-int SurfacePath::find_next_edge_extrude(int next_p, int prev_edge, int polygon) {
-	
-	//polygon is the faceID of prev_p
-	int next_faceID = origin_stroke->get_hit_faces()(next_p, 0);
-	
-	for (int i = 0; i < 3; i++) {
-		int edge = FE(polygon, i);
-		if (edge != prev_edge) {
-			int other_faceID = (EF(edge, 0) == polygon) ? EF(edge, 1) : EF(edge, 0);
-			if (other_faceID == next_faceID) {
-				return edge;
-			}
-		}
-	}
-	return -1;//shouldn't happen
-}
 
 /** Determines whether a pair of 2D segments crosses eachother. Follows principle from https://stackoverflow.com/questions/14176776/find-out-if-2-lines-intersect but slightly different **/
-bool SurfacePath::edges2D_cross(pair<Eigen::Vector2d, Eigen::Vector2d> edge1, pair<Eigen::Vector2d, Eigen::Vector2d> edge2) {
+/*bool SurfacePath::edges2D_cross(pair<Eigen::Vector2d, Eigen::Vector2d> edge1, pair<Eigen::Vector2d, Eigen::Vector2d> edge2) {
 	double a0, b0, c0, a1, b1, c1;
 	a0 = edge1.first[1] - edge1.second[1];
     b0 = edge1.second[0] - edge1.first[0];
@@ -243,15 +243,15 @@ bool SurfacePath::edges2D_cross(pair<Eigen::Vector2d, Eigen::Vector2d> edge1, pa
 	} else {
 		return false;
 	}
-}
+}*/
 
 /** Returns whether a face is front facing in the current viewer. **/
-bool SurfacePath::front_facing(int faceID) {
+/*bool SurfacePath::front_facing(int faceID) {
 	return is_counter_clockwise(faceID);
-}
+}*/
 
 /** Determines whether the vertices of an edge are in counter-clockwise order as seen from the current viewpoint. **/
-bool SurfacePath::is_counter_clockwise(int faceID) {
+/*bool SurfacePath::is_counter_clockwise(int faceID) {
 	//TODO: Not sure if we should zero-mean the face vertices first
 	Eigen::Matrix4f modelview = origin_stroke->viewervr.start_action_view * origin_stroke->viewervr.corevr.model;
 	double total_area = 0.0;
@@ -278,10 +278,10 @@ bool SurfacePath::is_counter_clockwise(int faceID) {
 	}
 	return true;
 
-}
+}*/
 
 /** Checks if point v is projected in face as seen from the current viewer. Checks if the point is on the correct side of all face edges. **/
-bool SurfacePath::is_projected_inside(Eigen::RowVector2d v, int face, Eigen::Matrix4f modelview) {
+/*bool SurfacePath::is_projected_inside(Eigen::RowVector2d v, int face, Eigen::Matrix4f modelview) {
 	int sign = -1;
 	if(!front_facing(face)) {
 		sign = 1;
@@ -304,14 +304,14 @@ bool SurfacePath::is_projected_inside(Eigen::RowVector2d v, int face, Eigen::Mat
 
 	}
 	return true;
-}
+}*/
 
-int SurfacePath::cross_prod2D(Eigen::Vector2d vec0, Eigen::Vector2d vec1) {
+/*int SurfacePath::cross_prod2D(Eigen::Vector2d vec0, Eigen::Vector2d vec1) {
     return vec0[0] * vec1[1] - vec0[1] * vec1[0];
-}
+}*/
 
 /** Takes a 2D point and unprojects this onto the face with ID faceID. This does not always have to be the first face in the line of sight to the 3D point (as compared to igl::unproject_onto_mesh, which unprojects to the first triangle that is hit). **/
-Eigen::Vector3d SurfacePath::unproject_onto_polygon(Eigen::Vector2d point, int faceID, Eigen::Matrix4f modelview) {
+/*Eigen::Vector3d SurfacePath::unproject_onto_polygon(Eigen::Vector2d point, int faceID, Eigen::Matrix4f modelview) {
 	Eigen::Vector3d source, dir;
 	Eigen::Vector3d tmp1 = origin_stroke->get_V().row(origin_stroke->get_F()(faceID, 0));
 	Eigen::Vector3d tmp2 = origin_stroke->get_V().row(origin_stroke->get_F()(faceID, 1));
@@ -322,10 +322,9 @@ Eigen::Vector3d SurfacePath::unproject_onto_polygon(Eigen::Vector2d point, int f
 	intersect_triangle1(source.data(), dir.data(), tmp1.data(), tmp2.data(), tmp3.data(), &t, &u, &v);
 
 	return source + t*dir;
-}
+}*/
 
 Eigen::MatrixX3d SurfacePath::create_loop_from_front_and_back(Eigen::MatrixX3d& front_3DPoints, Eigen::MatrixX3d& back_3DPoints) {
-	cout << "front " << front_3DPoints << endl << endl << "back " <<back_3DPoints << endl << endl;
 	Eigen::MatrixX3d result(front_3DPoints.rows() -1 + back_3DPoints.rows(), 3); //Take all of 3DPointsBack, because we never add back-points for the points that are off the mesh
 	result << front_3DPoints.topRows(front_3DPoints.rows() - 1), back_3DPoints.colwise().reverse().eval();
 	return result;

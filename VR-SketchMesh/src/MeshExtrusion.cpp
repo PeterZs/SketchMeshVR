@@ -54,9 +54,6 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 
 
 
-
-
-
     //Compute the real 3D positions of the silhouette stroke
 	Eigen::RowVector3d center(0, 0, 0);// , pr;
 	Eigen::Vector3d normal(0, 0, 0);// , source, dir;
@@ -85,16 +82,18 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	//double max, min;
 	int most_left_vertex_idx = 0, most_right_vertex_idx = 0;
 	//find_left_and_right(most_left_vertex_idx, most_right_vertex_idx, min, max, m, center, boundary_vertices, normal2);
-	find_left_and_right(most_left_vertex_idx, most_right_vertex_idx, m, boundary_vertices, silhouette_vertices.row(0), silhouette_vertices.row(silhouette_vertices.rows()-1));
-
+	find_left_and_right(most_left_vertex_idx, most_right_vertex_idx, m, boundary_vertices, silhouette_vertices.row(0), silhouette_vertices.row(silhouette_vertices.rows()-1), center);
+	stroke.viewervr.data.add_points(m.V.row(boundary_vertices[most_left_vertex_idx]), Eigen::RowVector3d(1, 1, 0));
 	//Eigen::Vector3d v_tmp = (m.V.row(boundary_vertices[most_left_vertex_idx]) - m.V.row(boundary_vertices[most_right_vertex_idx])).transpose();
 	//Eigen::Vector3d pop_surface_normal = normal.cross(v_tmp);
 //	pop_surface_normal.normalize();
 
 	//Eigen::RowVector3d pop_surface_point = m.V.row(boundary_vertices[most_left_vertex_idx]);
 //	compute_silhouette_positions(silhouette_vertices, stroke, modelview, center, normal2, min, max, pop_surface_point, pop_surface_normal);
+	cout << "left_most coor: " << m.V.row(boundary_vertices[most_left_vertex_idx]) << endl << "right most coor: " << m.V.row(boundary_vertices[most_right_vertex_idx]) << endl << endl;
 
-	remove_out_of_bounds_silhouette(silhouette_vertices, center, m.V.row(boundary_vertices[most_left_vertex_idx]), m.V.row(boundary_vertices[most_right_vertex_idx]));
+	Eigen::RowVector3d dir = (silhouette_vertices.row(silhouette_vertices.rows()-1) - silhouette_vertices.row(0)).normalized();
+	remove_out_of_bounds_silhouette(silhouette_vertices, center, m.V.row(boundary_vertices[most_left_vertex_idx]), m.V.row(boundary_vertices[most_right_vertex_idx]), dir);
 
 	if(silhouette_vertices.rows() == 0) {
 		cout << "returning: THIS IS BAD" << endl; //Todo: handle this neatly
@@ -114,23 +113,26 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	//Create one of the two loops
 	Eigen::MatrixXd front_loop3D = silhouette_vertices;
 	vector<int> front_loop_base_original_indices;
-	create_loop(m, front_loop3D, boundary_vertices, front_loop_base_original_indices, most_right_vertex_idx, most_left_vertex_idx);
+	create_loop(m, front_loop3D, boundary_vertices, front_loop_base_original_indices, most_left_vertex_idx, most_right_vertex_idx);
 
 	//Create the second loop
 	Eigen::MatrixXd back_loop3D = silhouette_vertices.colwise().reverse();
+	cout << " Front loop 3D before: " << endl << back_loop3D << endl;
 	vector<int> back_loop_base_original_indices;
-	create_loop(m, back_loop3D, boundary_vertices, back_loop_base_original_indices, most_left_vertex_idx, most_right_vertex_idx);
+	create_loop(m, back_loop3D, boundary_vertices, back_loop_base_original_indices, most_right_vertex_idx, most_left_vertex_idx);
+	cout << " Front loop 3D after: " << endl << back_loop3D << endl;
 
-	Eigen::Vector3d x_vec = m.V.row(boundary_vertices[most_right_vertex_idx]) - m.V.row(boundary_vertices[most_left_vertex_idx]);
-	x_vec.normalize();
+	//Eigen::Vector3d x_vec = m.V.row(boundary_vertices[most_right_vertex_idx]) - m.V.row(boundary_vertices[most_left_vertex_idx]);
+//	x_vec.normalize();
+	Eigen::Vector3d x_vec = dir;
 	Eigen::Vector3d y_vec = normal.cross(x_vec);
 	Eigen::Vector3d offset = x_vec.cross(y_vec);
 	offset *= 0.05;
 
     //Generate the two half-domes
-	generate_mesh(m, front_loop3D, center, x_vec*-1, y_vec, offset, silhouette_vertices.rows(), front_loop_base_original_indices, sil_original_indices);
+	generate_mesh(m, front_loop3D, center, x_vec, y_vec, offset, silhouette_vertices.rows(), front_loop_base_original_indices, sil_original_indices);
 	reverse(sil_original_indices.begin(), sil_original_indices.end());
-	generate_mesh(m, back_loop3D, center, x_vec*-1, y_vec, offset, silhouette_vertices.rows(), back_loop_base_original_indices, sil_original_indices);
+	generate_mesh(m, back_loop3D, center, x_vec, y_vec, offset, silhouette_vertices.rows(), back_loop_base_original_indices, sil_original_indices);
 
 
 
@@ -147,8 +149,8 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 }
 
 
-void MeshExtrusion::remove_out_of_bounds_silhouette(Eigen::MatrixXd& silhouette_vertices, Eigen::RowVector3d& center, const Eigen::RowVector3d& left_most, const Eigen::RowVector3d& right_most) {
-	Eigen::Vector3d dir = left_most - right_most;
+void MeshExtrusion::remove_out_of_bounds_silhouette(Eigen::MatrixXd& silhouette_vertices, Eigen::RowVector3d& center, const Eigen::RowVector3d& left_most, const Eigen::RowVector3d& right_most, Eigen::RowVector3d& dir) {
+	/*Eigen::Vector3d dir = left_most - right_most;
 	dir.normalize();
 	double dot_left = left_most.dot(dir);
 	double dot_right = right_most.dot(dir);
@@ -172,7 +174,35 @@ void MeshExtrusion::remove_out_of_bounds_silhouette(Eigen::MatrixXd& silhouette_
 	keep_col_idx.col(0) << 0, 1, 2;
 	igl::slice(silhouette_vertices, keep_row_idx, keep_col_idx, result);
 	silhouette_vertices = result;
-	cout << "silhouette vertices after slice " << silhouette_vertices << endl;
+	cout << "silhouette vertices after slice " << silhouette_vertices << endl;*/
+
+
+
+	vector<int> keep_indices;
+	Eigen::Vector3d center_to_vertex;
+	double most_left_dot_prod = dir.dot(left_most - center);
+	double most_right_dot_prod = dir.dot(right_most - center);
+	double dot_prod;
+
+	for (int i = 0; i < silhouette_vertices.rows(); i++) {
+		center_to_vertex = silhouette_vertices.row(i) - center;
+		dot_prod = dir.dot(center_to_vertex);
+		if (dot_prod > most_left_dot_prod || dot_prod < most_right_dot_prod) {
+			cerr << "silhouette point " << i << " is outside of range, it will be skipped." << endl;
+			continue;
+		}
+		else {
+			keep_indices.push_back(i);
+		}
+	}
+
+
+	Eigen::MatrixXd result;
+	Eigen::VectorXi keep_row_idx, keep_col_idx(3);
+	keep_row_idx = Eigen::VectorXi::Map(keep_indices.data(), keep_indices.size());
+	keep_col_idx.col(0) << 0, 1, 2;
+	igl::slice(silhouette_vertices, keep_row_idx, keep_col_idx, result);
+	silhouette_vertices = result;
 
 }
 
@@ -188,6 +218,7 @@ void MeshExtrusion::generate_mesh(Mesh& m, Eigen::MatrixXd loop3D, Eigen::Vector
 		loop2D.row(i) << vec.dot(x_vec), vec.dot(y_vec);
 		loop_stroke_edges.row(i) << i, ((i + 1) % loop3D.rows());
 	}
+	cout << " Loop 2d: " << endl << loop2D << endl << endl;
 
 	Eigen::MatrixXd V2;
 	Eigen::MatrixXi F2;
@@ -223,20 +254,21 @@ void MeshExtrusion::get_normal_and_center(Eigen::RowVector3d& center, Eigen::Vec
 	for(int i = 0; i < boundary_vertices.rows(); i++) {
 		vec0 = m.V.row(boundary_vertices[i]) - center;
 		vec1 = m.V.row(boundary_vertices[(i + 1) % boundary_vertices.rows()]) - center;
-		normal += vec1.cross(vec0);
+		normal += vec0.cross(vec1);
 	}
 	normal.normalize();
 }
 
-void MeshExtrusion::find_left_and_right(int& most_left_vertex_idx, int& most_right_vertex_idx, Mesh& m, Eigen::VectorXi &boundary_vertices, const Eigen::RowVector3d& sil_start, const Eigen::RowVector3d& sil_end) {
-	double dist = (m.V.row(boundary_vertices[0]) - sil_start).squaredNorm();
+void MeshExtrusion::find_left_and_right(int& most_left_vertex_idx, int& most_right_vertex_idx, Mesh& m, Eigen::VectorXi &boundary_vertices, const Eigen::RowVector3d& sil_start, const Eigen::RowVector3d& sil_end, Eigen::RowVector3d& center) {
+	/*double dist = (m.V.row(boundary_vertices[0]) - sil_start).squaredNorm();
 	double min_dist_start = dist;
 	dist = (m.V.row(boundary_vertices[0]) - sil_end).squaredNorm();
 	double min_dist_end = dist;
-
+	cout << "Boundary vertices: " << endl << m.V.row(boundary_vertices[0]) << endl;
 	most_left_vertex_idx = 0;
 	most_right_vertex_idx = 0;
 	for (int i = 1; i < boundary_vertices.rows(); i++) {
+		cout << m.V.row(boundary_vertices[i]) << endl;
 		dist = (m.V.row(boundary_vertices[i]) - sil_start).squaredNorm();
 		if (dist < min_dist_start) {
 			min_dist_start = dist;
@@ -245,6 +277,28 @@ void MeshExtrusion::find_left_and_right(int& most_left_vertex_idx, int& most_rig
 		dist = (m.V.row(boundary_vertices[i]) - sil_end).squaredNorm();
 		if (dist < min_dist_end) {
 			min_dist_end = dist;
+			most_right_vertex_idx = i;
+		}
+	}*/
+
+
+	Eigen::Vector3d dir = sil_end - sil_start;
+	dir.normalize();
+	Eigen::Vector3d center_to_vertex;
+	double dot_prod = dir.dot(m.V.row(boundary_vertices[0]) - center);
+	double min = dot_prod, max = dot_prod;
+	most_left_vertex_idx = 0;
+	most_right_vertex_idx = 0;
+
+	for (int i = 1; i < boundary_vertices.rows(); i++) {
+		center_to_vertex = (m.V.row(boundary_vertices[i]) - center);
+		dot_prod = dir.dot(center_to_vertex);
+		if (dot_prod > max) {
+			max = dot_prod;
+			most_left_vertex_idx = i;
+		}
+		else if (dot_prod < min) {
+			min = dot_prod;
 			most_right_vertex_idx = i;
 		}
 	}
