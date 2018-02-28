@@ -147,16 +147,14 @@ ToolMode get_chosen_mode(ViewerVR::ButtonCombo pressed) {
 		if (button_B_is_set) {
 			cout << "pull mode" << endl;
 			return PULL;
-		}
-		else {
+		} else {
 			return DRAW;
 		}
 	}
 	else if (pressed == ViewerVR::ButtonCombo::GRIP) {
 		if (button_A_is_set) {
 			return EXTRUDE;
-		}
-		else {
+		} else {
 			cout << "cut mode" << endl;
 
 			return CUT;
@@ -166,8 +164,7 @@ ToolMode get_chosen_mode(ViewerVR::ButtonCombo pressed) {
 		if (button_thumb_is_set) {
 			cout << "remove mode" << endl;
 			return REMOVE;
-		}
-		else {
+		} else {
 			cout << "Add mode" << endl;
 			return ADD;
 		}

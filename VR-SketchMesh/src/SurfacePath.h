@@ -21,7 +21,8 @@ private:
 	int extend_path_cut(int prev_p, int next_p, int faceID, bool & on_front_side);
 	int find_next_edge_cut(std::pair<int, int> strokeEdge, int prev_edge, int polygon, bool on_front_side);
 	int extend_path_extrude(int prev_p, int next_p, int faceID, Eigen::Matrix4f & modelview);
-	int find_next_edge_extrude(int next_p, int prev_edge, int polygon);
+	int find_next_edge_extrude(int next_p, int prev_p, int prev_edge, int polygon);
+	//int find_next_edge_extrude(int next_p, int prev_edge, int polygon);
     int cross_prod2D(Eigen::Vector2d vec0, Eigen::Vector2d vec1);
 	bool edges2D_cross(std::pair<Eigen::Vector2d, Eigen::Vector2d> edge1, std::pair<Eigen::Vector2d, Eigen::Vector2d> edge2);
 	bool front_facing(int faceID);

@@ -70,12 +70,13 @@ int SurfacePath::extend_path_extrude(int prev_p, int next_p, int faceID, Eigen::
 			return faceID;
 		}
 
-		edge = find_next_edge_extrude(next_p, edge, faceID);
+		edge = find_next_edge_extrude(next_p, prev_p, edge, faceID);
 		if (edge == -1) {
 			cout << "This (maybe) shouldn't happen" << endl; //TODO
 			return -1;
 		}
 
+		//TODO: reuse point that is created by find_next_edge_extrude instead and remove this cutplane here
 		Eigen::Vector3d v = cutPlane.cross_point(origin_stroke->get_V().row(EV(edge, 0)), origin_stroke->get_V().row(EV(edge, 1)));
 		PathElement newElement(edge, PathElement::EDGE, v);
 		path.push_back(newElement);
@@ -85,7 +86,7 @@ int SurfacePath::extend_path_extrude(int prev_p, int next_p, int faceID, Eigen::
 }
 
 //Find out the edge index of the edge to cross in order to get from polygon to next_p
-int SurfacePath::find_next_edge_extrude(int next_p, int prev_edge, int polygon) {
+int SurfacePath::find_next_edge_extrude(int next_p, int prev_p, int prev_edge, int polygon) {
 	//polygon is the faceID of prev_p
 	int next_faceID = origin_stroke->get_hit_faces()(next_p, 0);
 
@@ -98,6 +99,27 @@ int SurfacePath::find_next_edge_extrude(int next_p, int prev_edge, int polygon) 
 			}
 		}
 	}
+
+	//If we come here, it means that the next strokepoint (next_p) lies in a non-adjacent face (e.g. one or multiple faces away). Only then go for more elaborate checking 
+	::Plane cutPlane(origin_stroke->get_hand_pos().row(prev_p), looped_3DPoints.row(prev_p), looped_3DPoints.row(next_p));
+	for (int i = 0; i < 3; i++) {
+		int edge = FE(polygon, i);
+		if (edge != prev_edge) {
+			Eigen::RowVector3d cut_point = cutPlane.cross_point(origin_stroke->get_V().row(EV(edge, 0)), origin_stroke->get_V().row(EV(edge, 1)));
+			Eigen::RowVector3d seg_vec = looped_3DPoints.row(next_p) - looped_3DPoints.row(prev_p);
+			seg_vec.normalize();
+			Eigen::RowVector3d its_vec = cut_point - looped_3DPoints.row(prev_p);
+			its_vec.normalize();
+			if (its_vec.dot(seg_vec) < 0) {
+				//Projection points into the opposite direction of line segment
+				cout << "test next edge finding for extrude" << endl << seg_vec << endl << its_vec << endl << cut_point << endl;
+			}
+			else {
+				return edge;
+			}
+		}
+	}
+
 	return -1;//shouldn't happen
 }
 

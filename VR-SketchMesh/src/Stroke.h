@@ -40,6 +40,7 @@ public:
     Eigen::MatrixXd get_stroke2DPoints() const;
     Eigen::MatrixX3d get3DPoints();
 	Eigen::MatrixX3d get3DPointsBack();
+	Eigen::MatrixX3d get_hand_pos();
 	Eigen::MatrixXi get_hit_faces();
 	std::vector<int> get_closest_vert_bindings();
     void set3DPoints(Eigen::MatrixX3d new_3DPoints);
@@ -64,6 +65,7 @@ private:
 	Eigen::MatrixX3d stroke3DPointsBack;
 	Eigen::MatrixXd stroke2DPoints; //Used for early checking if point is new (in screen coordinates)
 	Eigen::MatrixXi faces_hit;
+	Eigen::MatrixX3d hand_pos_at_draw;
 	Eigen::RowVector3d cut_stroke_final_point; //Only used for cutting strokes. First point outside of the mesh
 	Eigen::RowVectorXd cut_stroke_final_point_2D;
 	Eigen::Vector3d pos_before_cut;

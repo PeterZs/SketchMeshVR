@@ -25,6 +25,7 @@ Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::viewer
 	stroke3DPoints = Eigen::MatrixX3d::Zero(1, 3);
 	stroke3DPointsBack = Eigen::MatrixX3d::Zero(1, 3);
 	faces_hit = Eigen::MatrixXi::Zero(1, 2);
+	hand_pos_at_draw = Eigen::MatrixXd::Zero(1, 3);
 	dep = Eigen::VectorXd::Zero(0);
 	_time1 = std::chrono::high_resolution_clock::now();
 	closest_vert_bindings.clear();
@@ -42,6 +43,7 @@ Stroke::Stroke(const Stroke& origin) :
 	stroke3DPoints(origin.stroke3DPoints),
 	stroke3DPointsBack(origin.stroke3DPointsBack),
 	faces_hit(origin.faces_hit),
+	hand_pos_at_draw(origin.hand_pos_at_draw),
 	dep(origin.dep),
 	closest_vert_bindings(origin.closest_vert_bindings),
 	has_points_on_mesh(origin.has_points_on_mesh),
@@ -63,6 +65,7 @@ void Stroke::swap(Stroke & tmp) {//The pointers to V and F will always be the sa
 	std::swap(this->stroke3DPoints, tmp.stroke3DPoints);
 	std::swap(this->stroke3DPointsBack, tmp.stroke3DPointsBack);
 	std::swap(this->faces_hit, tmp.faces_hit);
+	std::swap(this->hand_pos_at_draw, tmp.hand_pos_at_draw);
 	std::swap(this->closest_vert_bindings, tmp.closest_vert_bindings);
 	std::swap(this->has_points_on_mesh, tmp.has_points_on_mesh);
 	std::swap(this->has_been_reversed, tmp.has_been_reversed);
@@ -273,8 +276,8 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if(timePast < 30000000) { //TODO: make sure this is small enough such that every triangle that is traversed actually contains a sampled point
-            return;
+		if(timePast < 60000000) { //TODO: make sure this is small enough such that every triangle that is traversed actually contains a sampled point
+			return;
 		}
 	}
 
@@ -298,6 +301,7 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 			stroke2DPoints.row(0) << hit_pos2D[0], hit_pos2D[1];
 			stroke3DPoints.row(0) << hit_pos[0], hit_pos[1], hit_pos[2];
 			faces_hit.row(0) << hits[0].id, hits[1].id;
+			hand_pos_at_draw.row(0) << pos.transpose().cast<double>();
 			stroke_color = Eigen::RowVector3d(1, 0, 0);
 		}
 		else {
@@ -310,6 +314,8 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 			faces_hit.conservativeResize(faces_hit.rows() + 1, Eigen::NoChange);
 			faces_hit.row(faces_hit.rows() - 1) << hits[0].id, hits[1].id;
 
+			hand_pos_at_draw.conservativeResize(hand_pos_at_draw.rows() + 1, Eigen::NoChange);
+			hand_pos_at_draw.row(hand_pos_at_draw.rows() - 1) << pos.transpose().cast<double>();
 		}
 	}
 	else {
@@ -427,6 +433,8 @@ void Stroke::strokeReset() {
 	stroke3DPointsBack.setZero();
 	faces_hit.resize(1, 2);
 	faces_hit.setZero();
+	hand_pos_at_draw.resize(1, 3);
+	hand_pos_at_draw.setZero();
 	dep.resize(1);
 	dep.setZero();
 	_time1 = std::chrono::high_resolution_clock::now();
@@ -441,6 +449,10 @@ bool Stroke::toLoop() {
 		stroke3DPoints.row(stroke3DPoints.rows() - 1) << stroke3DPoints.row(0);
 		if(closest_vert_bindings.size() > 0) {
 			closest_vert_bindings.push_back(closest_vert_bindings[0]);
+		}
+		if (hand_pos_at_draw.rows() > 1) { //Only loop if it actually contains data
+			hand_pos_at_draw.conservativeResize(hand_pos_at_draw.rows() + 1, Eigen::NoChange);
+			hand_pos_at_draw.row(hand_pos_at_draw.rows() - 1) << hand_pos_at_draw.row(0);
 		}
 		is_loop = true;
 		return true;
@@ -559,6 +571,9 @@ void Stroke::counter_clockwise() {
 	if(total_area > 0) { //reverse the vector
 		stroke2DPoints = stroke2DPoints.colwise().reverse().eval();
 		stroke3DPoints = stroke3DPoints.colwise().reverse().eval();
+		if (hand_pos_at_draw.rows() > 1) {
+			hand_pos_at_draw = hand_pos_at_draw.colwise().reverse().eval();
+		}
 		has_been_reversed = true;
 	}
 
@@ -790,6 +805,10 @@ Eigen::MatrixX3d Stroke::get3DPoints() {
 
 Eigen::MatrixX3d Stroke::get3DPointsBack() {
 	return stroke3DPointsBack;
+}
+
+Eigen::MatrixX3d Stroke::get_hand_pos() {
+	return hand_pos_at_draw;
 }
 
 Eigen::MatrixXi Stroke::get_hit_faces() {
