@@ -325,6 +325,7 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 
 	if(stroke3DPoints.rows() > 1) {
 		viewervr.data.add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0, 0, 1));
+		viewervr.data.add_points(stroke3DPoints, Eigen::RowVector3d(1, 0, 0));
 	}
 
 	_time1 = std::chrono::high_resolution_clock::now();
@@ -680,12 +681,10 @@ double Stroke::compute_stroke_diag() {
 }
 
 void Stroke::update_Positions(Eigen::MatrixXd V) {
-	cout << "before" << stroke3DPoints << endl;
 	stroke3DPoints.resize(closest_vert_bindings.size(), Eigen::NoChange);
 	for(int i = 0; i < closest_vert_bindings.size(); i++) { //Iterate over the (updated) closest_vert_bindings instead of over stroke3DPoints
 		stroke3DPoints.row(i) = V.row(closest_vert_bindings[i]);
 	}
-	cout << endl << "after" << stroke3DPoints << endl;
 
 	//In the case of extrusion silhouette strokes, closest_vert_bindings isn't looped. Don't make stroke3DPoints looped, because we already account for it not being a loop when drawing the curves
 }

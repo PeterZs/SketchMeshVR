@@ -2,6 +2,7 @@
 #define _SurfacePath_H_
 #include <Eigen/Core>
 #include "Stroke.h"
+#include "Plane.h"
 
 //This class is used for curves that are drawn onto an existing mesh surface, and that need to generate new mesh vertices and edges etc. (whereas the Stroke class simply takes drawn curves as they are)
 class PathElement;
@@ -19,7 +20,7 @@ public:
 
 private:
 	int extend_path_cut(int prev_p, int next_p, int faceID, bool & on_front_side);
-	int find_next_edge_cut(std::pair<int, int> strokeEdge, int prev_edge, int polygon, bool on_front_side);
+	int find_next_edge_cut(std::pair<int, int> strokeEdge, int prev_edge, int polygon, bool on_front_side, ::Plane& cutPlane, Eigen::RowVector3d & start_pos, Eigen::RowVector3d & end_pos);
 	int extend_path_extrude(int prev_p, int next_p, int faceID, Eigen::Matrix4f & modelview);
 	int find_next_edge_extrude(int next_p, int prev_p, int prev_edge, int polygon);
 	//int find_next_edge_extrude(int next_p, int prev_edge, int polygon);

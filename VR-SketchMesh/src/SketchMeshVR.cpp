@@ -566,7 +566,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 				}
 
 				for (int i = 0; i < 2; i++) {
-					SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
+				//	SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 				}
 
 				//Update the stroke positions after smoothing, in case their positions have changed (although they really shouldn't)
@@ -610,7 +610,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 				}
 
 				for (int i = 0; i < 3; i++) { //TODO: turn smoothing back on
-					SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
+					//SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 				}
 
 				//Update the stroke positions after smoothing, in case their positions have changed (although they really shouldn't)
@@ -677,7 +677,7 @@ int main(int argc, char *argv[]) {
 	igl::read_triangle_mesh("../data/cube.off", V, F);
 	viewervr.data.set_mesh_with_floor(V, F);
 
-	viewervr.corevr.point_size = 15;
+	viewervr.corevr.point_size = 55;
 	//viewer.callback_load_mesh = callback_load_mesh;
 
 
