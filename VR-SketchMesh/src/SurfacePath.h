@@ -19,8 +19,10 @@ public:
 	PathElement& get_path_element(int i);
 
 private:
-	int extend_path_cut(int prev_p, int next_p, int faceID, bool & on_front_side);
-	int find_next_edge_cut(std::pair<int, int> strokeEdge, int prev_edge, int polygon, bool on_front_side, ::Plane& cutPlane, Eigen::RowVector3d & start_pos, Eigen::RowVector3d & end_pos);
+	//int extend_path_cut(int prev_p, int next_p, int faceID, bool & on_front_side, int& edge);
+	int extend_path_cut(int prev_p, int next_p, int faceID, bool & on_front_side, int & edge, bool & first_iter);
+	int find_next_edge_cut(std::pair<int, int> strokeEdge, int prev_edge, int polygon, bool on_front_side, ::Plane & cutPlane, Eigen::RowVector3d & start_pos, Eigen::RowVector3d & end_pos, bool first_iter);
+	//int find_next_edge_cut(std::pair<int, int> strokeEdge, int prev_edge, int polygon, bool on_front_side, ::Plane& cutPlane, Eigen::RowVector3d & start_pos, Eigen::RowVector3d & end_pos);
 	int extend_path_extrude(int prev_p, int next_p, int faceID, Eigen::Matrix4f & modelview);
 	int find_next_edge_extrude(int next_p, int prev_p, int prev_edge, int polygon);
 	//int find_next_edge_extrude(int next_p, int prev_edge, int polygon);

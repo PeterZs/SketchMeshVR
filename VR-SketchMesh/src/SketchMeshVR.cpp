@@ -25,9 +25,9 @@ using namespace std;
 using ViewerVR = igl::viewer::VR_Viewer;
 
 // Vertex array, #V x3
-Eigen::MatrixXd V;
+Eigen::MatrixXd V(0,3);
 // Face array, #F x3
-Eigen::MatrixXi F;
+Eigen::MatrixXi F(0,3);
 // Per face normals, #F x3
 Eigen::MatrixXd N_Faces;
 
@@ -674,7 +674,7 @@ bool callback_load_mesh(ViewerVR& viewervr, string filename) {
 
 int main(int argc, char *argv[]) {
 	ViewerVR viewervr;
-	igl::read_triangle_mesh("../data/cube.off", V, F);
+	//igl::read_triangle_mesh("../data/cube.off", V, F);
 	viewervr.data.set_mesh_with_floor(V, F);
 
 	viewervr.corevr.point_size = 55;

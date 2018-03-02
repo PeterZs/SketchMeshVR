@@ -374,7 +374,7 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 /** Used for CUT. Adds the first point, which is the last point outside of the mesh before cut start. Doesn't get drawn. **/
 void Stroke::prepend_first_point() {
 
-
+	cout << "test first point "<< pos_before_cut << "      " << dir_before_cut << endl;
 	Eigen::Vector3d first_point = pos_before_cut + (stroke3DPoints.row(0).transpose() - pos_before_cut).dot(dir_before_cut.normalized()) * dir_before_cut.normalized(); //The closest point Pr along a line that starts from P1 and does in direction dir to point P2 is as follows: Pr = P1 + (P2 - P1).dot(dir) * dir with dir normalized
 	Eigen::Matrix4f modelview = viewervr.start_action_view * viewervr.corevr.model;
 	Eigen::Vector3f first_point_tmp = first_point.cast<float>();
@@ -395,12 +395,14 @@ void Stroke::prepend_first_point() {
 	faces_hit.block(1, 0, faces_hit.rows() - 1, 2) = old_faces_hit;
 	faces_hit.row(0) << -1, -1;
 
+	viewervr.data.add_points(stroke3DPoints.row(0), Eigen::RowVector3d(1, 0, 1));
 
-	Eigen::MatrixX3d test_points(2, 3);
+
+	/*Eigen::MatrixX3d test_points(2, 3);
 	test_points.row(0) = stroke3DPoints.row(0);
 	test_points.row(1) = stroke3DPoints.row(1);
 	cout << test_points.row(0) << endl << test_points.row(1) << endl << endl;
-	viewervr.data.add_stroke_points(test_points);
+	viewervr.data.add_stroke_points(test_points);*/
 }
 
 /** Used for CUT. Adds the final point, which is the first point outside of the mesh. Doesn't get drawn. **/
@@ -418,6 +420,9 @@ void Stroke::append_final_point() {
 
 	faces_hit.conservativeResize(faces_hit.rows() + 1, Eigen::NoChange);
 	faces_hit.row(faces_hit.rows() - 1) << -1, -1;
+
+	viewervr.data.add_points(stroke3DPoints.row(stroke3DPoints.rows() - 1), Eigen::RowVector3d(1, 0, 1));
+
 
 	/*Eigen::MatrixX3d test_points(2, 3);
 	test_points.row(0) = stroke3DPoints.row(0);
