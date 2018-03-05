@@ -375,6 +375,8 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 			// igl::project(pt1, modelview, viewer.core.proj, viewer.core.viewport, pr);
 			//	 Eigen::RowVector3d pt = igl::unproject(Eigen::Vector3f(x, y, pr[2]), modelview, viewer.core.proj, viewer.core.viewport).transpose().cast<double>();
 
+            pos[0] += viewervr.current_eye_pos[0];
+            pos[2] += viewervr.current_eye_pos[2];
 			if (turnNr == 0) { //increase the number to smooth less often
 				CurveDeformation::pullCurve(pos.transpose().cast<double>(), V, part_of_original_stroke);
 				if (dirty_boundary) { //Smooth an extra time if the boundary is dirty, because smoothing once with a dirty boundary results in a flat mesh
