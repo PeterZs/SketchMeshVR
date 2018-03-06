@@ -81,10 +81,6 @@ Stroke::~Stroke() {}
 /** Used for DRAW. Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its projection as a 2D point (and stores the projected z-value). After adding the new point it will restart the timer. **/
 void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 
-	if (!stroke3DPoints.isZero() && pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
-		return;
-	}
-
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
@@ -100,6 +96,11 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
 	igl::project(pos_in, modelview, viewervr.corevr.proj, viewervr.corevr.viewport, pt2D);
 	double dep_val = pt2D[2];
+
+
+	if (!stroke2DPoints.isZero() && pt2D[0] == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && pt2D[1] == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) {//Check that the point is new compared to last time
+		return;
+	}
 
 	if (stroke3DPoints.rows() == 1 && stroke3DPoints.isZero()) {
 		stroke3DPoints.row(0) << pos[0], pos[1], pos[2];
@@ -125,10 +126,6 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 bool Stroke::strokeAddSegmentAdd(Eigen::Vector3f& pos) {
 	bool result = false;
 
-	if (!stroke3DPoints.isZero() && pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
-		return true;
-	}
-
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
@@ -142,6 +139,11 @@ bool Stroke::strokeAddSegmentAdd(Eigen::Vector3f& pos) {
 	vector<igl::Hit> hits;
 	pos[0] += viewervr.current_eye_pos[0];
 	pos[2] += viewervr.current_eye_pos[2];
+
+	if (!stroke3DPoints.isZero() && pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
+		return true;
+	}
+
 
 	if (igl::ray_mesh_intersect(pos, viewervr.right_touch_direction, V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 		hit_pos = V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v;
@@ -182,10 +184,7 @@ bool Stroke::strokeAddSegmentAdd(Eigen::Vector3f& pos) {
 
 /** Used for CUT. Will add a new 2D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its unprojection onto the existing as a 3D point. If the unprojection isn't on the mesh, it will unproject it and use it as the start or end point. After adding the new point it will restart the timer. **/
 void Stroke::strokeAddSegmentCut(Eigen::Vector3f& pos) {
-	if (!stroke3DPoints.isZero() && pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
-		return;
-	}
-
+	
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
@@ -210,6 +209,11 @@ void Stroke::strokeAddSegmentCut(Eigen::Vector3f& pos) {
 		Eigen::Matrix4f modelview = viewervr.start_action_view * viewervr.corevr.model;
 		Eigen::Vector3f hit_pos_tmp = hit_pos.cast<float>();
 		Eigen::Vector3d hit_pos2D = igl::project(hit_pos_tmp, modelview, viewervr.corevr.proj, viewervr.corevr.viewport).cast<double>();
+
+
+		if (!stroke3DPoints.isZero() && hit_pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && hit_pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && hit_pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
+			return;
+		}
 
 		if (stroke2DPoints.rows() == 1 && dir_before_cut.isZero()) {
 			cout << "This shouldn't happen. Draw the first point outside of the mesh" << endl;
@@ -270,11 +274,7 @@ void Stroke::strokeAddSegmentCut(Eigen::Vector3f& pos) {
 
 /** Used for EXTRUDE. Extrusion base strokes need to be drawn entirely on the mesh (points outside of it will be ignored) and needs to surround at least one whole triangle. Will add a new 2D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its unprojection onto the existing mesh as a 3D point. After adding the new point it will restart the timer. The closest vertex bindings are handled in SurfacePath. **/
 void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
-	//OpenGL has origin at left bottom, window(s) has origin at left top
-	if (!stroke3DPoints.isZero() && pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
-		return;
-	}
-
+	
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
@@ -282,8 +282,6 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 			return;
 		}
 	}
-
-
 
 	Eigen::Vector3d hit_pos;
 	vector<igl::Hit> hits;
@@ -298,6 +296,12 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 		Eigen::Matrix4f modelview = viewervr.start_action_view * viewervr.corevr.model;
 		Eigen::Vector3f hit_pos_tmp = hit_pos.cast<float>();
 		Eigen::Vector3d hit_pos2D = igl::project(hit_pos_tmp, modelview, viewervr.corevr.proj, viewervr.corevr.viewport).cast<double>();
+
+
+		if (!stroke2DPoints.isZero() && hit_pos2D[0] == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && hit_pos2D[1] == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) {//Check that the point is new compared to last time
+			return;
+		}
+
 
 		if (stroke2DPoints.rows() == 1 && stroke2DPoints.isZero()) {
 			stroke2DPoints.row(0) << hit_pos2D[0], hit_pos2D[1];
@@ -335,10 +339,6 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 
 /** Used for EXTRUDE. Extrusion silhouette strokes should be drawn in any of the side views. Will add a new 2D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its unprojection as a 3D point. These need to be projected to a different plane than the 2D points are in, before meshing (done in MeshExtrusion). After adding the new point it will restart the timer. The closest vertex bindings are handled in SurfacePath. **/
 void Stroke::strokeAddSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
-	if (!stroke3DPoints.isZero() && pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
-		return;
-	}
-
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
@@ -354,6 +354,12 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 	pos[2] += viewervr.current_eye_pos[2];
 	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
 	igl::project(pos_in, modelview, viewervr.corevr.proj, viewervr.corevr.viewport, pt2D);
+
+
+	if (!stroke2DPoints.isZero() && pt2D[0] == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && pt2D[1] == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) {//Check that the point is new compared to last time
+		return;
+	}
+
 
 	if (stroke2DPoints.rows() == 1 && empty2D()) {
 		stroke2DPoints.row(0) << pt2D[0], pt2D[1];
@@ -376,8 +382,6 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 
 /** Used for CUT. Adds the first point, which is the last point outside of the mesh before cut start. Doesn't get drawn. **/
 void Stroke::prepend_first_point() {
-
-	cout << "test first point " << pos_before_cut << "      " << dir_before_cut << endl;
 	Eigen::Vector3d first_point = pos_before_cut + (stroke3DPoints.row(0).transpose() - pos_before_cut).dot(dir_before_cut.normalized()) * dir_before_cut.normalized(); //The closest point Pr along a line that starts from P1 and does in direction dir to point P2 is as follows: Pr = P1 + (P2 - P1).dot(dir) * dir with dir normalized
 	Eigen::Matrix4f modelview = viewervr.start_action_view * viewervr.corevr.model;
 	Eigen::Vector3f first_point_tmp = first_point.cast<float>();
@@ -397,8 +401,6 @@ void Stroke::prepend_first_point() {
 	Eigen::MatrixXi old_faces_hit = faces_hit.block(0, 0, faces_hit.rows() - 1, 2);
 	faces_hit.block(1, 0, faces_hit.rows() - 1, 2) = old_faces_hit;
 	faces_hit.row(0) << -1, -1;
-
-	viewervr.data.add_points(stroke3DPoints.row(0), Eigen::RowVector3d(1, 0, 1));
 }
 
 /** Used for CUT. Adds the final point, which is the first point outside of the mesh. Doesn't get drawn. **/
@@ -415,10 +417,7 @@ void Stroke::append_final_point() {
 	stroke3DPoints.row(stroke3DPoints.rows() - 1) = last_point;
 
 	faces_hit.conservativeResize(faces_hit.rows() + 1, Eigen::NoChange);
-	faces_hit.row(faces_hit.rows() - 1) << -1, -1;
-
-	viewervr.data.add_points(stroke3DPoints.row(stroke3DPoints.rows() - 1), Eigen::RowVector3d(1, 0, 1));
-	
+	faces_hit.row(faces_hit.rows() - 1) << -1, -1;	
 }
 
 void Stroke::strokeReset() {
@@ -553,6 +552,7 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	viewervr.data.set_face_based(true);
 	viewervr.data.compute_normals();
 	cout << "testing face normals:  " << endl << viewervr.data.F_normals << endl;
+	cout << "testing vertex normals: " << endl << viewervr.data.V_normals << endl;
 
 	return backside_vertex_map;
 }

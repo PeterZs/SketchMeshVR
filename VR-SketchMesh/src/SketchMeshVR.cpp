@@ -241,12 +241,14 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 		LP.row(0) = pos_tmp.cast<double>();
 		LP.row(1) = (pos + 1000 * viewervr.right_touch_direction).cast<double>();
 		viewervr.data.set_laser_points(LP);
+	//	viewervr.data.add_points(pos_tmp.cast<double>().transpose(), Eigen::RowVector3d(0.5f, 0.5f, 0.5f));
+		viewervr.data.set_hand_point(pos_tmp.cast<double>().transpose(), Eigen::RowVector3d(0.5f, 0.5f, 0.5f));
 	}
 	else {
 		Eigen::RowVector3f pos_tmp = pos;
 		pos_tmp[0] += viewervr.current_eye_pos[0];
 		pos_tmp[2] += viewervr.current_eye_pos[2];
-		viewervr.data.add_points(pos_tmp.cast<double>(), Eigen::RowVector3d(1, 0, 0));
+		viewervr.data.set_hand_point(pos_tmp.cast<double>(), Eigen::RowVector3d(0.5f, 0.5f, 0.5f));
 		viewervr.data.set_laser_points(Eigen::MatrixXd(0, 0));
 	}
 
@@ -310,7 +312,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 					closest_stroke_idx = i;
 				}
 			}
-			cout << " test" << handleID << "   " << closest_stroke_ID << "    " << prev_closest_stroke_ID << endl;
+
 			if (handleID == -1) {//User clicked too far from any of the stroke vertices
 				return false;
 			}
@@ -334,7 +336,6 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 				added_points = stroke_collection[i].get3DPoints();
 				viewervr.data.add_points(added_points.topRows(added_points.rows() - 1), stroke_collection[i].stroke_color);
 			}
-			cout << "remove stroke clicked " <<  remove_stroke_clicked << endl;
 
 			if (remove_stroke_clicked == 2) { //Mechanism to force the user to click twice on the same stroke before removing it (safeguard)
 				stroke_was_removed = true;
@@ -464,10 +465,10 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 
 		else if (prev_tool_mode == DRAW) {
 			initial_stroke->strokeAddSegment(pos);
-			cout << "Releasing after draw" << endl;
+
 			if (initial_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
 										   //Give some time to show the stroke
-				cout << "Getting inside draw finish" << endl;
+
 #ifdef _WIN32
 				Sleep(200);
 #else
