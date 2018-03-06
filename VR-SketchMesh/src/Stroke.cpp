@@ -469,10 +469,11 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 		stroke_edges.row(i) << i, ((i + 1) % stroke2DPoints.rows());
 	}
 
+	cout << "2dpoints" << endl << stroke2DPoints << endl;
 	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq25", V2_tmp, F2, vertex_markers, edge_markers); //TODO: CHange this back to minimum angle of 25 degrees
 	double mean_Z = stroke3DPoints.col(2).mean();
 	V2 = Eigen::MatrixXd::Constant(V2_tmp.rows(), V2_tmp.cols() + 1, mean_Z);
-
+	cout << "test v2_tmp:" << endl << V2_tmp << endl;
 	V2.block(0, 0, V2_tmp.rows(), 2) = V2_tmp;
 
 
@@ -548,7 +549,7 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 
 	viewervr.data.clear_all();
 	viewervr.data.set_mesh_with_floor(V2, F2);
-
+	cout << "testing v " << endl << V2 << endl;
 	viewervr.data.set_face_based(true);
 	viewervr.data.compute_normals();
 	cout << "testing face normals:  " << endl << viewervr.data.F_normals << endl;

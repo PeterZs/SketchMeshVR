@@ -464,6 +464,9 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 		}
 
 		else if (prev_tool_mode == DRAW) {
+			prev_tool_mode = NONE;
+
+			cout << "draw gets called " << endl;
 			initial_stroke->strokeAddSegment(pos);
 
 			if (initial_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
