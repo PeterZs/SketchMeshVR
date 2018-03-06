@@ -30,8 +30,8 @@ public:
     bool empty2D() const { return stroke2DPoints.isZero(); }
 	bool toLoop();
     std::unordered_map<int, int> generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke);
-    int selectClosestVertex(Eigen::Vector3f& pos, double& closest_distance);
-    double compute_stroke_diag();
+	int selectClosestVertex(Eigen::Vector3f pos, double & closest_distance);
+	double compute_stroke_diag();
     
     int get_vertex_idx_for_point(int i);
     int get_ID();

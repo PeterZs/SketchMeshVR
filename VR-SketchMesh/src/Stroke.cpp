@@ -85,10 +85,10 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 		return;
 	}
 
-	if(!stroke3DPoints.isZero()) {
+	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if(timePast < 30000000) {
+		if (timePast < 30000000) {
 			return;
 		}
 	}
@@ -101,11 +101,12 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 	igl::project(pos_in, modelview, viewervr.corevr.proj, viewervr.corevr.viewport, pt2D);
 	double dep_val = pt2D[2];
 
-	if(stroke3DPoints.rows()==1 && stroke3DPoints.isZero()){
+	if (stroke3DPoints.rows() == 1 && stroke3DPoints.isZero()) {
 		stroke3DPoints.row(0) << pos[0], pos[1], pos[2];
 		stroke2DPoints.row(0) << pt2D[0], pt2D[1];
 		dep[0] = dep_val;
-	} else {
+	}
+	else {
 		stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
 		stroke2DPoints.row(stroke2DPoints.rows() - 1) << pt2D[0], pt2D[1];
 
@@ -128,10 +129,10 @@ bool Stroke::strokeAddSegmentAdd(Eigen::Vector3f& pos) {
 		return true;
 	}
 
-	if(!stroke3DPoints.isZero()) {
+	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if(timePast < 10000000) {
+		if (timePast < 10000000) {
 			return result;
 		}
 	}
@@ -147,28 +148,29 @@ bool Stroke::strokeAddSegmentAdd(Eigen::Vector3f& pos) {
 
 		double cur_dist, min_dist = INFINITY;
 		int closest_vert_idx;
-		for(int i = 0; i < 3; i++) {
+		for (int i = 0; i < 3; i++) {
 			cur_dist = (hit_pos.transpose() - V.row(F(hits[0].id, i))).norm();
-			if(cur_dist < min_dist) {
+			if (cur_dist < min_dist) {
 				min_dist = cur_dist;
 				closest_vert_idx = F(hits[0].id, i);
 			}
 		}
 
-		if(closest_vert_bindings.size() == 0 || closest_vert_idx != closest_vert_bindings.back()) { //TODO: might become redundant
+		if (closest_vert_bindings.size() == 0 || closest_vert_idx != closest_vert_bindings.back()) { //TODO: might become redundant
 			closest_vert_bindings.push_back(closest_vert_idx);
 		}
 
 		has_points_on_mesh = true;
 
-		if(stroke3DPoints.rows() == 1 && stroke3DPoints.isZero()) {
+		if (stroke3DPoints.rows() == 1 && stroke3DPoints.isZero()) {
 			stroke3DPoints.row(0) << hit_pos[0], hit_pos[1], hit_pos[2];
-		} else {
+		}
+		else {
 			stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
 			stroke3DPoints.row(stroke3DPoints.rows() - 1) << hit_pos[0], hit_pos[1], hit_pos[2];
 		}
 
-		if(stroke3DPoints.rows() > 1) {
+		if (stroke3DPoints.rows() > 1) {
 			viewervr.data.add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0, 1, 0));
 		}
 		result = true;
@@ -241,7 +243,7 @@ void Stroke::strokeAddSegmentCut(Eigen::Vector3f& pos) {
 		}
 
 		just_came_from_mesh = true;
-		
+
 	}
 	else if (stroke2DPoints.rows() > 1 && just_came_from_mesh) { //We need to add the final point of the stroke, even though it is off the mesh (needed in order to wrap around to the backside)
 		pos_after_cut = pos.cast<double>();
@@ -276,7 +278,7 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if(timePast < 60000000) { //TODO: make sure this is small enough such that every triangle that is traversed actually contains a sampled point
+		if (timePast < 60000000) { //TODO: make sure this is small enough such that every triangle that is traversed actually contains a sampled point
 			return;
 		}
 	}
@@ -323,7 +325,7 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 		return;
 	}
 
-	if(stroke3DPoints.rows() > 1) {
+	if (stroke3DPoints.rows() > 1) {
 		viewervr.data.add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0, 0, 1));
 		viewervr.data.add_points(stroke3DPoints, Eigen::RowVector3d(1, 0, 0));
 	}
@@ -340,8 +342,8 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if(timePast < 90000000) {
-            return;
+		if (timePast < 90000000) {
+			return;
 		}
 	}
 
@@ -353,10 +355,11 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
 	igl::project(pos_in, modelview, viewervr.corevr.proj, viewervr.corevr.viewport, pt2D);
 
-	if(stroke2DPoints.rows() == 1 && empty2D()) {
+	if (stroke2DPoints.rows() == 1 && empty2D()) {
 		stroke2DPoints.row(0) << pt2D[0], pt2D[1];
 		stroke3DPoints.row(0) << pos[0], pos[1], pos[2];
-	} else {
+	}
+	else {
 		stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
 		stroke2DPoints.row(stroke2DPoints.rows() - 1) << pt2D[0], pt2D[1];
 
@@ -364,7 +367,7 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 		stroke3DPoints.row(stroke3DPoints.rows() - 1) << pos[0], pos[1], pos[2];
 	}
 
-	if(stroke3DPoints.rows() > 1) {
+	if (stroke3DPoints.rows() > 1) {
 		viewervr.data.add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0.2, 0.6, 1));
 	}
 
@@ -374,7 +377,7 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 /** Used for CUT. Adds the first point, which is the last point outside of the mesh before cut start. Doesn't get drawn. **/
 void Stroke::prepend_first_point() {
 
-	cout << "test first point "<< pos_before_cut << "      " << dir_before_cut << endl;
+	cout << "test first point " << pos_before_cut << "      " << dir_before_cut << endl;
 	Eigen::Vector3d first_point = pos_before_cut + (stroke3DPoints.row(0).transpose() - pos_before_cut).dot(dir_before_cut.normalized()) * dir_before_cut.normalized(); //The closest point Pr along a line that starts from P1 and does in direction dir to point P2 is as follows: Pr = P1 + (P2 - P1).dot(dir) * dir with dir normalized
 	Eigen::Matrix4f modelview = viewervr.start_action_view * viewervr.corevr.model;
 	Eigen::Vector3f first_point_tmp = first_point.cast<float>();
@@ -396,18 +399,11 @@ void Stroke::prepend_first_point() {
 	faces_hit.row(0) << -1, -1;
 
 	viewervr.data.add_points(stroke3DPoints.row(0), Eigen::RowVector3d(1, 0, 1));
-
-
-	/*Eigen::MatrixX3d test_points(2, 3);
-	test_points.row(0) = stroke3DPoints.row(0);
-	test_points.row(1) = stroke3DPoints.row(1);
-	cout << test_points.row(0) << endl << test_points.row(1) << endl << endl;
-	viewervr.data.add_stroke_points(test_points);*/
 }
 
 /** Used for CUT. Adds the final point, which is the first point outside of the mesh. Doesn't get drawn. **/
 void Stroke::append_final_point() {
-	Eigen::Vector3d last_point = pos_after_cut + (stroke3DPoints.row(stroke3DPoints.rows()-1).transpose() - pos_after_cut).dot(dir_after_cut.normalized()) * dir_after_cut.normalized(); //The closest point Pr along a line that starts from P1 and does in direction dir to point P2 is as follows: Pr = P1 + (P2 - P1).dot(dir) * dir with dir normalized
+	Eigen::Vector3d last_point = pos_after_cut + (stroke3DPoints.row(stroke3DPoints.rows() - 1).transpose() - pos_after_cut).dot(dir_after_cut.normalized()) * dir_after_cut.normalized(); //The closest point Pr along a line that starts from P1 and does in direction dir to point P2 is as follows: Pr = P1 + (P2 - P1).dot(dir) * dir with dir normalized
 	Eigen::Matrix4f modelview = viewervr.start_action_view * viewervr.corevr.model;
 	Eigen::Vector3f last_point_tmp = last_point.cast<float>();
 	Eigen::Vector3d hit_pos2D = igl::project(last_point_tmp, modelview, viewervr.corevr.proj, viewervr.corevr.viewport).cast<double>();
@@ -422,12 +418,7 @@ void Stroke::append_final_point() {
 	faces_hit.row(faces_hit.rows() - 1) << -1, -1;
 
 	viewervr.data.add_points(stroke3DPoints.row(stroke3DPoints.rows() - 1), Eigen::RowVector3d(1, 0, 1));
-
-
-	/*Eigen::MatrixX3d test_points(2, 3);
-	test_points.row(0) = stroke3DPoints.row(0);
-	test_points.row(1) = stroke3DPoints.row(1);
-	viewervr.data.set_stroke_points(test_points); */
+	
 }
 
 void Stroke::strokeReset() {
@@ -450,10 +441,10 @@ void Stroke::strokeReset() {
 
 bool Stroke::toLoop() {
 
-	if(stroke3DPoints.rows() > 2) { //Don't do anything if we have only 1 line segment
+	if (stroke3DPoints.rows() > 2) { //Don't do anything if we have only 1 line segment
 		stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
 		stroke3DPoints.row(stroke3DPoints.rows() - 1) << stroke3DPoints.row(0);
-		if(closest_vert_bindings.size() > 0) {
+		if (closest_vert_bindings.size() > 0) {
 			closest_vert_bindings.push_back(closest_vert_bindings[0]);
 		}
 		if (hand_pos_at_draw.rows() > 1) { //Only loop if it actually contains data
@@ -475,7 +466,7 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	Eigen::MatrixXd V2_tmp, V2;
 	Eigen::MatrixXi F2, F2_back, vertex_markers, edge_markers;
 	Eigen::MatrixXi stroke_edges(stroke2DPoints.rows(), 2);
-	for(int i = 0; i < stroke2DPoints.rows(); i++) {
+	for (int i = 0; i < stroke2DPoints.rows(); i++) {
 		stroke_edges.row(i) << i, ((i + 1) % stroke2DPoints.rows());
 	}
 
@@ -492,14 +483,15 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	V2.conservativeResize(2 * original_size - nr_boundary_vertices, Eigen::NoChange); //Increase size, such that boundary vertices only get included one
 	unordered_map<int, int> backside_vertex_map;
 	int count = 0;
-	for(int i = 0; i < original_size; i++) {
-		if(vertex_markers(i) != 1) { //If the vertex is NOT on the boundary, duplicate it
+	for (int i = 0; i < original_size; i++) {
+		if (vertex_markers(i) != 1) { //If the vertex is NOT on the boundary, duplicate it
 			V2.row(original_size + count) << V2.row(i);
-			backside_vertex_map.insert({i, original_size + count});
-			backside_vertex_map.insert({original_size + count, i});
+			backside_vertex_map.insert({ i, original_size + count });
+			backside_vertex_map.insert({ original_size + count, i });
 			count++;
-		} else {
-			backside_vertex_map.insert({i, i});
+		}
+		else {
+			backside_vertex_map.insert({ i, i });
 		}
 	}
 
@@ -509,8 +501,8 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	//Add backside faces, using original vertices for boundary and copied vertices for interior
 	original_size = F2_back.rows();
 	F2.conservativeResize(original_size * 2, Eigen::NoChange);
-	for(int i = 0; i < original_size; i++) {
-		for(int j = 0; j < 3; j++) {
+	for (int i = 0; i < original_size; i++) {
+		for (int j = 0; j < 3; j++) {
 			auto got = backside_vertex_map.find(F2_back(i, j));
 			F2(original_size + i, j) = got->second;
 		}
@@ -521,13 +513,14 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 
 	vertex_boundary_markers.resize(V2.rows());
 	part_of_original_stroke.resize(V2.rows());
-	for(int i = 0; i < V2.rows(); i++) {
-		if(i >= vertex_markers.rows()) { //vertex can't be boundary (it's on backside)
+	for (int i = 0; i < V2.rows(); i++) {
+		if (i >= vertex_markers.rows()) { //vertex can't be boundary (it's on backside)
 			V2.row(i) = V2.row(i) + 0.1*N_Vertices.row(i);
 			vertex_boundary_markers[i] = 0;
 			part_of_original_stroke[i] = 0;
-		} else {
-			if(vertex_markers(i) == 1) { //Don't change boundary vertices
+		}
+		else {
+			if (vertex_markers(i) == 1) { //Don't change boundary vertices
 				vertex_boundary_markers[i] = 1;
 				part_of_original_stroke[i] = 1;
 				//Don't need to change stroke3DPoints here because they're the same as V2's points.
@@ -547,18 +540,19 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	Eigen::MatrixXd V2_unproj, V2_with_dep(V2.rows(), V2.cols());
 	V2_with_dep.leftCols(2) = V2.leftCols(2);
 	V2_with_dep.col(2) = dep_tmp;
-	
+
 	Eigen::Matrix4f modelview = viewervr.start_action_view * viewervr.corevr.model;
 
 	igl::unproject(V2_with_dep, modelview, viewervr.corevr.proj, viewervr.corevr.viewport, V2_unproj);
 	V2.leftCols(2) = V2_unproj.leftCols(2);
-	
+
 
 	viewervr.data.clear_all();
 	viewervr.data.set_mesh_with_floor(V2, F2);
-	
+
 	viewervr.data.set_face_based(true);
 	viewervr.data.compute_normals();
+	cout << "testing face normals:  " << endl << viewervr.data.F_normals << endl;
 
 	return backside_vertex_map;
 }
@@ -568,13 +562,13 @@ void Stroke::counter_clockwise() {
 	double total_area = 0;
 	Eigen::Vector2d prev, next;
 	prev = (Eigen::Vector2d) stroke2DPoints.row(stroke2DPoints.rows() - 1);
-	for(int i = 0; i < stroke2DPoints.rows(); i++) {
+	for (int i = 0; i < stroke2DPoints.rows(); i++) {
 		next = (Eigen::Vector2d) stroke2DPoints.row(i);
 		total_area += (prev[1] + next[1]) * (next[0] - prev[0]);
 		prev = next;
 	}
 
-	if(total_area > 0) { //reverse the vector
+	if (total_area > 0) { //reverse the vector
 		stroke2DPoints = stroke2DPoints.colwise().reverse().eval();
 		stroke3DPoints = stroke3DPoints.colwise().reverse().eval();
 		if (hand_pos_at_draw.rows() > 1) {
@@ -589,7 +583,7 @@ void Stroke::counter_clockwise() {
 Eigen::MatrixXd Stroke::resample_stroke2D(Eigen::MatrixXd & original_stroke2DPoints) {
 	Eigen::MatrixXd new_stroke2DPoints = Eigen::MatrixXd::Zero(original_stroke2DPoints.rows(), 2);
 	int nr_iterations = max(5.0, original_stroke2DPoints.rows() / 4.0);
-	for(int i = 0; i < nr_iterations; i++) {
+	for (int i = 0; i < nr_iterations; i++) {
 		move_to_middle(original_stroke2DPoints, new_stroke2DPoints);
 		move_to_middle(new_stroke2DPoints, original_stroke2DPoints);
 	}
@@ -600,7 +594,7 @@ void Stroke::move_to_middle(Eigen::MatrixXd &positions, Eigen::MatrixXd &new_pos
 	int n = positions.rows();
 	Eigen::Vector2d prev, cur, next;
 
-	for(int i = 0; i < n; i++) {
+	for (int i = 0; i < n; i++) {
 		prev = positions.row(((i - 1) + n) % n);
 		cur = positions.row(i % n);
 		next = positions.row(((i + 1) + n) % n);
@@ -615,65 +609,29 @@ void Stroke::generate_backfaces(Eigen::MatrixXi &faces, Eigen::MatrixXi &back_fa
 }
 
 /** Returns the ID of the stroke's 3D point that is closest to where the user clicked. Stores the distance to this point in closest_distance. If the user clicked too far away from any of the stroke's points, it will return -1. **/
-int Stroke::selectClosestVertex(Eigen::Vector3f& pos, double& closest_distance) {
-    //First try to unproject the ray onto the mesh. If there is a hit, then take that as the point to compare with all the stroke points (in 3D)
-    //If we do not hit the mesh, then loop over all stroke points and for each of them find the closest point along the ray. Compare all distances and keep the closest.
-    
-    double closest_dist = INFINITY, dist;
-    int closest_ID;
-    
-    Eigen::RowVector3d hit_pos;
-    vector<igl::Hit> hits;
-    pos[0] += viewervr.current_eye_pos[0];
-    pos[2] += viewervr.current_eye_pos[2];
-    
-  /*  if (igl::ray_mesh_intersect(pos, viewervr.right_touch_direction, V, F, hits)){
-        hit_pos = V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v;
-        
-        for(int i=0;i<stroke3DPoints.rows();i++){
-            dist = (stroke3DPoints.row(i) - hit_pos).squaredNorm();
-            if(dist < closest_dist){
-                closest_dist = dist;
-                closest_ID = i;
-            }
-        }
-        
+int Stroke::selectClosestVertex(Eigen::Vector3f pos, double& closest_distance) {
+	//Loop over all stroke points and find the closest one to the hand position. Compare all distances and keep the closest.
 
-    }else{*/
-      //  Eigen::Vector3f test_point;
-	//	test_point = pos;
-        for(int i=0;i<stroke3DPoints.rows();i++){
-          //  test_point = pos + (stroke3DPoints.row(i).transpose().cast<float>() - pos).dot(viewervr.right_touch_direction.normalized()) * viewervr.right_touch_direction.normalized(); //The closest point Pr along a line that starts from P1 and does in direction dir to point P2 is as follows: Pr = P1 + (P2 - P1).dot(dir) * dir with dir normalized
-            dist = (stroke3DPoints.row(i).transpose().cast<float>() - pos).squaredNorm();
-            if(dist < closest_dist){
-                closest_dist = dist;
-                closest_ID = i;
-            }
-        }
-    //}
-    
-    
-    
-	/*Eigen::RowVector3d pt, vert, clicked_pt(x, y, 0);
 	double closest_dist = INFINITY, dist;
 	int closest_ID;
-
-	for(int i = 0; i < stroke3DPoints.rows(); i++) {
-		vert = stroke3DPoints.row(i).transpose();
-		igl::project(vert, modelview, viewervr.core.proj, viewervr.core.viewport, pt);
-		dist = (pt - clicked_pt).squaredNorm();
-		if(dist < closest_dist) {
+	
+	for (int i = 0; i < stroke3DPoints.rows(); i++) {
+		dist = (stroke3DPoints.row(i).transpose().cast<float>() - pos).squaredNorm();
+		if (dist < closest_dist) {
 			closest_dist = dist;
 			closest_ID = i;
 		}
-	}*/
+	}
+
 
 	closest_dist = sqrt(closest_dist);
 	double stroke_diag = compute_stroke_diag();
 	closest_distance = closest_dist;
-	if(stroke3DPoints.rows() > 2 && closest_dist > 0.08*stroke_diag) { //Don't do pulling when the user clicks too far away from any curve (treat as navigation movement)
+
+	if (stroke3DPoints.rows() > 2 && closest_dist > 0.08*stroke_diag) { //Don't do pulling when the user clicks too far away from any curve (treat as navigation movement)
 		return -1;
-	} else if(stroke3DPoints.rows() == 2 && closest_dist > 0.08 * (stroke3DPoints.row(0).norm() * 2)) { //The stroke consist of a single point (that's "looped") so the diag will be 0. Use the point's norm instead
+	}
+	else if (stroke3DPoints.rows() == 2 && closest_dist > 0.08 * (stroke3DPoints.row(0).norm() * 2)) { //The stroke consist of a single point (that's "looped") so the diag will be 0. Use the point's norm instead
 		return -1;
 	}
 	return closest_ID;
@@ -687,7 +645,7 @@ double Stroke::compute_stroke_diag() {
 
 void Stroke::update_Positions(Eigen::MatrixXd V) {
 	stroke3DPoints.resize(closest_vert_bindings.size(), Eigen::NoChange);
-	for(int i = 0; i < closest_vert_bindings.size(); i++) { //Iterate over the (updated) closest_vert_bindings instead of over stroke3DPoints
+	for (int i = 0; i < closest_vert_bindings.size(); i++) { //Iterate over the (updated) closest_vert_bindings instead of over stroke3DPoints
 		stroke3DPoints.row(i) = V.row(closest_vert_bindings[i]);
 	}
 
@@ -695,16 +653,16 @@ void Stroke::update_Positions(Eigen::MatrixXd V) {
 }
 
 /** Remaps the stroke's vertex bindings after the mesh topology has changed. If a stroke becomes non-continous (can only happen to strokes that were non-looped at the start and that did not have their first and/or last point removed) the stroke will be removed and its boundary_vertex_markers unset. Looped strokes always stay continuous, since we can ony remove one continuous piece of them.
-    Note that this method does not update the stroke3DPoints, use update_Positions() for that. **/
+	Note that this method does not update the stroke3DPoints, use update_Positions() for that. **/
 bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi& vertex_boundary_markers) {
 	vector<int> new_bindings;
 	int first_included_after_remove = -1;
 	bool points_were_removed = false, no_tracked_point_yet = true, stays_continuous = false, originally_is_loop = is_loop;
-	
-    for(int i = 0; i < closest_vert_bindings.size() - 1; i++) {	//Closest_vert_bindings is always a loop
 
-		if(new_mapped_indices[closest_vert_bindings[i]] == -1) { //Removed vertex
-			if(!originally_is_loop && (i==0 || i==closest_vert_bindings.size()-2)) {
+	for (int i = 0; i < closest_vert_bindings.size() - 1; i++) {	//Closest_vert_bindings is always a loop
+
+		if (new_mapped_indices[closest_vert_bindings[i]] == -1) { //Removed vertex
+			if (!originally_is_loop && (i == 0 || i == closest_vert_bindings.size() - 2)) {
 				stays_continuous = true;
 			}
 
@@ -713,24 +671,24 @@ bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::V
 			continue;
 		}
 		new_bindings.push_back(new_mapped_indices[closest_vert_bindings[i]]);
-		if(points_were_removed && no_tracked_point_yet) {
+		if (points_were_removed && no_tracked_point_yet) {
 			first_included_after_remove = new_bindings.size() - 1;
 			no_tracked_point_yet = false;
 		}
 	}
 
-	if(new_bindings.size() == 0) {
+	if (new_bindings.size() == 0) {
 		return false; //Stroke ceases to exist.
 	}
 
-	if(first_included_after_remove != -1) {	//Check that we didn't remove ALL points in the stroke and that we actually need to reorder (because point 0 was removed)
+	if (first_included_after_remove != -1) {	//Check that we didn't remove ALL points in the stroke and that we actually need to reorder (because point 0 was removed)
 		rotate(new_bindings.begin(), new_bindings.begin() + first_included_after_remove, new_bindings.end()); //Makes the stroke "continuous" again
 	}
 
 	new_bindings.push_back(new_bindings[0]); //Make the vertex bindings looped again
 	set_closest_vert_bindings(new_bindings);
 
-	if(!originally_is_loop && points_were_removed && !stays_continuous) { //For non-looped strokes that have a middle chunk removed (but not everything), unset their markers because we will remove the entire stroke
+	if (!originally_is_loop && points_were_removed && !stays_continuous) { //For non-looped strokes that have a middle chunk removed (but not everything), unset their markers because we will remove the entire stroke
 		undo_stroke_add(vertex_boundary_markers);
 		return false;
 	}
@@ -748,22 +706,23 @@ void Stroke::snap_to_vertices(Eigen::VectorXi &vertex_boundary_markers) {
 	vector<vector<int>> adj_list;
 	adjacency_list(F, adj_list);
 
-	if((stroke3DPoints.row(0) - stroke3DPoints.row(stroke3DPoints.rows() - 1)).norm() < compute_stroke_diag() / 5.0) {
+	if ((stroke3DPoints.row(0) - stroke3DPoints.row(stroke3DPoints.rows() - 1)).norm() < compute_stroke_diag() / 5.0) {
 		is_loop = true;
-	} else {
+	}
+	else {
 		is_loop = false;
 	}
 
 	stroke3DPoints.resize(0, 3);
-	for(int i = 0; i < closest_vert_bindings.size() - 1; i++) {
+	for (int i = 0; i < closest_vert_bindings.size() - 1; i++) {
 		set<int> goal;
 		goal.insert(closest_vert_bindings[i + 1]);
 		dijkstra_compute_paths(closest_vert_bindings[i], goal, adj_list, min_dist, previous);
 		dijkstra_get_shortest_path_to(closest_vert_bindings[i + 1], previous, result_path);
 
-		for(int j = result_path.size() - 1; j >= 0; j--) {
+		for (int j = result_path.size() - 1; j >= 0; j--) {
 			int idx = result_path[j];
-			if(idx != prev) {
+			if (idx != prev) {
 				added_stroke_final_vertices.push_back(idx);
 				stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
 				stroke3DPoints.row(stroke3DPoints.rows() - 1) << V.row(added_stroke_final_vertices.back());
@@ -776,13 +735,13 @@ void Stroke::snap_to_vertices(Eigen::VectorXi &vertex_boundary_markers) {
 	closest_vert_bindings = added_stroke_final_vertices; //closest_vert_bindings will be updated when the topology changes, added_stroke_final_vertices not, so only use it as a temporary
 	stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
 	stroke3DPoints.row(stroke3DPoints.rows() - 1) << stroke3DPoints.row(0); // Also add a copy of the first point at the end for strokes that are later added, to keep consistency with the initial stroke
-	if(closest_vert_bindings[0] != closest_vert_bindings[closest_vert_bindings.size() - 1]) {
+	if (closest_vert_bindings[0] != closest_vert_bindings[closest_vert_bindings.size() - 1]) {
 		closest_vert_bindings.push_back(closest_vert_bindings[0]); //"Loop" the closest_vert_bindings because they are used to determine which 3DPoints to update, and we need 3DPoints to stay a loop for the sake of draw
 	}
 }
 
 void Stroke::undo_stroke_add(Eigen::VectorXi& vertex_boundary_markers) {
-	for(int i = 0; i < closest_vert_bindings.size(); i++) {
+	for (int i = 0; i < closest_vert_bindings.size(); i++) {
 		vertex_boundary_markers[closest_vert_bindings[i]] = 0;
 	}
 }
