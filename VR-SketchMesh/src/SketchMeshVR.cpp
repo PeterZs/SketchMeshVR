@@ -229,6 +229,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 	if (pressed_type == PULL || pressed_type == ADD || pressed_type == CUT || pressed_type == EXTRUDE) {
 		if (initial_stroke->empty2D()) { //Don't go into these modes when there is no mesh yet
+			cout << "exiting due to initial stroke's empty2d" << endl;
 			return true;
 		}
 	}
@@ -247,12 +248,16 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 	if (tool_mode != DRAW && tool_mode != PULL) {
 		Eigen::MatrixX3d LP(2, 3);
 		Eigen::Vector3f pos_tmp = pos;
+		cout << "want to get eye pos" << endl;
 		pos_tmp[0] += viewervr.get_current_eye_pos()[0];
 		pos_tmp[2] += viewervr.get_current_eye_pos()[2];
+		cout << "got eye pos" << endl;
 		LP.row(0) = pos_tmp.cast<double>();
 		LP.row(1) = (pos + 1000 * viewervr.get_right_touch_direction()).cast<double>();
+		cout << "got touch dir" << endl;
 		viewervr.data.set_laser_points(LP);
 		viewervr.data.set_hand_point(pos_tmp.cast<double>().transpose(), Eigen::RowVector3d(0.5f, 0.5f, 0.5f));
+		cout << "set overlay stuff" << endl;
 	}
 	else {
 		Eigen::RowVector3f pos_tmp = pos;
@@ -517,6 +522,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			draw_all_strokes();
 		}
 		else if (prev_tool_mode == PULL && handleID != -1) { //TODO: do we need hand_has_moved logic?
+			cout << "start finishing pull" << endl;
 			for (int i = 0; i < 2; i++) {
 				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 			}
