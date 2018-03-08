@@ -29,7 +29,7 @@ public:
     bool update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi & vertex_boundary_markers);
     bool empty2D() const { return stroke2DPoints.isZero(); }
 	bool toLoop();
-    std::unordered_map<int, int> generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke);
+	std::unordered_map<int, int> generate3DMeshFromStroke(Eigen::VectorXi & vertex_boundary_markers, Eigen::VectorXi & part_of_original_stroke, Eigen::MatrixXd & mesh_V, Eigen::MatrixXi & mesh_F);
 	int selectClosestVertex(Eigen::Vector3f pos, double & closest_distance);
 	double compute_stroke_diag();
     

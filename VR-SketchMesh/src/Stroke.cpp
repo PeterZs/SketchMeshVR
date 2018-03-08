@@ -59,7 +59,7 @@ Stroke& Stroke::operator=(Stroke other) {
 }
 
 void Stroke::swap(Stroke & tmp) {//The pointers to V and F will always be the same for all stroke instances, so no need to copy
-	std::swap(this->viewervr, tmp.viewervr);
+//	std::swap(this->viewervr, tmp.viewervr);
 	std::swap(this->stroke_ID, tmp.stroke_ID);
 	std::swap(this->stroke2DPoints, tmp.stroke2DPoints);
 	std::swap(this->stroke3DPoints, tmp.stroke3DPoints);
@@ -457,7 +457,7 @@ bool Stroke::toLoop() {
 	return false;
 }
 
-unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke) {
+unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::MatrixXd& mesh_V, Eigen::MatrixXi& mesh_F) {
 	counter_clockwise(); //Ensure the stroke is counter-clockwise, handy later
 	Eigen::MatrixXd original_stroke2DPoints = stroke2DPoints;
 	stroke2DPoints = resample_stroke2D(original_stroke2DPoints); //TODO: decide on whether to include this or not. Might give a discrepancy between what is drawn and the result you get
@@ -547,13 +547,15 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	V2.leftCols(2) = V2_unproj.leftCols(2);
 
 
-	viewervr.data.clear_all();
-	viewervr.data.set_mesh_with_floor(V2, F2);
+	//viewervr.data.clear_all();
+	//viewervr.data.set_face_based(true);
+	//viewervr.data.set_mesh_with_floor(V2, F2);
 	cout << "testing v " << endl << V2 << endl;
-	viewervr.data.set_face_based(true);
-	viewervr.data.compute_normals();
+	//viewervr.data.compute_normals();
 	cout << "testing face normals:  " << endl << viewervr.data.F_normals << endl;
 	cout << "testing vertex normals: " << endl << viewervr.data.V_normals << endl;
+	mesh_V = V2;
+	mesh_F = F2;
 
 	return backside_vertex_map;
 }
