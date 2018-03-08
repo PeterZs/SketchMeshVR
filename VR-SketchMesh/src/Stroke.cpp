@@ -89,12 +89,12 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 		}
 	}
 	Eigen::RowVector3d pt2D;
-	Eigen::Matrix4f modelview = viewervr.start_action_view * viewervr.corevr.model;
+	Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
 
-	pos[0] += viewervr.current_eye_pos[0];
-	pos[2] += viewervr.current_eye_pos[2];
+	pos[0] += viewervr.get_current_eye_pos()[0];
+	pos[2] += viewervr.get_current_eye_pos()[2];
 	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
-	igl::project(pos_in, modelview, viewervr.corevr.proj, viewervr.corevr.viewport, pt2D);
+	igl::project(pos_in, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport, pt2D);
 	double dep_val = pt2D[2];
 
 
@@ -137,15 +137,15 @@ bool Stroke::strokeAddSegmentAdd(Eigen::Vector3f& pos) {
 	bool current_hit = false;
 	Eigen::Vector3d hit_pos, hit_pos_back;
 	vector<igl::Hit> hits;
-	pos[0] += viewervr.current_eye_pos[0];
-	pos[2] += viewervr.current_eye_pos[2];
+	pos[0] += viewervr.get_current_eye_pos()[0];
+	pos[2] += viewervr.get_current_eye_pos()[2];
 
 	if (!stroke3DPoints.isZero() && pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
 		return true;
 	}
 
 
-	if (igl::ray_mesh_intersect(pos, viewervr.right_touch_direction, V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
+	if (igl::ray_mesh_intersect(pos, viewervr.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 		hit_pos = V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v;
 
 		double cur_dist, min_dist = INFINITY;
@@ -196,19 +196,19 @@ void Stroke::strokeAddSegmentCut(Eigen::Vector3f& pos) {
 	bool current_hit = false;
 	Eigen::Vector3d hit_pos, hit_pos_back;
 	vector<igl::Hit> hits;
-	pos[0] += viewervr.current_eye_pos[0];
-	pos[2] += viewervr.current_eye_pos[2];
+	pos[0] += viewervr.get_current_eye_pos()[0];
+	pos[2] += viewervr.get_current_eye_pos()[2];
 
-	if (igl::ray_mesh_intersect(pos, viewervr.right_touch_direction, V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
+	if (igl::ray_mesh_intersect(pos, viewervr.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 		current_hit = true;
 		hit_pos = V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v;
 		hit_pos_back = V.row(F(hits[1].id, 0))*(1.0 - hits[1].u - hits[1].v) + V.row(F(hits[1].id, 1))*hits[1].u + V.row(F(hits[1].id, 2))*hits[1].v;
 
 		has_points_on_mesh = true;
 
-		Eigen::Matrix4f modelview = viewervr.start_action_view * viewervr.corevr.model;
+		Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
 		Eigen::Vector3f hit_pos_tmp = hit_pos.cast<float>();
-		Eigen::Vector3d hit_pos2D = igl::project(hit_pos_tmp, modelview, viewervr.corevr.proj, viewervr.corevr.viewport).cast<double>();
+		Eigen::Vector3d hit_pos2D = igl::project(hit_pos_tmp, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport).cast<double>();
 
 
 		if (!stroke3DPoints.isZero() && hit_pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && hit_pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && hit_pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
@@ -251,16 +251,16 @@ void Stroke::strokeAddSegmentCut(Eigen::Vector3f& pos) {
 	}
 	else if (stroke2DPoints.rows() > 1 && just_came_from_mesh) { //We need to add the final point of the stroke, even though it is off the mesh (needed in order to wrap around to the backside)
 		pos_after_cut = pos.cast<double>();
-		dir_after_cut = viewervr.right_touch_direction.cast<double>();
+		dir_after_cut = viewervr.get_right_touch_direction().cast<double>();
 		just_came_from_mesh = false;
 	}
 	else if (stroke2DPoints.rows() == 1) { //Add the first point, which should be outside the mesh. Refresh the "first" point until we get to the last one before we enter the mesh
 		pos_before_cut = pos.cast<double>();
-		dir_before_cut = viewervr.right_touch_direction.cast<double>();
+		dir_before_cut = viewervr.get_right_touch_direction().cast<double>();
 	}
 
 	if (!current_hit) {
-		hit_pos = (pos + 1000 * viewervr.right_touch_direction).cast<double>();
+		hit_pos = (pos + 1000 * viewervr.get_right_touch_direction()).cast<double>();
 	}
 
 	Eigen::MatrixX3d ray_points(2, 3);
@@ -285,17 +285,17 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 
 	Eigen::Vector3d hit_pos;
 	vector<igl::Hit> hits;
-	pos[0] += viewervr.current_eye_pos[0];
-	pos[2] += viewervr.current_eye_pos[2];
+	pos[0] += viewervr.get_current_eye_pos()[0];
+	pos[2] += viewervr.get_current_eye_pos()[2];
 
-	if (igl::ray_mesh_intersect(pos, viewervr.right_touch_direction, V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
+	if (igl::ray_mesh_intersect(pos, viewervr.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 		hit_pos = V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v;
 
 		has_points_on_mesh = true;
 
-		Eigen::Matrix4f modelview = viewervr.start_action_view * viewervr.corevr.model;
+		Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
 		Eigen::Vector3f hit_pos_tmp = hit_pos.cast<float>();
-		Eigen::Vector3d hit_pos2D = igl::project(hit_pos_tmp, modelview, viewervr.corevr.proj, viewervr.corevr.viewport).cast<double>();
+		Eigen::Vector3d hit_pos2D = igl::project(hit_pos_tmp, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport).cast<double>();
 
 
 		if (!stroke2DPoints.isZero() && hit_pos2D[0] == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && hit_pos2D[1] == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) {//Check that the point is new compared to last time
@@ -348,12 +348,12 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 	}
 
 	Eigen::RowVector3d pt2D;
-	Eigen::Matrix4f modelview = viewervr.start_action_view * viewervr.corevr.model;
+	Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
 
-	pos[0] += viewervr.current_eye_pos[0];
-	pos[2] += viewervr.current_eye_pos[2];
+	pos[0] += viewervr.get_current_eye_pos()[0];
+	pos[2] += viewervr.get_current_eye_pos()[2];
 	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
-	igl::project(pos_in, modelview, viewervr.corevr.proj, viewervr.corevr.viewport, pt2D);
+	igl::project(pos_in, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport, pt2D);
 
 
 	if (!stroke2DPoints.isZero() && pt2D[0] == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && pt2D[1] == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) {//Check that the point is new compared to last time
@@ -383,9 +383,9 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 /** Used for CUT. Adds the first point, which is the last point outside of the mesh before cut start. Doesn't get drawn. **/
 void Stroke::prepend_first_point() {
 	Eigen::Vector3d first_point = pos_before_cut + (stroke3DPoints.row(0).transpose() - pos_before_cut).dot(dir_before_cut.normalized()) * dir_before_cut.normalized(); //The closest point Pr along a line that starts from P1 and does in direction dir to point P2 is as follows: Pr = P1 + (P2 - P1).dot(dir) * dir with dir normalized
-	Eigen::Matrix4f modelview = viewervr.start_action_view * viewervr.corevr.model;
+	Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
 	Eigen::Vector3f first_point_tmp = first_point.cast<float>();
-	Eigen::Vector3d hit_pos2D = igl::project(first_point_tmp, modelview, viewervr.corevr.proj, viewervr.corevr.viewport).cast<double>();
+	Eigen::Vector3d hit_pos2D = igl::project(first_point_tmp, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport).cast<double>();
 
 	stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
 	Eigen::MatrixXd old = stroke2DPoints.block(0, 0, stroke2DPoints.rows() - 1, 2);
@@ -406,9 +406,9 @@ void Stroke::prepend_first_point() {
 /** Used for CUT. Adds the final point, which is the first point outside of the mesh. Doesn't get drawn. **/
 void Stroke::append_final_point() {
 	Eigen::Vector3d last_point = pos_after_cut + (stroke3DPoints.row(stroke3DPoints.rows() - 1).transpose() - pos_after_cut).dot(dir_after_cut.normalized()) * dir_after_cut.normalized(); //The closest point Pr along a line that starts from P1 and does in direction dir to point P2 is as follows: Pr = P1 + (P2 - P1).dot(dir) * dir with dir normalized
-	Eigen::Matrix4f modelview = viewervr.start_action_view * viewervr.corevr.model;
+	Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
 	Eigen::Vector3f last_point_tmp = last_point.cast<float>();
-	Eigen::Vector3d hit_pos2D = igl::project(last_point_tmp, modelview, viewervr.corevr.proj, viewervr.corevr.viewport).cast<double>();
+	Eigen::Vector3d hit_pos2D = igl::project(last_point_tmp, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport).cast<double>();
 
 	stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
 	stroke2DPoints.row(stroke2DPoints.rows() - 1) << hit_pos2D[0], hit_pos2D[1];
@@ -541,9 +541,9 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	V2_with_dep.leftCols(2) = V2.leftCols(2);
 	V2_with_dep.col(2) = dep_tmp;
 
-	Eigen::Matrix4f modelview = viewervr.start_action_view * viewervr.corevr.model;
+	Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
 
-	igl::unproject(V2_with_dep, modelview, viewervr.corevr.proj, viewervr.corevr.viewport, V2_unproj);
+	igl::unproject(V2_with_dep, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport, V2_unproj);
 	V2.leftCols(2) = V2_unproj.leftCols(2);
 
 

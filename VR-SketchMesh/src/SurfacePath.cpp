@@ -18,7 +18,7 @@ SurfacePath::SurfacePath() {
 void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 	origin_stroke = new Stroke(stroke);
 	path.clear();
-	Eigen::Matrix4f modelview = stroke.viewervr.start_action_view * stroke.viewervr.corevr.model;
+	Eigen::Matrix4f modelview = stroke.viewervr.get_start_action_view() * stroke.viewervr.corevr.get_model();
 	
 	int prev_p = stroke.get_stroke2DPoints().rows() - 1;
 	int start_p = prev_p;
@@ -62,7 +62,7 @@ void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 int SurfacePath::extend_path_extrude(int prev_p, int next_p, int faceID, Eigen::Matrix4f& modelview) {
 	Eigen::Vector3d src, dir;
 	Eigen::Vector2d tmp = origin_stroke->get_stroke2DPoints().row(prev_p);
-	igl::unproject_ray(tmp, modelview, origin_stroke->viewervr.corevr.proj, origin_stroke->viewervr.corevr.viewport, src, dir);
+	igl::unproject_ray(tmp, modelview, origin_stroke->viewervr.corevr.get_proj(), origin_stroke->viewervr.corevr.viewport, src, dir);
 	::Plane cutPlane(src.transpose(), looped_3DPoints.row(prev_p), looped_3DPoints.row(next_p));
 
 	int edge = -1;

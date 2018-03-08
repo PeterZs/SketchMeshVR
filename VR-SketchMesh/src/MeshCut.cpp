@@ -26,7 +26,7 @@ void MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &verte
 }
 
 void MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke) {
-	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_cut_remove_inside(m, surface_path, stroke.viewervr.corevr.model, stroke.viewervr.start_action_view, stroke.viewervr.corevr.proj, stroke.viewervr.corevr.viewport);
+	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_cut_remove_inside(m, surface_path, stroke.viewervr.corevr.get_model(), stroke.viewervr.get_start_action_view(), stroke.viewervr.corevr.get_proj(), stroke.viewervr.corevr.viewport);
 	mesh_open_hole(boundary_vertices, m);
 }
 
