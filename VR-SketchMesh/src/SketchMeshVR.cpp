@@ -44,7 +44,7 @@ Eigen::VectorXi sharp_edge;
 Eigen::VectorXi new_mapped_indices;
 
 //General
-enum ToolMode { DRAW, ADD, CUT, EXTRUDE, PULL, REMOVE, CHANGE, SMOOTH, NAVIGATE, TOGGLE, NONE, DEFAULT }; //NONE is used to indicate that a button was released, whereas DEFAULT indicates that one of the toggle buttons was pressed within its cooldown period
+enum ToolMode { DRAW, ADD, CUT, EXTRUDE, PULL, REMOVE, CHANGE, SMOOTH, NAVIGATE, TOGGLE, NONE, DEFAULT, FAIL }; //NONE is used to indicate that a button was released, whereas DEFAULT indicates that one of the toggle buttons was pressed within its cooldown period, FAIL is used to indicate that something went wrong (e.g. user clicked too far away for PULL)
 
 ToolMode tool_mode = NAVIGATE;
 ToolMode prev_tool_mode = NONE;
@@ -213,7 +213,7 @@ ToolMode get_chosen_mode(ViewerVR::ButtonCombo pressed) {
 
 bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 	ToolMode pressed_type = get_chosen_mode(pressed);
-
+	cout << "pressed type " << pressed_type << endl;
 	if (pressed_type == DEFAULT) { //Default means that one of the toggle buttons was pressed again within the cooldown period. Do nothing
 		return true;
 	}
@@ -222,10 +222,10 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		return true;
 	}
 
-	if (!((pos - prev_pos).isZero())) {
+/*	if (!((pos - prev_pos).isZero())) {
 		hand_has_moved = true;
 	}
-	prev_pos = pos;
+	prev_pos = pos;*/
 
 	if (pressed_type == PULL || pressed_type == ADD || pressed_type == CUT || pressed_type == EXTRUDE) {
 		if (initial_stroke->empty2D()) { //Don't go into these modes when there is no mesh yet
@@ -261,14 +261,18 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 	}
 	else {
 		Eigen::RowVector3f pos_tmp = pos;
+		cout << "want pos for draw or pull" << endl;
+
 		pos_tmp[0] += viewervr.get_current_eye_pos()[0];
 		pos_tmp[2] += viewervr.get_current_eye_pos()[2];
+		cout << "got pos for draw or pull" << endl;
 		viewervr.data.set_hand_point(pos_tmp.cast<double>(), Eigen::RowVector3d(0.5f, 0.5f, 0.5f));
 		viewervr.data.set_laser_points(Eigen::MatrixXd(0, 0));
+		cout << "set overlay for draw or pull" << endl;
 	}
-
+	cout << "prev toolmode " << prev_tool_mode << endl;
 	if (tool_mode == DRAW) { //Creating the first curve/mesh
-		if (prev_tool_mode == NONE) {
+		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) {
 			if (has_recentered) {
 				viewervr.set_start_action_view(viewervr.corevr.get_view());
 				stroke_collection.clear();
@@ -283,7 +287,6 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				viewervr.request_recenter();
 				has_recentered = true;
 			}
-
 		}
 		else if (prev_tool_mode == DRAW) {
 			//We had already started drawing, continue
@@ -292,7 +295,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		}
 	}
 	else if (tool_mode == ADD) {
-		if (prev_tool_mode == NONE) { //Adding a new control curve onto an existing mesh
+		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) { //Adding a new control curve onto an existing mesh
 			added_stroke = new Stroke(V, F, viewervr, next_added_stroke_ID);
 			next_added_stroke_ID++;
 			added_stroke->strokeAddSegmentAdd(pos); //If the user starts outside of the mesh, consider the movement as navigation
@@ -305,7 +308,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		}
 	}
 	else if (tool_mode == REMOVE) {
-		if (prev_tool_mode == NONE) {
+		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) {
 			Eigen::Vector3f hit_pos;
 			vector<igl::Hit> hits;
 			Eigen::Vector3f pos_tmp = pos;
@@ -330,6 +333,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			}
 
 			if (handleID == -1) {//User clicked too far from any of the stroke vertices
+				prev_tool_mode = FAIL;
 				return false;
 			}
 			if (closest_stroke_ID == prev_closest_stroke_ID) {
@@ -368,12 +372,13 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		}
 	}
 	else if (tool_mode == PULL) { //Dragging an existing curve
-		if (prev_tool_mode == NONE || prev_tool_mode == ADD) { //Also allow to go to pull after add because sometimes the buttons are hard to differentiate
+		if (prev_tool_mode == NONE || prev_tool_mode == ADD || prev_tool_mode == FAIL) { //Also allow to go to pull after ADD because sometimes the buttons are hard to differentiate
 			pos[0] += viewervr.get_current_eye_pos()[0];
 			pos[2] += viewervr.get_current_eye_pos()[2];
 			select_dragging_handle(pos);
 
 			if (handleID == -1) {//User clicked too far from any of the stroke vertices
+				prev_tool_mode = FAIL;
 				return false;
 			}
 			if (closest_stroke_ID == -1) {
@@ -417,7 +422,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 	}
 	else if (tool_mode == CUT) {
-		if (prev_tool_mode == NONE) {
+		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) {
 			prev_tool_mode = CUT;
 			if (cut_stroke_already_drawn) { //clicked while cut stroke already drawn
 				cout << "return after second click" << endl;
@@ -438,7 +443,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		}
 	}
 	else if (tool_mode == EXTRUDE) {
-		if (prev_tool_mode == NONE) {
+		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) {
 			prev_tool_mode = EXTRUDE;
 			if (extrusion_base_already_drawn) { //clicked while the extrude base was already drawn
 				added_stroke = new Stroke(V, F, viewervr, next_added_stroke_ID);
@@ -650,7 +655,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 			}
 		}
-		else if (prev_tool_mode == TOGGLE) {
+		else if (prev_tool_mode == TOGGLE || prev_tool_mode == FAIL) {
 			viewervr.draw_while_computing = false;
 		}
 
