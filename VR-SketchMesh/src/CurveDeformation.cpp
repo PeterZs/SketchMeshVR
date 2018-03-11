@@ -1,4 +1,6 @@
 #include "CurveDeformation.h"
+#include <Eigen/Sparse>
+
 
 using namespace std;
 using namespace igl;
@@ -35,7 +37,7 @@ void CurveDeformation::startPullCurve(Stroke& _stroke, int _handle_ID) {
 	stroke_ID = _stroke.get_ID();
 }
 
-//pos is the unprojection from the position to where the user dragged the vertex
+//pos is the position to where the user dragged the vertex
 void CurveDeformation::pullCurve(const Eigen::RowVector3d& pos, Eigen::MatrixXd& V, Eigen::VectorXi& part_of_original_stroke) {
 	double drag_size = (pos - start_pos).norm();
 	drag_size /= curve_diag_length;

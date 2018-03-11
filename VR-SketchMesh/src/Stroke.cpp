@@ -59,7 +59,6 @@ Stroke& Stroke::operator=(Stroke other) {
 }
 
 void Stroke::swap(Stroke & tmp) {//The pointers to V and F will always be the same for all stroke instances, so no need to copy
-//	std::swap(this->viewervr, tmp.viewervr);
 	std::swap(this->stroke_ID, tmp.stroke_ID);
 	std::swap(this->stroke2DPoints, tmp.stroke2DPoints);
 	std::swap(this->stroke3DPoints, tmp.stroke3DPoints);
@@ -91,8 +90,9 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 	Eigen::RowVector3d pt2D;
 	Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
 
-	pos[0] += viewervr.get_current_eye_pos()[0];
-	pos[2] += viewervr.get_current_eye_pos()[2];
+	Eigen::Vector3f cur_eye_pos = viewervr.get_current_eye_pos();
+	pos[0] += cur_eye_pos[0];
+	pos[2] += cur_eye_pos[2];
 	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
 	igl::project(pos_in, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport, pt2D);
 	double dep_val = pt2D[2];
@@ -137,8 +137,10 @@ bool Stroke::strokeAddSegmentAdd(Eigen::Vector3f& pos) {
 	bool current_hit = false;
 	Eigen::Vector3d hit_pos, hit_pos_back;
 	vector<igl::Hit> hits;
-	pos[0] += viewervr.get_current_eye_pos()[0];
-	pos[2] += viewervr.get_current_eye_pos()[2];
+
+	Eigen::Vector3f cur_eye_pos = viewervr.get_current_eye_pos();
+	pos[0] += cur_eye_pos[0];
+	pos[2] += cur_eye_pos[2];
 
 	if (!stroke3DPoints.isZero() && pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
 		return true;
@@ -196,8 +198,10 @@ void Stroke::strokeAddSegmentCut(Eigen::Vector3f& pos) {
 	bool current_hit = false;
 	Eigen::Vector3d hit_pos, hit_pos_back;
 	vector<igl::Hit> hits;
-	pos[0] += viewervr.get_current_eye_pos()[0];
-	pos[2] += viewervr.get_current_eye_pos()[2];
+
+	Eigen::Vector3f cur_eye_pos = viewervr.get_current_eye_pos();
+	pos[0] += cur_eye_pos[0];
+	pos[2] += cur_eye_pos[2];
 
 	if (igl::ray_mesh_intersect(pos, viewervr.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 		current_hit = true;
@@ -285,8 +289,10 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 
 	Eigen::Vector3d hit_pos;
 	vector<igl::Hit> hits;
-	pos[0] += viewervr.get_current_eye_pos()[0];
-	pos[2] += viewervr.get_current_eye_pos()[2];
+
+	Eigen::Vector3f cur_eye_pos = viewervr.get_current_eye_pos();
+	pos[0] += cur_eye_pos[0];
+	pos[2] += cur_eye_pos[2];
 
 	if (igl::ray_mesh_intersect(pos, viewervr.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 		hit_pos = V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v;
@@ -350,8 +356,9 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 	Eigen::RowVector3d pt2D;
 	Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
 
-	pos[0] += viewervr.get_current_eye_pos()[0];
-	pos[2] += viewervr.get_current_eye_pos()[2];
+	Eigen::Vector3f cur_eye_pos = viewervr.get_current_eye_pos();
+	pos[0] += cur_eye_pos[0];
+	pos[2] += cur_eye_pos[2];
 	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
 	igl::project(pos_in, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport, pt2D);
 
@@ -547,11 +554,7 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	V2.leftCols(2) = V2_unproj.leftCols(2);
 
 
-	//viewervr.data.clear_all();
-	//viewervr.data.set_face_based(true);
-	//viewervr.data.set_mesh_with_floor(V2, F2);
 	cout << "testing v " << endl << V2 << endl;
-	//viewervr.data.compute_normals();
 	cout << "testing face normals:  " << endl << viewervr.data.F_normals << endl;
 	cout << "testing vertex normals: " << endl << viewervr.data.V_normals << endl;
 	mesh_V = V2;
