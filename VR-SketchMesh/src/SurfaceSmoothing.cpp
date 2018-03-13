@@ -21,9 +21,8 @@ Eigen::VectorXd initial_curvature;
 Eigen::VectorXd SurfaceSmoothing::curvatures(ptrdiff_t(0));
 int ID = -1, iteration = 0;
 int no_boundary_vertices, no_boundary_adjacent_vertices;
-double SurfaceSmoothing::vertex_weight = 10.0;//1000.0;// 10.0;
-double SurfaceSmoothing::edge_weight = 1.0;// 0.001;// 1.0;
-double SurfaceSmoothing::curvature_vertex_weight = 0.1;
+double SurfaceSmoothing::vertex_weight = 10.0;
+double SurfaceSmoothing::edge_weight = 1.0;
 double SurfaceSmoothing::factor = 1.9;
 vector<vector<int>> neighbors;
 

@@ -7,27 +7,34 @@
 using namespace std;
 using namespace igl;
 
-int MeshCut::prev_vertex_count = -1;
-int MeshCut::ID = -1;
 
-void MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::VectorXi &new_mapped_indices, Eigen::VectorXi &sharp_edge, Stroke& stroke) {
-	if(V.rows() != prev_vertex_count) {
-		ID++;
-		prev_vertex_count = V.rows();
-	}
-	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, ID);
+bool MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::VectorXi &new_mapped_indices, Eigen::VectorXi &sharp_edge, Stroke& stroke) {
+
+	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, -1); //Give ID -1 since we're not using it here anyway
 	SurfacePath surface_path;
-	surface_path.create_from_stroke_cut(stroke); //Prepares the drawn stroke (inserts extra points at the edges that it crosses)
-	cut_main(m, surface_path, stroke);
+	bool success = surface_path.create_from_stroke_cut(stroke); //Prepares the drawn stroke (inserts extra points at the edges that it crosses)
+	if (!success) {
+		return false;
+	}
+	success = cut_main(m, surface_path, stroke);
+	if (!success) {
+		return false;
+	}
 
 	post_cut_update_points(stroke, surface_path);
 
-	return;
+	return true;
 }
 
-void MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke) {
-	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_cut_remove_inside(m, surface_path, stroke.viewervr.corevr.get_model(), stroke.viewervr.get_start_action_view(), stroke.viewervr.corevr.get_proj(), stroke.viewervr.corevr.viewport);
+bool MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke) {
+	bool remesh_success = true;
+	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_cut_remove_inside(m, surface_path, stroke.viewervr.corevr.get_model(), stroke.viewervr.get_start_action_view(), stroke.viewervr.corevr.get_proj(), stroke.viewervr.corevr.viewport, remesh_success);
+	if (!remesh_success) {
+		return false;
+	}
 	mesh_open_hole(boundary_vertices, m);
+
+	return true;
 }
 
 void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
@@ -55,7 +62,6 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 	Eigen::Vector3d x_vec, y_vec;
 	project_points_to_2D(boundary_vertices, m, boundary_vertices_2D, stroke_edges, center, x_vec, y_vec);
 
-	cout << "boundary 2d" << boundary_vertices_2D << endl << endl;
 	Eigen::MatrixXd V2;
 	Eigen::MatrixXi F2, vertex_markers, edge_markers;
 	igl::triangle::triangulate(boundary_vertices_2D.leftCols(2), stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(boundary_vertices_2D.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "Yq25Q", V2, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary

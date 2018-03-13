@@ -20,7 +20,6 @@ Eigen::RowVector3d Plane::cross_point(Eigen::RowVector3d edge_start, Eigen::RowV
 	double end_to_surface = signed_distance(edge_end);
 	double start_to_end = start_to_surface - end_to_surface;
 	Eigen::RowVector3d result = edge_start + (edge_end - edge_start)*(start_to_surface / start_to_end);
-	std::cout << "plane line intersection gives t = " << start_to_surface / start_to_end << std::endl;
 	return result;
 }
 
@@ -30,7 +29,6 @@ Eigen::RowVector3d Plane::cross_point(Eigen::RowVector3d edge_start, Eigen::RowV
 	double end_to_surface = signed_distance(edge_end);
 	double start_to_end = start_to_surface - end_to_surface;
 	Eigen::RowVector3d result = edge_start + (edge_end - edge_start)*(start_to_surface / start_to_end);
-	std::cout << "plane line intersection gives t = " << start_to_surface / start_to_end << std::endl;
 	t_val = start_to_surface / start_to_end;
 	return result;
 }

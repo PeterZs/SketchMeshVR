@@ -337,7 +337,7 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 
 	if (stroke3DPoints.rows() > 1) {
 		viewervr.data.add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0, 0, 1));
-		viewervr.data.add_points(stroke3DPoints, Eigen::RowVector3d(1, 0, 0));
+	//	viewervr.data.add_points(stroke3DPoints, Eigen::RowVector3d(1, 0, 0));
 	}
 
 	_time1 = std::chrono::high_resolution_clock::now();
@@ -476,11 +476,9 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 		stroke_edges.row(i) << i, ((i + 1) % stroke2DPoints.rows());
 	}
 
-	cout << "2dpoints" << endl << stroke2DPoints << endl;
 	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq25", V2_tmp, F2, vertex_markers, edge_markers); //TODO: CHange this back to minimum angle of 25 degrees
 	double mean_Z = stroke3DPoints.col(2).mean();
 	V2 = Eigen::MatrixXd::Constant(V2_tmp.rows(), V2_tmp.cols() + 1, mean_Z);
-	cout << "test v2_tmp:" << endl << V2_tmp << endl;
 	V2.block(0, 0, V2_tmp.rows(), 2) = V2_tmp;
 
 
@@ -501,9 +499,6 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 			backside_vertex_map.insert({ i, i });
 		}
 	}
-
-	//V2.col(0) = V2.col(0).array() - V2.col(0).mean();//TODO; check that this is still what i wanna do, since it will move the mesh to a different position in space from where it was drawn
-	//V2.col(1) = V2.col(1).array() - V2.col(1).mean();//TODO; check that this is still what i wanna do, since it will move the mesh to a different position in space from where it was drawn
 
 	//Add backside faces, using original vertices for boundary and copied vertices for interior
 	original_size = F2_back.rows();
@@ -553,10 +548,6 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	igl::unproject(V2_with_dep, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport, V2_unproj);
 	V2.leftCols(2) = V2_unproj.leftCols(2);
 
-
-	cout << "testing v " << endl << V2 << endl;
-	cout << "testing face normals:  " << endl << viewervr.data.F_normals << endl;
-	cout << "testing vertex normals: " << endl << viewervr.data.V_normals << endl;
 	mesh_V = V2;
 	mesh_F = F2;
 
@@ -654,7 +645,6 @@ void Stroke::update_Positions(Eigen::MatrixXd V) {
 	for (int i = 0; i < closest_vert_bindings.size(); i++) { //Iterate over the (updated) closest_vert_bindings instead of over stroke3DPoints
 		stroke3DPoints.row(i) = V.row(closest_vert_bindings[i]);
 	}
-
 	//In the case of extrusion silhouette strokes, closest_vert_bindings isn't looped. Don't make stroke3DPoints looped, because we already account for it not being a loop when drawing the curves
 }
 

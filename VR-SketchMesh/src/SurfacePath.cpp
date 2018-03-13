@@ -13,7 +13,7 @@ SurfacePath::SurfacePath() {
 }
 
 /** Creates a SurfacePath that contains both the original points in stroke, and new points at the locations where stroke segments cross face edges. Won't wrap around to the backside of the mesh (because it will arrive at the first index again before having to switch direction). Used for extrusion **/
-void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
+bool SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 	origin_stroke = new Stroke(stroke);
 	path.clear();
 	Eigen::Matrix4f modelview = stroke.viewervr.get_start_action_view() * stroke.viewervr.corevr.get_model();
@@ -41,7 +41,9 @@ void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 		path.push_back(newElement);
 
 		faceID = extend_path_extrude(prev_p, next_p, faceID, modelview);
-
+		if (faceID == -1) {
+			return false;
+		}
 		if (next_p == start_p && faceID == start_face) {
 			break;
 		}
@@ -52,7 +54,7 @@ void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 	pt = origin_stroke->get3DPoints().row(start_p); //TODO: check why this is needed
 	PathElement lastElement(faceID, PathElement::FACE, pt);
 	path.push_back(lastElement);
-	
+	return true;
 }
 
 int SurfacePath::extend_path_extrude(int prev_p, int next_p, int faceID, Eigen::Matrix4f& modelview) {
@@ -81,7 +83,6 @@ int SurfacePath::extend_path_extrude(int prev_p, int next_p, int faceID, Eigen::
 		path.push_back(newElement);
 
 		faceID = (EF(edge, 0) == faceID) ? EF(edge, 1) : EF(edge, 0); //get the polygon on the other side of the edge
-		cout << "new faceID" << faceID << endl;
 	}
 }
 
@@ -95,7 +96,6 @@ int SurfacePath::find_next_edge_extrude(int next_p, int prev_p, int prev_edge, i
 		if (edge != prev_edge) {
 			int other_faceID = (EF(edge, 0) == polygon) ? EF(edge, 1) : EF(edge, 0);
 			if (other_faceID == next_faceID) {
-				cout << "found adjacent edge" << endl;
 				return edge;
 			}
 		}
@@ -103,9 +103,6 @@ int SurfacePath::find_next_edge_extrude(int next_p, int prev_p, int prev_edge, i
 
 	//If we come here, it means that the next strokepoint (next_p) lies in a non-adjacent face (e.g. one or multiple faces away). Only then go for more elaborate checking 
 	::Plane cutPlane(origin_stroke->get_hand_pos().row(prev_p), looped_3DPoints.row(prev_p), looped_3DPoints.row(next_p));
-	cout << "prev_p " << prev_p << " next_p " << next_p << endl;
-	cout << "faces hit: " <<  origin_stroke->get_hit_faces()(prev_p, 0) << "  " << origin_stroke->get_hit_faces()(next_p, 0) << endl;
-	cout << "plane points" << endl << origin_stroke->get_hand_pos().row(prev_p) << endl << looped_3DPoints.row(prev_p) << endl << looped_3DPoints.row(next_p) << endl;
 	for (int i = 0; i < 3; i++) {
 		int edge = FE(polygon, i);
 		if (edge != prev_edge) {
@@ -116,7 +113,6 @@ int SurfacePath::find_next_edge_extrude(int next_p, int prev_p, int prev_edge, i
 			its_vec.normalize();
 			if (its_vec.dot(seg_vec) < 0) {
 				//Projection points into the opposite direction of line segment
-				cout << "test next edge finding for extrude" << endl << seg_vec << endl << its_vec << endl << cut_point << endl;
 			}
 			else {
 				return edge;
@@ -128,7 +124,7 @@ int SurfacePath::find_next_edge_extrude(int next_p, int prev_p, int prev_edge, i
 }
 
 /** Creates a SurfacePath that contains both the original points in stroke, and new points at the locations where stroke segments cross face edges. Also wraps around to the backside of the mesh. Used for cutting **/
-void SurfacePath::create_from_stroke_cut(const Stroke & stroke) {
+bool SurfacePath::create_from_stroke_cut(const Stroke & stroke) {
 	origin_stroke = new Stroke(stroke);
 	path.clear();
 
@@ -153,7 +149,6 @@ void SurfacePath::create_from_stroke_cut(const Stroke & stroke) {
 		prev_faceID = faceID;
 		int prev_p_tmp = (prev_p > nr_looped_3DPoints / 2) ? nr_looped_3DPoints - prev_p : prev_p;
 		faceID = origin_stroke->get_hit_faces()(prev_p_tmp, !on_front_side);
-		cout << "face and prev face" << faceID << "  " << prev_faceID << endl;
 		if (faceID == -1) {
 			//We're dealing with one of the 2 off-mesh vertices
 			faceID = prev_faceID; //Reset to the previous faceID
@@ -163,10 +158,10 @@ void SurfacePath::create_from_stroke_cut(const Stroke & stroke) {
 			path.push_back(newElement);
 		}
 
-		//bool forward;
-		cout << "prev and next" << prev_p << "  " << next_p << endl;
 		faceID = extend_path_cut(prev_p, next_p, faceID, on_front_side, edge, first_iter);
-
+		if (faceID == -1) {
+			return false;
+		}
 
 		if(next_p == start_p && faceID == start_face) {
 			break;
@@ -176,6 +171,7 @@ void SurfacePath::create_from_stroke_cut(const Stroke & stroke) {
 		prev_p = next_p;
 	}
 
+	return true;
 }
 
 //TODO: NOTE that this is now fully adapted to the needs for CUT and not regarding EXTRUDE
@@ -203,7 +199,6 @@ int SurfacePath::extend_path_cut(int prev_p, int next_p, int faceID, bool& on_fr
 	Eigen::RowVector3d end_pos = looped_3DPoints.row(next_p);
 
 	//int edge = -1;
-	cout << "hitfaces" << origin_stroke->get_hit_faces() << endl;
 
 	while(true) {
 		next_p = (next_p > nr_looped_3DPoints / 2) ? nr_looped_3DPoints - next_p : next_p; //next_p is used to index into hit_faces, which only has data stored for "the front half" and then has the info for the "back half" in the second column
@@ -228,7 +223,6 @@ int SurfacePath::extend_path_cut(int prev_p, int next_p, int faceID, bool& on_fr
 		faceID = (EF(edge, 0) == faceID) ? EF(edge, 1) : EF(edge, 0); //get the polygon on the other side of the edge
 
 		if(origin_stroke->get_hit_faces()(prev_p, 0) == faceID || origin_stroke->get_hit_faces()(prev_p, 1) == faceID){// || old_normal.dot(new_normal) < 0){
-			cout << " this becomes true" << endl;
             //This means that the current point (prev_p) is projected into both "its own" polygon and into the polygon of next_p, while next_p's polygon is across an edge. Means that next_p's polygon is on the backside
 			on_front_side = !on_front_side;
 			return faceID;
@@ -260,7 +254,6 @@ int SurfacePath::find_next_edge_cut(pair<int, int> strokeEdge, int prev_edge, in
 
 	
 	//If we come here, it means that the next strokepoint (next_p) lies in a non-adjacent face (e.g. one or multiple faces away). Only then go for more elaborate checking 
-	cout << polygon << "   " << start_pos << "   " << end_pos << endl;
 	double t_val;
 	for (int i = 0; i < 3; i++) {
 		int edge = FE(polygon, i);
@@ -272,7 +265,6 @@ int SurfacePath::find_next_edge_cut(pair<int, int> strokeEdge, int prev_edge, in
 			its_vec.normalize();
 			if (t_val>0.99 || t_val<0.01 || (first_iter && its_vec.dot(seg_vec)<0)) { //Force the first extension to go into the right direction
 				//Projection points into the opposite direction of line segment
-				cout << "test next edge finding for extrude" << endl << seg_vec << endl << its_vec << endl << cut_point << endl;
 			}
 			else {
 				return edge;

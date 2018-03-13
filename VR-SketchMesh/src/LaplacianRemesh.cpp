@@ -16,21 +16,21 @@ bool LaplacianRemesh::remove_inside_faces = true;
 Eigen::MatrixXi LaplacianRemesh::EV, LaplacianRemesh::FE, LaplacianRemesh::EF;
 vector<vector<int>> LaplacianRemesh::VV;
 
-Eigen::VectorXi LaplacianRemesh::remesh_cut_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport) {
+Eigen::VectorXi LaplacianRemesh::remesh_cut_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success) {
 	is_front_loop = false;
 	remove_inside_faces = true;
 	adjacency_list(m.F, VV);
-	return remesh(m, surface_path, model, view, proj, viewport);
+	return remesh(m, surface_path, model, view, proj, viewport, remesh_success);
 }
 
-Eigen::VectorXi LaplacianRemesh::remesh_extrusion_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport) {
+Eigen::VectorXi LaplacianRemesh::remesh_extrusion_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success) {
 	is_front_loop = true;
 	remove_inside_faces = true;
 	adjacency_list(m.F, VV);
-	return remesh(m, surface_path, model, view, proj, viewport);
+	return remesh(m, surface_path, model, view, proj, viewport, remesh_success);
 }
 
-Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport) {
+Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success) {
 	vector<bool> dirty_face(m.F.rows());
 	vector<int> dirty_vertices(m.V.rows());
 	m.new_mapped_indices.resize(m.V.rows()); //Resize the map from old to new (clean) vertex indices to allow it to contain the number of vertices that are in the mesh at the start
@@ -86,6 +86,11 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		}
 	}
 
+	if (outer_boundary_vertices.size() == 0) { //There are no vertices left behind (cut that removes everthing or extrude that doesn't include at least 1 triangle)
+		remesh_success = false;
+		return Eigen::VectorXi::Zero(1);
+	}
+
 	//Collect faces along the path
 	for(int i = 0; i < path.size(); i++) {
 		if(path[i].get_type() == PathElement::EDGE) {
@@ -114,6 +119,11 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		}
 	}
 
+	if (clean_faces.size() == 0) { //There are no faces left behind (cut that removes everthing or extrude that doesn't include at least 1 vertex)
+		remesh_success = false;
+		return Eigen::VectorXi::Zero(1);
+	}
+
 	//Determine which vertices are clean
 	Eigen::VectorXi vertex_is_clean = Eigen::VectorXi::Zero(m.V.rows());
 	vector<int> clean_vertices;
@@ -131,7 +141,6 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 			clean_vertices.push_back(i);
 		}
 	}
-
 
 	Eigen::MatrixXi tmp_F;
 	Eigen::VectorXi row_idx, col_idx(3);

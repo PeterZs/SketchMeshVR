@@ -11,27 +11,30 @@
 using namespace std;
 using namespace igl;
 
-int MeshExtrusion::prev_vertex_count = -1;
-int MeshExtrusion::ID = -1;
-
-void MeshExtrusion::extrude_prepare(Stroke& base, SurfacePath& surface_path) {
+bool MeshExtrusion::extrude_prepare(Stroke& base, SurfacePath& surface_path) {
 	base.counter_clockwise();
 
 	//TODO: maybe need to do teddy.cleanstroke.clean like in Model line 1020 (ON BOTH BASE AND SILHOUETTE)
 	
-	surface_path.create_from_stroke_extrude(base);
+	bool success = surface_path.create_from_stroke_extrude(base);
+	if (!success) {
+		return false;
+	}
 	post_extrude_prepare_update_points(base, surface_path);
+	return true;
 }
 
-void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::VectorXi &new_mapped_indices, Eigen::VectorXi &sharp_edge, SurfacePath& surface_path, Stroke& stroke, Stroke& base, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport) {
-	if(V.rows() != prev_vertex_count) {
-		ID++;
-		prev_vertex_count = V.rows();
-	}
+bool MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::VectorXi &new_mapped_indices, Eigen::VectorXi &sharp_edge, SurfacePath& surface_path, Stroke& stroke, Stroke& base, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport) {
 
-	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, ID);
+	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, -1); //Give ID -1 since we don't use the mesh ID here anyway
 	stroke.counter_clockwise();
-	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_extrusion_remove_inside(m, surface_path, model, view, proj, viewport);
+	bool remesh_success = true;
+	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_extrusion_remove_inside(m, surface_path, model, view, proj, viewport, remesh_success);
+
+	if (!remesh_success) {
+		//NOTE: remesh will have cleared m.new_mapped_indices but since this is cleared every time it is needed, there's no need to revert this
+		return false;
+	}
 
 	vector<int> sharp_edge_indices;
 	for(int i = 0; i < m.sharp_edge.rows(); i++) {
@@ -55,19 +58,9 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 
 
     //Compute the real 3D positions of the silhouette stroke
-	Eigen::RowVector3d center(0, 0, 0);// , pr;
-	Eigen::Vector3d normal(0, 0, 0);// , source, dir;
-	//Eigen::Vector2d tmp0;
+	Eigen::RowVector3d center(0, 0, 0);
+	Eigen::Vector3d normal(0, 0, 0);
 	get_normal_and_center(center, normal, m, boundary_vertices);
-
-	//Eigen::Matrix4f modelview = stroke.viewer.core.view * stroke.viewer.core.model;
-	//igl::project(center, modelview, stroke.viewer.core.proj, stroke.viewer.core.viewport, pr);
-	//tmp0 = pr.leftCols(2);
-	//unproject_ray(tmp0, modelview, stroke.viewer.core.proj, stroke.viewer.core.viewport, source, dir);	
-
-	//Eigen::Vector3d camera_to_center = source + dir;
-	//Eigen::Vector3d normal2 = normal.cross(camera_to_center);
-//	normal2.normalize();
 
 	Eigen::MatrixX3d sil_3D_points = stroke.get3DPoints();
 	Eigen::MatrixXd silhouette_vertices(sil_3D_points.rows() - 1, 3);
@@ -78,37 +71,24 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	}
 
 
-	//Eigen::Vector3d center_to_vertex = m.V.row(boundary_vertices[0]) - center;
-	//double max, min;
 	int most_left_vertex_idx = 0, most_right_vertex_idx = 0;
-	//find_left_and_right(most_left_vertex_idx, most_right_vertex_idx, min, max, m, center, boundary_vertices, normal2);
 	find_left_and_right(most_left_vertex_idx, most_right_vertex_idx, m, boundary_vertices, silhouette_vertices.row(0), silhouette_vertices.row(silhouette_vertices.rows()-1), center);
-	stroke.viewervr.data.add_points(m.V.row(boundary_vertices[most_left_vertex_idx]), Eigen::RowVector3d(1, 1, 0));
-	//Eigen::Vector3d v_tmp = (m.V.row(boundary_vertices[most_left_vertex_idx]) - m.V.row(boundary_vertices[most_right_vertex_idx])).transpose();
-	//Eigen::Vector3d pop_surface_normal = normal.cross(v_tmp);
-//	pop_surface_normal.normalize();
-
-	//Eigen::RowVector3d pop_surface_point = m.V.row(boundary_vertices[most_left_vertex_idx]);
-//	compute_silhouette_positions(silhouette_vertices, stroke, modelview, center, normal2, min, max, pop_surface_point, pop_surface_normal);
-	cout << "left_most coor: " << m.V.row(boundary_vertices[most_left_vertex_idx]) << endl << "right most coor: " << m.V.row(boundary_vertices[most_right_vertex_idx]) << endl << endl;
-
+	
 	Eigen::RowVector3d dir = (silhouette_vertices.row(silhouette_vertices.rows()-1) - silhouette_vertices.row(0)).normalized();
 	remove_out_of_bounds_silhouette(silhouette_vertices, center, m.V.row(boundary_vertices[most_left_vertex_idx]), m.V.row(boundary_vertices[most_right_vertex_idx]), dir);
 
 	if(silhouette_vertices.rows() == 0) {
 		cout << "returning: THIS IS BAD" << endl; //Todo: handle this neatly
-		return;
+		return false;
 	}
 
-	//Possibly reverse silhouette_vertices, so they start closest to the most_left_vertex
-	//if((m.V.row(boundary_vertices[most_left_vertex_idx]) - silhouette_vertices.row(0)).norm() > (m.V.row(boundary_vertices[most_right_vertex_idx]) - silhouette_vertices.row(0)).norm()) {
-	//	silhouette_vertices = silhouette_vertices.colwise().reverse().eval();
-//	}
 
 	//TODO: FOR NOW SKIPPING OVER RESAMPLING IN LAPLACIANEXTRUSION LINE 311-315 (SEEMS TO BE A SIMPLE RESAMPLE THOUGH)
 	
 	vector<int> sil_original_indices = add_silhouette_vertices(m, stroke.get_ID(), silhouette_vertices);
-	stroke.set_closest_vert_bindings(sil_original_indices);
+	vector<int> sil_original_indices_looped = sil_original_indices;
+	sil_original_indices_looped.push_back(sil_original_indices[0]);
+	stroke.set_closest_vert_bindings(sil_original_indices_looped);
 
 	//Create one of the two loops
 	Eigen::MatrixXd front_loop3D = silhouette_vertices;
@@ -117,13 +97,9 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 
 	//Create the second loop
 	Eigen::MatrixXd back_loop3D = silhouette_vertices.colwise().reverse();
-	cout << " Front loop 3D before: " << endl << back_loop3D << endl;
 	vector<int> back_loop_base_original_indices;
 	create_loop(m, back_loop3D, boundary_vertices, back_loop_base_original_indices, most_right_vertex_idx, most_left_vertex_idx);
-	cout << " Front loop 3D after: " << endl << back_loop3D << endl;
 
-	//Eigen::Vector3d x_vec = m.V.row(boundary_vertices[most_right_vertex_idx]) - m.V.row(boundary_vertices[most_left_vertex_idx]);
-//	x_vec.normalize();
 	Eigen::Vector3d x_vec = dir;
 	Eigen::Vector3d y_vec = normal.cross(x_vec);
 	Eigen::Vector3d offset = x_vec.cross(y_vec);
@@ -146,38 +122,11 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	post_extrude_main_update_points(stroke, silhouette_vertices);
 	post_extrude_main_update_bindings(base, surface_path);
 	update_sharp_edges(m, sharpEV);
+	return true;
 }
 
 
 void MeshExtrusion::remove_out_of_bounds_silhouette(Eigen::MatrixXd& silhouette_vertices, Eigen::RowVector3d& center, const Eigen::RowVector3d& left_most, const Eigen::RowVector3d& right_most, Eigen::RowVector3d& dir) {
-	/*Eigen::Vector3d dir = left_most - right_most;
-	dir.normalize();
-	double dot_left = left_most.dot(dir);
-	double dot_right = right_most.dot(dir);
-	double dot_sil;
-	vector<int> keep_indices;
-	for (int i = 0; i < silhouette_vertices.rows(); i++) {
-		dot_sil = silhouette_vertices.row(i).dot(dir);
-		if (dot_sil <= dot_left && dot_sil >= dot_right ) { //TODO: verify correctness. Should say that if the point is within limits, it stays
-			keep_indices.push_back(i);
-		}
-		else {
-			cout << "Silhouette index " << i << " is out of bounds, removing." << endl;
-		}
-	}
-	cout << "silhouette vertices before slice " << silhouette_vertices << endl;
-
-
-	Eigen::MatrixXd result;
-	Eigen::VectorXi keep_row_idx, keep_col_idx(3);
-	keep_row_idx = Eigen::VectorXi::Map(keep_indices.data(), keep_indices.size());
-	keep_col_idx.col(0) << 0, 1, 2;
-	igl::slice(silhouette_vertices, keep_row_idx, keep_col_idx, result);
-	silhouette_vertices = result;
-	cout << "silhouette vertices after slice " << silhouette_vertices << endl;*/
-
-
-
 	vector<int> keep_indices;
 	Eigen::Vector3d center_to_vertex;
 	double most_left_dot_prod = dir.dot(left_most - center);
@@ -218,7 +167,6 @@ void MeshExtrusion::generate_mesh(Mesh& m, Eigen::MatrixXd loop3D, Eigen::Vector
 		loop2D.row(i) << vec.dot(x_vec), vec.dot(y_vec);
 		loop_stroke_edges.row(i) << i, ((i + 1) % loop3D.rows());
 	}
-	cout << " Loop 2d: " << endl << loop2D << endl << endl;
 
 	Eigen::MatrixXd V2;
 	Eigen::MatrixXi F2;
@@ -260,28 +208,6 @@ void MeshExtrusion::get_normal_and_center(Eigen::RowVector3d& center, Eigen::Vec
 }
 
 void MeshExtrusion::find_left_and_right(int& most_left_vertex_idx, int& most_right_vertex_idx, Mesh& m, Eigen::VectorXi &boundary_vertices, const Eigen::RowVector3d& sil_start, const Eigen::RowVector3d& sil_end, Eigen::RowVector3d& center) {
-	/*double dist = (m.V.row(boundary_vertices[0]) - sil_start).squaredNorm();
-	double min_dist_start = dist;
-	dist = (m.V.row(boundary_vertices[0]) - sil_end).squaredNorm();
-	double min_dist_end = dist;
-	cout << "Boundary vertices: " << endl << m.V.row(boundary_vertices[0]) << endl;
-	most_left_vertex_idx = 0;
-	most_right_vertex_idx = 0;
-	for (int i = 1; i < boundary_vertices.rows(); i++) {
-		cout << m.V.row(boundary_vertices[i]) << endl;
-		dist = (m.V.row(boundary_vertices[i]) - sil_start).squaredNorm();
-		if (dist < min_dist_start) {
-			min_dist_start = dist;
-			most_left_vertex_idx = i;
-		}
-		dist = (m.V.row(boundary_vertices[i]) - sil_end).squaredNorm();
-		if (dist < min_dist_end) {
-			min_dist_end = dist;
-			most_right_vertex_idx = i;
-		}
-	}*/
-
-
 	Eigen::Vector3d dir = sil_end - sil_start;
 	dir.normalize();
 	Eigen::Vector3d center_to_vertex;
@@ -303,51 +229,6 @@ void MeshExtrusion::find_left_and_right(int& most_left_vertex_idx, int& most_rig
 		}
 	}
 }
-
-/** Computes the left- and rightmost vertex index of the base stroke as seen from how the silhouette stroke was drawn. **/
-/*void MeshExtrusion::find_left_and_right(int& most_left_vertex_idx, int& most_right_vertex_idx, double& min, double& max, Mesh& m, Eigen::RowVector3d& center, Eigen::VectorXi &boundary_vertices, Eigen::Vector3d& normal2) {
-	Eigen::Vector3d center_to_vertex = m.V.row(boundary_vertices[0]) - center;
-	double dot_prod = normal2.dot(center_to_vertex);
-	max = dot_prod;
-	min = dot_prod;
-	most_left_vertex_idx = 0;
-	most_right_vertex_idx = 0;
-	for(int i = 1; i < boundary_vertices.rows(); i++) {
-		center_to_vertex = m.V.row(boundary_vertices[i]) - center;
-		dot_prod = normal2.dot(center_to_vertex);
-		if(dot_prod > max) {
-			max = dot_prod;
-			most_left_vertex_idx = i;
-		} else if(dot_prod < min) {
-			min = dot_prod;
-			most_right_vertex_idx = i;
-		}
-	}
-
-
-
-
-}*/
-
-/** Takes the silhouette's 2D positions as it was drawn and projects it onto the correct plane (more or less parallel to the base stroke). **/
-/*void MeshExtrusion::compute_silhouette_positions(Eigen::MatrixXd& silhouette_vertices, Stroke& stroke, Eigen::Matrix4f& modelview, Eigen::RowVector3d& center, Eigen::Vector3d& normal2, int min, int max, Eigen::RowVector3d& pop_surface_point, Eigen::Vector3d& pop_surface_normal) {
-	Eigen::RowVector3d v; 
-	Eigen::Vector3d source, dir, center_to_vertex;
-	Plane pop_surface(pop_surface_point, pop_surface_normal);
-
-	for(int i = 0; i < stroke.get_stroke2DPoints().rows(); i++) {
-		Eigen::Vector2d tmp = stroke.get_stroke2DPoints().row(i);
-		unproject_ray(tmp, modelview, stroke.viewer.core.proj, stroke.viewer.core.viewport, source, dir);
-		v = pop_surface.intersect_point(source, dir);
-		center_to_vertex = v - center;
-		if(normal2.dot(center_to_vertex) > max || normal2.dot(center_to_vertex) < min) {
-			cerr << "silhouette point " << i << " is outside of range, it will be skipped." << endl; //TODO handle exiting in a proper way
-			continue;
-		}
-		silhouette_vertices.conservativeResize(silhouette_vertices.rows() + 1, Eigen::NoChange);
-		silhouette_vertices.row(silhouette_vertices.rows() - 1) = v;
-	}
-}*/
 
 /** Adds the silhouette vertices to the mesh and also inserts their tracking variables. **/
 vector<int> MeshExtrusion::add_silhouette_vertices(Mesh& m, int stroke_ID, Eigen::MatrixXd& silhouette_vertices) {
@@ -440,10 +321,12 @@ void MeshExtrusion::post_extrude_prepare_update_points(Stroke& stroke, SurfacePa
 
 /** Updates the silhouette stroke's 3DPoints with the new vertices. **/
 void MeshExtrusion::post_extrude_main_update_points(Stroke &stroke, Eigen::MatrixXd new_positions) {
-	Eigen::MatrixX3d new_3DPoints(new_positions.rows(), 3);
+	Eigen::MatrixX3d new_3DPoints(new_positions.rows() + 1, 3);
 	for(int i = 0; i < new_positions.rows(); i++) {
 		new_3DPoints.row(i) = new_positions.row(i);
 	}
+	new_3DPoints.row(new_3DPoints.rows() - 1) = new_positions.row(0); //Make looped
+	
 
 	stroke.set3DPoints(new_3DPoints); 
 }
