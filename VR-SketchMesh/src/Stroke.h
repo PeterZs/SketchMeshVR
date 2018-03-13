@@ -65,7 +65,7 @@ private:
 	Eigen::MatrixX3d stroke3DPointsBack;
 	Eigen::MatrixXd stroke2DPoints; //Used for early checking if point is new (in screen coordinates)
 	Eigen::MatrixXi faces_hit;
-	Eigen::MatrixX3d hand_pos_at_draw;
+	Eigen::MatrixX3d hand_pos_at_draw; //Only used for extrusion base strokes.
 	Eigen::RowVector3d cut_stroke_final_point; //Only used for cutting strokes. First point outside of the mesh
 	Eigen::RowVectorXd cut_stroke_final_point_2D;
 	Eigen::Vector3d pos_before_cut;

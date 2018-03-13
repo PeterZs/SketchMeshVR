@@ -596,11 +596,8 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				added_stroke->toLoop();
 				added_stroke->is_loop = false; //Set to false manually, because we don't want curveDeformation to consider it as a loop (but we do need looped 3DPoints)
 
-				Eigen::MatrixXd V_tmp = V;
-				Eigen::MatrixXi F_tmp = F;
 				bool success_extrude = MeshExtrusion::extrude_main(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, base_surface_path, *added_stroke, *extrusion_base, base_model, base_view, base_proj, base_viewport);
 				if (!success_extrude) { //Catches the case that the extrusion base removes all faces/vertices
-					cout << "test diff" << endl << V_tmp - V << endl << endl << F_tmp - F << endl << endl;
 					prev_tool_mode = NONE;
 					next_added_stroke_ID -= 2;
 					extrusion_base_already_drawn = false;
@@ -662,12 +659,8 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				dirty_boundary = true;
 				extrusion_base->toLoop();
 
-				Eigen::MatrixXd V_tmp = V;
-				Eigen::MatrixXi F_tmp = F;
 				bool succes_extrude_prepare = MeshExtrusion::extrude_prepare(*extrusion_base, base_surface_path); //Don't need to update all strokes here, since it didn't remove any vertices
 				if (!succes_extrude_prepare) { //Catches the case that face == -1 in SurfacePath
-					cout << "test diff" << endl << V_tmp - V << endl << endl << F_tmp - F << endl << endl;
-
 #ifdef _WIN32
 					Beep(900, 200);
 #else

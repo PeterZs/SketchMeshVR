@@ -204,6 +204,9 @@ void Stroke::strokeAddSegmentCut(Eigen::Vector3f& pos) {
 	pos[2] += cur_eye_pos[2];
 
 	if (igl::ray_mesh_intersect(pos, viewervr.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
+		if (hits.size() < 2) { //User had hand inside mesh while cutting
+			return;
+		}
 		current_hit = true;
 		hit_pos = V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v;
 		hit_pos_back = V.row(F(hits[1].id, 0))*(1.0 - hits[1].u - hits[1].v) + V.row(F(hits[1].id, 1))*hits[1].u + V.row(F(hits[1].id, 2))*hits[1].v;
@@ -295,6 +298,9 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 	pos[2] += cur_eye_pos[2];
 
 	if (igl::ray_mesh_intersect(pos, viewervr.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
+		if (hits.size() < 2) { //User had hand inside mesh while drawing extrusion base stroke
+			return;
+		}
 		hit_pos = V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v;
 
 		has_points_on_mesh = true;
@@ -337,7 +343,6 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 
 	if (stroke3DPoints.rows() > 1) {
 		viewervr.data.add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0, 0, 1));
-	//	viewervr.data.add_points(stroke3DPoints, Eigen::RowVector3d(1, 0, 0));
 	}
 
 	_time1 = std::chrono::high_resolution_clock::now();
@@ -366,7 +371,6 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 	if (!stroke2DPoints.isZero() && pt2D[0] == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && pt2D[1] == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) {//Check that the point is new compared to last time
 		return;
 	}
-
 
 	if (stroke2DPoints.rows() == 1 && empty2D()) {
 		stroke2DPoints.row(0) << pt2D[0], pt2D[1];
@@ -456,6 +460,10 @@ bool Stroke::toLoop() {
 		if (hand_pos_at_draw.rows() > 1) { //Only loop if it actually contains data
 			hand_pos_at_draw.conservativeResize(hand_pos_at_draw.rows() + 1, Eigen::NoChange);
 			hand_pos_at_draw.row(hand_pos_at_draw.rows() - 1) << hand_pos_at_draw.row(0);
+		}
+		if (faces_hit.rows() > 1) { //Only loop if it actually contains data
+			faces_hit.conservativeResize(faces_hit.rows() + 1, Eigen::NoChange);
+			faces_hit.row(faces_hit.rows() - 1) << faces_hit.row(0);
 		}
 		is_loop = true;
 		return true;
@@ -570,6 +578,9 @@ void Stroke::counter_clockwise() {
 		stroke3DPoints = stroke3DPoints.colwise().reverse().eval();
 		if (hand_pos_at_draw.rows() > 1) {
 			hand_pos_at_draw = hand_pos_at_draw.colwise().reverse().eval();
+		}
+		if (faces_hit.rows() > 1) {
+			faces_hit = faces_hit.colwise().reverse().eval();
 		}
 		has_been_reversed = true;
 	}

@@ -44,7 +44,6 @@ void SurfaceSmoothing::smooth(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::Vec
 	}
 
 	if(BOUNDARY_IS_DIRTY) {
-		cout << "dirty boundary" << endl;
 		iteration = 0;
 	}
 
@@ -56,7 +55,7 @@ void SurfaceSmoothing::smooth(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::Vec
 }
 
 void SurfaceSmoothing::clear_precomputed_matrices() {
-	precomputed_L.clear(); //NOTE: as opposed to java's Hashmap.clear, this reduces the size of the unordered_map to 0
+	precomputed_L.clear(); //This reduces the size of the unordered_map to 0
 
 	for(auto it = precompute_matrix_for_LM_and_edges.begin(); it != precompute_matrix_for_LM_and_edges.end(); ++it) {
 		it->second.resize(0, 0); //Resize the referenced Eigen::MatrixXd to size 0
