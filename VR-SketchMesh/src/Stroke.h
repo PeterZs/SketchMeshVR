@@ -29,9 +29,9 @@ public:
     bool update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi & vertex_boundary_markers);
     bool empty2D() const { return stroke2DPoints.isZero(); }
 	bool toLoop();
-    std::unordered_map<int, int> generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke);
-    int selectClosestVertex(Eigen::Vector3f& pos, double& closest_distance);
-    double compute_stroke_diag();
+	std::unordered_map<int, int> generate3DMeshFromStroke(Eigen::VectorXi & vertex_boundary_markers, Eigen::VectorXi & part_of_original_stroke, Eigen::MatrixXd & mesh_V, Eigen::MatrixXi & mesh_F);
+	int selectClosestVertex(Eigen::Vector3f pos, double & closest_distance);
+	double compute_stroke_diag();
     
     int get_vertex_idx_for_point(int i);
     int get_ID();
@@ -65,7 +65,7 @@ private:
 	Eigen::MatrixX3d stroke3DPointsBack;
 	Eigen::MatrixXd stroke2DPoints; //Used for early checking if point is new (in screen coordinates)
 	Eigen::MatrixXi faces_hit;
-	Eigen::MatrixX3d hand_pos_at_draw;
+	Eigen::MatrixX3d hand_pos_at_draw; //Only used for extrusion base strokes.
 	Eigen::RowVector3d cut_stroke_final_point; //Only used for cutting strokes. First point outside of the mesh
 	Eigen::RowVectorXd cut_stroke_final_point_2D;
 	Eigen::Vector3d pos_before_cut;

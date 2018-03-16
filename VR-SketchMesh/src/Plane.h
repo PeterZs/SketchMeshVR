@@ -2,8 +2,6 @@
 #define _VR_Plane_H_
 #include <Eigen/Core>
 
-
-
 class Plane {
 public:
     Eigen::Vector3d base;

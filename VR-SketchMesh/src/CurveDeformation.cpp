@@ -1,4 +1,6 @@
 #include "CurveDeformation.h"
+#include <Eigen/Sparse>
+
 
 using namespace std;
 using namespace igl;
@@ -18,7 +20,7 @@ Eigen::MatrixXd original_L0, original_L1;
 Eigen::SparseMatrix<double> A, A_L1_T;
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solverL1; //Solver for final vertex positions (with L1)
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solverPosRot;
-//Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solverPosRot;
+//Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solverPosRot; //TODO
 
 
 void CurveDeformation::startPullCurve(Stroke& _stroke, int _handle_ID) {
@@ -35,12 +37,12 @@ void CurveDeformation::startPullCurve(Stroke& _stroke, int _handle_ID) {
 	stroke_ID = _stroke.get_ID();
 }
 
-//pos is the unprojection from the position to where the user dragged the vertex
+//pos is the position to where the user dragged the vertex
 void CurveDeformation::pullCurve(const Eigen::RowVector3d& pos, Eigen::MatrixXd& V, Eigen::VectorXi& part_of_original_stroke) {
 	double drag_size = (pos - start_pos).norm();
 	drag_size /= curve_diag_length;
 	bool ROI_is_updated = false;
-	if(!current_ROI_size || (fabs(drag_size - current_ROI_size) > 0.01)) { //Take the deformation and roi size as percentages
+	if(!current_ROI_size || (fabs(drag_size - current_ROI_size) > 0.01)) { //Take the deformation and ROI size as percentages
 		ROI_is_updated = update_ROI(drag_size);
 	}
 	if(no_ROI_vert == 0 || current_ROI_size == 0) { //If we have no other "free" vertices other than the handle vertex, we simply move it to the target position
@@ -83,7 +85,6 @@ bool CurveDeformation::update_ROI(double drag_size) {
 }
 
 void CurveDeformation::compute_ROI_boundaries(int& ROI_1, int& ROI_2) {
-	cout << "Reminder to test if extrusion silhouette stroke is seen as a loop (it shouldn't)  " << stroke_is_loop << endl; //TODO
 	if(stroke_is_loop) {
 		ROI_1 = (((handle_ID - no_ROI_vert) + no_vertices) % no_vertices);
 		ROI_2 = (((handle_ID + no_ROI_vert) + no_vertices) % no_vertices);
@@ -122,7 +123,6 @@ void CurveDeformation::setup_fixed_indices(int ROI_1, int ROI_2) {
 
 	fixed_indices = Eigen::VectorXi::Map(fixed.data(), fixed.size());
 	fixed_indices_local = Eigen::VectorXi::Map(fixed_local.data(), fixed_local.size());
-
 }
 
 void CurveDeformation::setup_for_update_curve(Eigen::MatrixXd& V) {

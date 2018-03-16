@@ -3,15 +3,14 @@
 #include <Windows.h>
 #else
 #include <unistd.h>
+#include <curses.h>
 #endif
 
 #include <igl/readOFF.h>
-#include <igl/read_triangle_mesh.h>
 #include <igl/edge_topology.h>
 #include <igl/cat.h>
 #include <igl/ray_mesh_intersect.h>
 #include <iostream>
-#include <unordered_map>
 #include <igl/viewer/VR_Viewer.h>
 #include <SketchMeshVR.h>
 #include <Stroke.h>
@@ -24,12 +23,13 @@
 using namespace std;
 using ViewerVR = igl::viewer::VR_Viewer;
 
+ViewerVR viewervr; //TODO: I made this a global variable so we don't need to send a viewerVR into the callback for button down, which was giving problems due to copy constructors of classes involving atomic variables. Document any possible side effects of this (not sure if there was any benefit of sending in the viewerVR anyway)
+
+
 // Vertex array, #V x3
 Eigen::MatrixXd V(0,3);
 // Face array, #F x3
 Eigen::MatrixXi F(0,3);
-// Per face normals, #F x3
-Eigen::MatrixXd N_Faces;
 
 //Per vertex indicator of whether vertex is on boundary (on boundary if == 1)
 Eigen::VectorXi vertex_boundary_markers;
@@ -41,7 +41,7 @@ Eigen::VectorXi sharp_edge;
 Eigen::VectorXi new_mapped_indices;
 
 //General
-enum ToolMode { DRAW, ADD, CUT, EXTRUDE, PULL, REMOVE, CHANGE, SMOOTH, NAVIGATE, TOGGLE, NONE };
+enum ToolMode { DRAW, ADD, CUT, EXTRUDE, PULL, REMOVE, CHANGE, SMOOTH, NAVIGATE, TOGGLE, NONE, DEFAULT, FAIL }; //NONE is used to indicate that a button was released, whereas DEFAULT indicates that one of the toggle buttons was pressed within its cooldown period, FAIL is used to indicate that something went wrong (e.g. user clicked too far away for PULL)
 
 ToolMode tool_mode = NAVIGATE;
 ToolMode prev_tool_mode = NONE;
@@ -49,13 +49,6 @@ Stroke* initial_stroke;
 Stroke* added_stroke;
 Stroke* extrusion_base;
 vector<Stroke> stroke_collection;
-
-//Mouse interaction
-bool skip_standardcallback = false;
-int down_mouse_x = -1, down_mouse_y = -1;
-bool mouse_is_down = false; //We need this due to mouse_down not working in the nanogui menu, whilst mouse_up does work there
-bool hand_has_moved = false;
-Eigen::Vector3f prev_pos = Eigen::Vector3f::Zero();
 
 //For smoothing
 int initial_smooth_iter = 8;
@@ -72,9 +65,6 @@ int closest_stroke_ID, prev_closest_stroke_ID;
 //Keeps track of the stroke IDs
 int next_added_stroke_ID = 2; //Start at 2 because marker 1 belongs to the original boundary
 
-//Variables for adding control curves
-bool last_add_on_mesh = false;
-unordered_map<int, int> backside_vertex_map;
 
 //Variables for removing a control curve
 bool stroke_was_removed = false;
@@ -89,14 +79,12 @@ SurfacePath base_surface_path;
 Eigen::Matrix4f base_model, base_view, base_proj;
 Eigen::Vector4f base_viewport;
 
-bool button_A_is_set = false;
-bool button_B_is_set = false;
-bool button_thumb_is_set = false;
+bool button_A_is_set = false, button_B_is_set = false, button_thumb_is_set = false;
 
 std::chrono::steady_clock::time_point _start_time, _end_time;
 bool has_recentered = false;
 
-void draw_all_strokes(ViewerVR& viewervr) {
+void draw_all_strokes(){
 	Eigen::MatrixXd added_points;
 	viewervr.data.set_points((Eigen::MatrixXd) initial_stroke->get3DPoints().block(0, 0, initial_stroke->get3DPoints().rows() - 1, 3), Eigen::RowVector3d(1, 0, 0)); //Display the original stroke points and clear all the rest. Don't take the last point
 	viewervr.data.set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::RowVector3d(0, 0, 1)); //Clear the non-original stroke edges
@@ -118,7 +106,7 @@ void draw_all_strokes(ViewerVR& viewervr) {
 	}
 }
 
-void draw_extrusion_base(ViewerVR& viewervr) {
+void draw_extrusion_base(){
 	int points_to_hold_back;
 	Eigen::MatrixXd added_points = extrusion_base->get3DPoints();
 	points_to_hold_back = 1 + extrusion_base->is_loop;
@@ -148,11 +136,13 @@ ToolMode get_chosen_mode(ViewerVR::ButtonCombo pressed) {
 			cout << "pull mode" << endl;
 			return PULL;
 		} else {
+			cout << "draw" << endl;
 			return DRAW;
 		}
 	}
 	else if (pressed == ViewerVR::ButtonCombo::GRIP) {
 		if (button_A_is_set) {
+			cout << "extrud" << endl;
 			return EXTRUDE;
 		} else {
 			cout << "cut mode" << endl;
@@ -175,7 +165,11 @@ ToolMode get_chosen_mode(ViewerVR::ButtonCombo pressed) {
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_end_time - _start_time).count();
 		if (timePast > 100000000) {
 			button_A_is_set = !button_A_is_set;
+			cout << "Switching A " << endl;
 			return TOGGLE;
+		}
+		else {
+			return DEFAULT;
 		}
 	}
 	else if (pressed == ViewerVR::ButtonCombo::B) {
@@ -187,6 +181,9 @@ ToolMode get_chosen_mode(ViewerVR::ButtonCombo pressed) {
 			cout << "switching buttonB" << endl;
 			return TOGGLE;
 		}
+		else {
+			return DEFAULT;
+		}
 	}
 	else if (pressed == ViewerVR::ButtonCombo::THUMB) {
 		_start_time = _end_time; //Set timer 1 to be the previous time of when we came here
@@ -197,63 +194,70 @@ ToolMode get_chosen_mode(ViewerVR::ButtonCombo pressed) {
 			cout << "switching thumb button" << endl;
 			return TOGGLE;
 		}
+		else {
+			return DEFAULT;
+		}
 	}
 	else if (pressed == ViewerVR::ButtonCombo::NONE) {
 		return NONE;
 	}
+	else {
+		cout << "default" << endl;
+		return DEFAULT;
+	}
 }
 
-bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewer::VR_Viewer& viewervr) {
+void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 	ToolMode pressed_type = get_chosen_mode(pressed);
 
-	if (pressed_type == TOGGLE) { //User was just switching between e.g. cut/extrude, don't do anything (prev_tool_mode stays at NONE)
-		return true;
+	if (pressed_type == DEFAULT) { //Default means that one of the toggle buttons was pressed again within the cooldown period. Do nothing
+		return;
 	}
-
-	if (!((pos - prev_pos).isZero())) {
-		hand_has_moved = true;
+	else if (pressed_type == TOGGLE) { //User was just switching between e.g. cut/extrude, don't do anything 
+		prev_tool_mode = TOGGLE; //Needed for handling multithreading in VR_Viewer
+		return;
 	}
-	prev_pos = pos;
-
-	if (pressed_type == PULL || pressed_type == ADD || pressed_type == CUT || pressed_type == EXTRUDE) {
+	else if (pressed_type == PULL || pressed_type == ADD || pressed_type == CUT || pressed_type == EXTRUDE) {
 		if (initial_stroke->empty2D()) { //Don't go into these modes when there is no mesh yet
-			return true;
+			cout << "exiting due to initial stroke's empty2d" << endl;
+			return;
 		}
 	}
-	if (pressed_type == REMOVE) {
+	else if (pressed_type == REMOVE) {
 		if (stroke_collection.size() == 0) {
-			return true;
+			return;
 		}
-		remove_stroke_clicked = 0; //Reset because we might be left with a single click from the last round
 	}
 
 	tool_mode = pressed_type;
 
-	if (tool_mode != DRAW) {
+	Eigen::Vector3f pos_tmp = pos;
+	Eigen::Vector3f cur_eye_pos = viewervr.get_current_eye_pos();
+	pos_tmp[0] += cur_eye_pos[0];
+	pos_tmp[2] += cur_eye_pos[2];
+	if (tool_mode != DRAW && tool_mode != PULL) {
 		Eigen::MatrixX3d LP(2, 3);
-		Eigen::Vector3f pos_tmp = pos;
-		pos_tmp[0] += viewervr.current_eye_pos[0];
-		pos_tmp[2] += viewervr.current_eye_pos[2];
 		LP.row(0) = pos_tmp.cast<double>();
-		LP.row(1) = (pos + 1000 * viewervr.right_touch_direction).cast<double>();
+		LP.row(1) = (pos + 1000 * viewervr.get_right_touch_direction()).cast<double>();
 		viewervr.data.set_laser_points(LP);
+		viewervr.data.set_hand_point(pos_tmp.cast<double>().transpose(), Eigen::RowVector3d(0.5f, 0.5f, 0.5f));
+	}
+	else {
+		viewervr.data.set_laser_points(Eigen::MatrixXd(0, 0));
+		viewervr.data.set_hand_point(pos_tmp.cast<double>().transpose(), Eigen::RowVector3d(0.5f, 0.5f, 0.5f));
 	}
 
 	if (tool_mode == DRAW) { //Creating the first curve/mesh
-		if (prev_tool_mode == NONE) {
-			cout << "Draw with previously none" << endl;
+		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) {
 			if (has_recentered) {
-				cout << "Already recentered" << endl;
-				viewervr.start_action_view = viewervr.corevr.view;
+				viewervr.set_start_action_view(viewervr.corevr.get_view());
 				stroke_collection.clear();
 				next_added_stroke_ID = 2;
 				initial_stroke->strokeReset();
 				initial_stroke->strokeAddSegment(pos);
 				prev_tool_mode = DRAW;
-				skip_standardcallback = true;
 			}
 			else {
-				cout << "recentering" << endl;
 				viewervr.data.clear_without_floor();
 				viewervr.request_recenter();
 				has_recentered = true;
@@ -262,32 +266,35 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 		else if (prev_tool_mode == DRAW) {
 			//We had already started drawing, continue
 			initial_stroke->strokeAddSegment(pos);
-			return true;
+			return;
+		}
+		else if (prev_tool_mode == CUT || prev_tool_mode == EXTRUDE || prev_tool_mode == ADD || prev_tool_mode == REMOVE) {
+			// One of the modes was called while the user had only partially pressed the DRAW button combo. Stop drawing in ViewerVR and wait a round
+			prev_tool_mode = NONE;
+			viewervr.draw_while_computing = false;
 		}
 	}
 	else if (tool_mode == ADD) {
-		if (prev_tool_mode == NONE) { //Adding a new control curve onto an existing mesh
+		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) { //Adding a new control curve onto an existing mesh
 			added_stroke = new Stroke(V, F, viewervr, next_added_stroke_ID);
 			next_added_stroke_ID++;
-			added_stroke->strokeAddSegmentAdd(pos); //If the user starts outside of the mesh, consider the movement as navigation
+			added_stroke->strokeAddSegmentAdd(pos);
 			prev_tool_mode = ADD;
-			skip_standardcallback = true;
 		}
 		else if (prev_tool_mode == ADD) {
-			last_add_on_mesh = added_stroke->strokeAddSegmentAdd(pos);
-			return true;
+			added_stroke->strokeAddSegmentAdd(pos);
 		}
 	}
 	else if (tool_mode == REMOVE) {
-		if (prev_tool_mode == NONE) {
-			//TODO: HERE WE ACTUALLY WANT TO USE RAY CASTING, LIKE IN CUT
+		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) {
 			Eigen::Vector3f hit_pos;
 			vector<igl::Hit> hits;
 			Eigen::Vector3f pos_tmp = pos;
-			pos_tmp[0] += viewervr.current_eye_pos[0];
-			pos_tmp[2] += viewervr.current_eye_pos[2];
+			Eigen::Vector3f cur_eye_pos = viewervr.get_current_eye_pos();
+			pos_tmp[0] += cur_eye_pos[0];
+			pos_tmp[2] += cur_eye_pos[2];
 
-			igl::ray_mesh_intersect(pos, viewervr.right_touch_direction, V, F, hits); //Intersect the ray from the Touch controller with the mesh to get the 3D point
+			igl::ray_mesh_intersect(pos_tmp, viewervr.get_right_touch_direction(), V, F, hits); //Intersect the ray from the Touch controller with the mesh to get the 3D point
 			hit_pos = (V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v).cast<float>();
 
 			double closest_dist = INFINITY;
@@ -305,7 +312,8 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 			}
 
 			if (handleID == -1) {//User clicked too far from any of the stroke vertices
-				return false;
+				prev_tool_mode = FAIL;
+				return;
 			}
 			if (closest_stroke_ID == prev_closest_stroke_ID) {
 				remove_stroke_clicked++;
@@ -328,7 +336,6 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 				viewervr.data.add_points(added_points.topRows(added_points.rows() - 1), stroke_collection[i].stroke_color);
 			}
 
-
 			if (remove_stroke_clicked == 2) { //Mechanism to force the user to click twice on the same stroke before removing it (safeguard)
 				stroke_was_removed = true;
 				stroke_collection[closest_stroke_idx].undo_stroke_add(vertex_boundary_markers); //Sets the vertex_boundary_markers for the vertices of this stroke to 0 again
@@ -336,18 +343,22 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 				remove_stroke_clicked = 0; //Reset
 			}
 
-			skip_standardcallback = true;
+			prev_tool_mode = REMOVE;
 		}
 		if (prev_tool_mode == REMOVE) {
-			return true; //For REMOVE we only take action upon button press and release 
+			return; //For REMOVE we only take action upon button press and release 
 		}
 	}
 	else if (tool_mode == PULL) { //Dragging an existing curve
-		if (prev_tool_mode == NONE) {
+		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) { //Also allow to go to pull after ADD because sometimes the buttons are hard to differentiate
+			Eigen::Vector3f cur_eye_pos = viewervr.get_current_eye_pos();
+			pos[0] += cur_eye_pos[0];
+			pos[2] += cur_eye_pos[2];
 			select_dragging_handle(pos);
 
 			if (handleID == -1) {//User clicked too far from any of the stroke vertices
-				return false;
+				prev_tool_mode = FAIL;
+				return;
 			}
 			if (closest_stroke_ID == -1) {
 				CurveDeformation::startPullCurve(*initial_stroke, handleID);
@@ -356,81 +367,58 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 				CurveDeformation::startPullCurve(stroke_collection[closest_stroke_ID], handleID);
 			}
 			prev_tool_mode = PULL;
-			skip_standardcallback = true;
 		}
 		else if (prev_tool_mode == PULL) {
-			// Eigen::Matrix4f modelview = viewer.core.view * viewer.core.model;
-			int global_handleID;
-			if (closest_stroke_ID == -1) {
-				global_handleID = initial_stroke->get_vertex_idx_for_point(handleID);
-			}
-			else {
-				global_handleID = stroke_collection[closest_stroke_ID].get_vertex_idx_for_point(handleID);
-			}
-
-			//TODO: think about how to handle this in VR. Probably best to grab close to mesh and use the hands actual 3D position. Using a ray cast won't work because Z-axis information will not be taken into account, which makes you lose some of the extra possibilites that VR gives
-			//	 Eigen::RowVector3f pt1(viewervr.data.V(global_handleID, 0), viewervr.data.V(global_handleID, 1), viewervr.data.V(global_handleID, 2));
-
-			//	 Eigen::RowVector3f pr;
-			// igl::project(pt1, modelview, viewer.core.proj, viewer.core.viewport, pr);
-			//	 Eigen::RowVector3d pt = igl::unproject(Eigen::Vector3f(x, y, pr[2]), modelview, viewer.core.proj, viewer.core.viewport).transpose().cast<double>();
-
-            pos[0] += viewervr.current_eye_pos[0];
-            pos[2] += viewervr.current_eye_pos[2];
-			if (turnNr == 0) { //increase the number to smooth less often
+			Eigen::Vector3f cur_eye_pos = viewervr.get_current_eye_pos();
+            pos[0] += cur_eye_pos[0];
+            pos[2] += cur_eye_pos[2];
+			if (turnNr == 0) { 
 				CurveDeformation::pullCurve(pos.transpose().cast<double>(), V, part_of_original_stroke);
-				if (dirty_boundary) { //Smooth an extra time if the boundary is dirty, because smoothing once with a dirty boundary results in a flat mesh
-					for (int i = 0; i < 2; i++) {
-						SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
-					}
-				}
 				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 
 				turnNr++;
+
+				initial_stroke->update_Positions(V);
+				for (int i = 0; i < stroke_collection.size(); i++) {
+					stroke_collection[i].update_Positions(V);
+				}
+
+				viewervr.data.set_mesh_with_floor(V, F);
+				draw_all_strokes();
 			}
 			else {
 				turnNr++;
-				if (turnNr == 4) {
+				if (turnNr == 4) {//increase this number to smooth less often
 					turnNr = 0;
 				}
 			}
-
-			initial_stroke->update_Positions(V);
-			for (int i = 0; i < stroke_collection.size(); i++) {
-				stroke_collection[i].update_Positions(V);
-			}
-
-			viewervr.data.set_mesh_with_floor(V, F); //TODO: check that this does the right thing with regards to the floor
-			viewervr.data.compute_normals();
-			draw_all_strokes(viewervr);
-
-			return true;
 		}
-
+		else if (prev_tool_mode == CUT || prev_tool_mode == EXTRUDE || prev_tool_mode == ADD || prev_tool_mode == REMOVE) {
+			// One of the modes was called while the user had only partially pressed the PULL button combo. Stop drawing in ViewerVR and wait a round
+			prev_tool_mode = NONE;
+			viewervr.draw_while_computing = false;
+		}
 	}
 	else if (tool_mode == CUT) {
-		if (prev_tool_mode == NONE) {
+		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) {
 			prev_tool_mode = CUT;
 			if (cut_stroke_already_drawn) { //clicked while cut stroke already drawn
-				cout << "return after second click" << endl;
-				return true;
+				return;
 			}
 			//clicked with no cut stroke drawn yet
 			added_stroke = new Stroke(V, F, viewervr, next_added_stroke_ID);
-			viewervr.start_action_view = viewervr.corevr.view;
+			viewervr.set_start_action_view(viewervr.corevr.get_view());
 			next_added_stroke_ID++;
 			added_stroke->strokeAddSegmentCut(pos);
-			skip_standardcallback = true;
 		}
 		else if (prev_tool_mode == CUT) {
 			if (!cut_stroke_already_drawn) {
 				added_stroke->strokeAddSegmentCut(pos);
 			}
-			return true;
 		}
 	}
 	else if (tool_mode == EXTRUDE) {
-		if (prev_tool_mode == NONE) {
+		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) {
 			prev_tool_mode = EXTRUDE;
 			if (extrusion_base_already_drawn) { //clicked while the extrude base was already drawn
 				added_stroke = new Stroke(V, F, viewervr, next_added_stroke_ID);
@@ -442,7 +430,6 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 				next_added_stroke_ID++;
 				extrusion_base->strokeAddSegmentExtrusionBase(pos);
 			}
-			skip_standardcallback = true;
 		}
 		else if (prev_tool_mode == EXTRUDE) {
 			if (extrusion_base_already_drawn) {
@@ -451,30 +438,38 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 			else {
 				extrusion_base->strokeAddSegmentExtrusionBase(pos);
 			}
-			return true;
 		}
 	}
 	else if (tool_mode == NONE) {	//Have to finish up as if we're calling mouse_up()
 		has_recentered = false;
 		if (prev_tool_mode == NONE) {
-			return true;
+			return;
 		}
-
 		else if (prev_tool_mode == DRAW) {
+			prev_tool_mode = NONE;
 			initial_stroke->strokeAddSegment(pos);
-			cout << "Releasing after draw" << endl;
-			if (initial_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
-										   //Give some time to show the stroke
-				cout << "Getting inside draw finish" << endl;
-#ifdef _WIN32
-				Sleep(200);
-#else
-				usleep(200000);
-#endif
 
-				backside_vertex_map = initial_stroke->generate3DMeshFromStroke(vertex_boundary_markers, part_of_original_stroke);
-				F = viewervr.data.F.block(0, 0, viewervr.data.F.rows() - 2, viewervr.data.F.cols()); //Don't consider the last 2 faces because they belong to the floor
-				V = viewervr.data.V.block(0, 0, viewervr.data.V.rows() - 4, viewervr.data.V.cols()); //Don't consider the last 4 vertices because they belong to the floor
+			if (initial_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
+
+				initial_stroke->generate3DMeshFromStroke(vertex_boundary_markers, part_of_original_stroke, V, F);
+				
+				if (!igl::is_edge_manifold(F)) { //Check if the drawn stroke results in an edge-manifold mesh, otherwise sound a beep and revert
+#ifdef _WIN32
+					Beep(500, 200);
+#else
+					beep();
+#endif				
+					Eigen::MatrixXd drawn_points = initial_stroke->get3DPoints();
+					initial_stroke->strokeReset();
+					vertex_boundary_markers.resize(0);
+					part_of_original_stroke.resize(0);
+					dirty_boundary = true;
+
+					viewervr.data.add_edges(drawn_points.block(0, 0, drawn_points.rows() - 1, 3), drawn_points.block(1, 0, drawn_points.rows() - 1, 3), Eigen::RowVector3d(0, 0, 0)); //Display the stroke in black to show that it went wrong
+					prev_tool_mode = NONE;
+					viewervr.draw_while_computing = false;
+					return;
+				}
 
 				Eigen::MatrixXi EV, FE, EF;
 				igl::edge_topology(V, F, EV, FE, EF);
@@ -489,8 +484,9 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 
 				initial_stroke->update_Positions(V);
 
+				viewervr.data.clear_all();
+				viewervr.data.set_face_based(true);
 				viewervr.data.set_mesh_with_floor(V, F);
-				viewervr.data.compute_normals();
 
 				//Overlay the drawn stroke
 				int strokeSize = (vertex_boundary_markers.array() > 0).count();
@@ -500,26 +496,24 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 
 
 			}
-			hand_has_moved = false;
-			skip_standardcallback = false;
 		}
 		else if (prev_tool_mode == ADD) {
 			dirty_boundary = true;
 			if (!added_stroke->has_points_on_mesh) {
-				hand_has_moved = false;
-				return true;
+				viewervr.draw_while_computing = false;
+				return;
 			}
 			added_stroke->snap_to_vertices(vertex_boundary_markers);
 			stroke_collection.push_back(*added_stroke);
-			draw_all_strokes(viewervr);
+			draw_all_strokes();
 		}
 		else if (prev_tool_mode == REMOVE && stroke_was_removed) { //Only redraw if we actually removed a stroke (otherwise we draw unnecessary)
 			stroke_was_removed = false; //Reset
 			dirty_boundary = true;
 
-			draw_all_strokes(viewervr);
+			draw_all_strokes();
 		}
-		else if (prev_tool_mode == PULL && handleID != -1) { //TODO: do we need hand_has_moved logic?
+		else if (prev_tool_mode == PULL && handleID != -1) {
 			for (int i = 0; i < 2; i++) {
 				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 			}
@@ -527,31 +521,40 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 			for (int i = 0; i < stroke_collection.size(); i++) {
 				stroke_collection[i].update_Positions(V);
 			}
-
 			viewervr.data.clear_all();
 			viewervr.data.set_mesh_with_floor(V, F);
-			viewervr.data.compute_normals();
-
-			draw_all_strokes(viewervr);
+			draw_all_strokes();
 		}
 		else if (prev_tool_mode == CUT) {
-			cout << " ending cut" << endl;
 			if (!added_stroke->has_points_on_mesh) {
-				cout << "no points on mesh" << endl;
-				hand_has_moved = false;
-				return true;
+				viewervr.draw_while_computing = false;
+				return;
 			}
-			if (cut_stroke_already_drawn) { //User had already drawn the cut stroke and has now drawn the final stroke for removing the part
-				cout << " get here" << endl;
+			if (cut_stroke_already_drawn) { //User had already drawn the cut stroke and has now clicked/drawn the final stroke for removing the part
 				dirty_boundary = true;
-				cout << "before" << added_stroke->get3DPoints() << endl << endl << added_stroke->get_stroke2DPoints() << endl << endl;
 
 				added_stroke->prepend_first_point();
 				added_stroke->append_final_point();
 				added_stroke->toLoop();
+				
+				bool cut_success = MeshCut::cut(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, *added_stroke);
+				if (!cut_success) { //Catches the cases that the cut removes all mesh vertices/faces and when the first/last cut point aren't correct (face -1 in SurfacePath)
+					cut_stroke_already_drawn = false;
+					next_added_stroke_ID--; //Undo ID increment since stroke didn't actually get pushed back
+					prev_tool_mode = NONE;
+#ifdef _WIN32
+					Beep(500, 200);
+#else
+					beep();
+#endif	
 
-				cout << added_stroke->get3DPoints() << endl << endl << added_stroke->get_stroke2DPoints() << endl << endl;
-				MeshCut::cut(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, *added_stroke);
+					draw_all_strokes(); //Will remove the pink cut stroke
+					Eigen::MatrixXd drawn_points = added_stroke->get3DPoints();
+					viewervr.data.add_edges(drawn_points.block(0, 0, drawn_points.rows() - 1, 3), drawn_points.block(1, 0, drawn_points.rows() - 1, 3), Eigen::RowVector3d(0, 0, 0)); //Display the stroke in black to show that it went wrong
+					//draw_all_strokes();
+					viewervr.draw_while_computing = false;
+					return;
+				}
 				stroke_collection.push_back(*added_stroke);
 
 				initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers);//Don't test if the initial one dies, cause then we have mayhem anyway? TODO
@@ -568,7 +571,7 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 				}
 
 				for (int i = 0; i < 2; i++) {
-				//	SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
+					SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 				}
 
 				//Update the stroke positions after smoothing, in case their positions have changed (although they really shouldn't)
@@ -579,22 +582,40 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 
 				viewervr.data.clear_all();
 				viewervr.data.set_mesh_with_floor(V, F);
-				viewervr.data.compute_normals();
 
 				cut_stroke_already_drawn = false; //Reset
-				draw_all_strokes(viewervr);
+				draw_all_strokes();
 			}
 			else { //We're finished drawing the cut stroke, prepare for when user draws the final stroke to remove the part
-				cout << "setting already drawwn" << endl;
 				cut_stroke_already_drawn = true;
 			}
 		}
 		else if (prev_tool_mode == EXTRUDE) {
 			if (extrusion_base_already_drawn) { //User has drawn the silhouette stroke for extrusion
 				dirty_boundary = true;
-				cout << "mouse released after extrusion silhouette drawn" << endl;
 				added_stroke->toLoop();
-				MeshExtrusion::extrude_main(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, base_surface_path, *added_stroke, *extrusion_base, base_model, base_view, base_proj, base_viewport);
+				added_stroke->is_loop = false; //Set to false manually, because we don't want curveDeformation to consider it as a loop (but we do need looped 3DPoints)
+
+				bool success_extrude = MeshExtrusion::extrude_main(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, base_surface_path, *added_stroke, *extrusion_base, base_model, base_view, base_proj, base_viewport);
+				if (!success_extrude) { //Catches the case that the extrusion base removes all faces/vertices
+					prev_tool_mode = NONE;
+					next_added_stroke_ID -= 2;
+					extrusion_base_already_drawn = false;
+#ifdef _WIN32
+					Beep(700, 200);
+#else
+					beep();
+#endif	
+					draw_all_strokes(); //Will remove the drawn base & silhouette strokes
+					Eigen::MatrixXd drawn_points = extrusion_base->get3DPoints();
+					viewervr.data.add_edges(drawn_points.block(0, 0, drawn_points.rows() - 1, 3), drawn_points.block(1, 0, drawn_points.rows() - 1, 3), Eigen::RowVector3d(0, 0, 0)); //Display the stroke in black to show that it went wrong
+					drawn_points = added_stroke->get3DPoints();
+					viewervr.data.add_edges(drawn_points.block(0, 0, drawn_points.rows() - 2, 3), drawn_points.block(1, 0, drawn_points.rows() - 2, 3), Eigen::RowVector3d(0, 0, 0)); //Display the stroke in black to show that it went wrong
+					viewervr.draw_while_computing = false;
+					return;
+				}
+
+
 				stroke_collection.push_back(*extrusion_base);
 				stroke_collection.push_back(*added_stroke);
 
@@ -611,8 +632,8 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 					}
 				}
 
-				for (int i = 0; i < 3; i++) { //TODO: turn smoothing back on
-					//SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
+				for (int i = 0; i < 6; i++) {
+					SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 				}
 
 				//Update the stroke positions after smoothing, in case their positions have changed (although they really shouldn't)
@@ -621,86 +642,94 @@ bool button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos, igl::viewe
 					stroke_collection[i].update_Positions(V);
 				}
 
-				viewervr.data.clear_all();
-				viewervr.data.set_mesh_with_floor(V, F); //TODO check that this works
-				viewervr.data.compute_normals(); //TODO: check that this uses face-based normals
 
-				draw_all_strokes(viewervr);
+				viewervr.data.clear_all();
+				viewervr.data.set_mesh_with_floor(V, F);
+
+				draw_all_strokes();
 
 				extrusion_base_already_drawn = false; //Reset
-				//draw_all_strokes(viewervr);
 			}
 			else { //mouse released after extrusion base drawn
 				if (!extrusion_base->has_points_on_mesh) {
-					hand_has_moved = false;
-					return true;
+					viewervr.draw_while_computing = false;
+					return;
 				}
-				//extrusion_base->resample_all(); //This will shrink the drawn stroke. Might result in no face being contained inside the stroke
+
 				dirty_boundary = true;
 				extrusion_base->toLoop();
-				extrusion_base_already_drawn = true;
-				MeshExtrusion::extrude_prepare(*extrusion_base, base_surface_path); //Don't need to update all strokes here, since it didn't remove any vertices
 
-				base_model = extrusion_base->viewervr.corevr.model;
-				base_view = extrusion_base->viewervr.corevr.view;
-				base_proj = extrusion_base->viewervr.corevr.proj;
+				bool succes_extrude_prepare = MeshExtrusion::extrude_prepare(*extrusion_base, base_surface_path); //Don't need to update all strokes here, since it didn't remove any vertices
+				if (!succes_extrude_prepare) { //Catches the case that face == -1 in SurfacePath
+#ifdef _WIN32
+					Beep(900, 200);
+#else
+					beep();
+#endif	
+					next_added_stroke_ID--;
+					prev_tool_mode = NONE;
+					draw_all_strokes(); //Removes the drawn base stroke
+					Eigen::MatrixXd drawn_points = extrusion_base->get3DPoints();
+					viewervr.data.add_edges(drawn_points.block(0, 0, drawn_points.rows() - 1, 3), drawn_points.block(1, 0, drawn_points.rows() - 1, 3), Eigen::RowVector3d(0, 0, 0)); //Display the stroke in black to show that it went wrong
+					viewervr.draw_while_computing = false;
+					return;
+				}
+
+				extrusion_base_already_drawn = true;
+
+				base_model = extrusion_base->viewervr.corevr.get_model();
+				base_view = extrusion_base->viewervr.corevr.get_view();
+				base_proj = extrusion_base->viewervr.corevr.get_proj();
 				base_viewport = extrusion_base->viewervr.corevr.viewport;
 
-				draw_all_strokes(viewervr);
-				draw_extrusion_base(viewervr); //Need to draw the extrusion base separately, since it isn't added to the stroke_collection yet.
+				draw_all_strokes();
+				draw_extrusion_base(); //Need to draw the extrusion base separately, since it isn't added to the stroke_collection yet.
+
 			}
+		}
+		else if (prev_tool_mode == TOGGLE || prev_tool_mode == FAIL) {
+			viewervr.draw_while_computing = false;
 		}
 
 
 		prev_tool_mode = NONE;
-		return true;
+		viewervr.draw_while_computing = false;
+
+		return;
 	}
 
 
 
-	return true;
+	return;
 }
 
 
-//TODO: make callback for this in viewer, like in exercise 5 of shapemod
 bool callback_load_mesh(ViewerVR& viewervr, string filename) {
-	/*	igl::readOFF(filename, V, F);
-		viewervr.data.clear();
-		viewervr.data.set_mesh(V, F);
-		viewervr.data.compute_normals();
-		viewervr.core.align_camera_center(viewervr.data.V);
+		igl::readOFF(filename, V, F);
+		viewervr.data.clear_all();
+		viewervr.data.set_mesh_with_floor(V, F);
 
-		std::cout << filename.substr(filename.find_last_of("/") + 1) << endl;*/
+		std::cout << filename.substr(filename.find_last_of("/") + 1) << endl;
 	return true;
 }
 
 int main(int argc, char *argv[]) {
-	ViewerVR viewervr;
-	//igl::read_triangle_mesh("../data/cube.off", V, F);
-	viewervr.data.set_mesh_with_floor(V, F);
-
-	viewervr.corevr.point_size = 55;
-	//viewer.callback_load_mesh = callback_load_mesh;
-
-
-
 	//Init stroke selector
 	initial_stroke = new Stroke(V, F, viewervr, 0);
+
 	if (argc == 2) {
 		// Read mesh
-	//	igl::readOFF(argv[1], V, F);
-		//	callback_load_mesh(viewer, argv[1]);
+		igl::readOFF(argv[1], V, F);
+		callback_load_mesh(viewervr, argv[1]);
 	}
 	else {
-		// Read mesh
-		//callback_load_mesh(viewer, "../data/cube.off");
+		viewervr.data.set_mesh_with_floor(V, F);
 	}
 
-	//	callback_key_down(viewervr, '1', 0);
-
+	CurveDeformation::smooth_deform_mode = true;
 	viewervr.init();
 	viewervr.callback_button_down = button_down;
-
+	viewervr.corevr.point_size = 55;
 	viewervr.launch();
 }
 

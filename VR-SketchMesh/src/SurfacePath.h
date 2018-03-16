@@ -12,26 +12,18 @@ public:
 
 
 	SurfacePath();
-	void create_from_stroke_extrude(const Stroke & stroke);
-	void create_from_stroke_cut(const Stroke& stroke);
+	bool create_from_stroke_extrude(const Stroke & stroke);
+	bool create_from_stroke_cut(const Stroke& stroke);
 	int get_origin_stroke_ID();
     std::vector<PathElement> get_path();
 	PathElement& get_path_element(int i);
 
 private:
-	//int extend_path_cut(int prev_p, int next_p, int faceID, bool & on_front_side, int& edge);
 	int extend_path_cut(int prev_p, int next_p, int faceID, bool & on_front_side, int & edge, bool & first_iter);
-	int find_next_edge_cut(std::pair<int, int> strokeEdge, int prev_edge, int polygon, bool on_front_side, ::Plane & cutPlane, Eigen::RowVector3d & start_pos, Eigen::RowVector3d & end_pos, bool first_iter);
-	//int find_next_edge_cut(std::pair<int, int> strokeEdge, int prev_edge, int polygon, bool on_front_side, ::Plane& cutPlane, Eigen::RowVector3d & start_pos, Eigen::RowVector3d & end_pos);
-	int extend_path_extrude(int prev_p, int next_p, int faceID, Eigen::Matrix4f & modelview);
-	int find_next_edge_extrude(int next_p, int prev_p, int prev_edge, int polygon);
-	//int find_next_edge_extrude(int next_p, int prev_edge, int polygon);
-    int cross_prod2D(Eigen::Vector2d vec0, Eigen::Vector2d vec1);
-	bool edges2D_cross(std::pair<Eigen::Vector2d, Eigen::Vector2d> edge1, std::pair<Eigen::Vector2d, Eigen::Vector2d> edge2);
-	bool front_facing(int faceID);
-	bool is_counter_clockwise(int faceID);
-	bool is_projected_inside(Eigen::RowVector2d v, int face, Eigen::Matrix4f modelview);
-	Eigen::Vector3d unproject_onto_polygon(Eigen::Vector2d, int faceID, Eigen::Matrix4f modelview);
+	int extend_path_extrude(int prev_p, int next_p, int faceID);
+	int find_next_edge_extrude(int next_p, int prev_p, int prev_edge, int polygon, Eigen::Vector3d & edge_cut_point);
+  
+	int find_next_edge_cut(std::pair<int, int> strokeEdge, int prev_edge, int polygon, bool on_front_side, ::Plane & cutPlane, Eigen::RowVector3d & start_pos, Eigen::RowVector3d & end_pos, bool first_iter, Eigen::Vector3d & edge_cut_point);
 
 	Eigen::MatrixX3d create_loop_from_front_and_back(Eigen::MatrixX3d & front_3DPoints, Eigen::MatrixX3d & back_3DPoints);
 

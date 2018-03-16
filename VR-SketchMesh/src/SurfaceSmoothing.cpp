@@ -21,9 +21,8 @@ Eigen::VectorXd initial_curvature;
 Eigen::VectorXd SurfaceSmoothing::curvatures(ptrdiff_t(0));
 int ID = -1, iteration = 0;
 int no_boundary_vertices, no_boundary_adjacent_vertices;
-double SurfaceSmoothing::vertex_weight = 10.0;//1000.0;// 10.0;
-double SurfaceSmoothing::edge_weight = 1.0;// 0.001;// 1.0;
-double SurfaceSmoothing::curvature_vertex_weight = 0.1;
+double SurfaceSmoothing::vertex_weight = 10.0;
+double SurfaceSmoothing::edge_weight = 1.0;
 double SurfaceSmoothing::factor = 1.9;
 vector<vector<int>> neighbors;
 
@@ -45,7 +44,6 @@ void SurfaceSmoothing::smooth(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::Vec
 	}
 
 	if(BOUNDARY_IS_DIRTY) {
-		cout << "dirty boundary" << endl;
 		iteration = 0;
 	}
 
@@ -57,7 +55,7 @@ void SurfaceSmoothing::smooth(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::Vec
 }
 
 void SurfaceSmoothing::clear_precomputed_matrices() {
-	precomputed_L.clear(); //NOTE: as opposed to java's Hashmap.clear, this reduces the size of the unordered_map to 0
+	precomputed_L.clear(); //This reduces the size of the unordered_map to 0
 
 	for(auto it = precompute_matrix_for_LM_and_edges.begin(); it != precompute_matrix_for_LM_and_edges.end(); ++it) {
 		it->second.resize(0, 0); //Resize the referenced Eigen::MatrixXd to size 0
@@ -153,6 +151,7 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 			}
 		}
 		AT = A.transpose();
+		cout << "computing" << endl;
 		solver1.compute(AT*A);
 		set_precompute_matrix_for_LM_and_edges(m, A);
         set_AT_for_LM_and_edges(m, AT);
@@ -164,6 +163,7 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 			}
 		}
 		AT = A.transpose();
+		cout << "computing 2" << endl;
 		solver1.compute(AT*A);
 		set_precompute_matrix_for_LM_and_edges(m, A);
 		set_AT_for_LM_and_edges(m, AT);
@@ -176,6 +176,8 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 			}
 		}
 		AT = A.transpose();
+		cout << "computing 3" << endl;
+
 		solver1.compute(AT*A);
 		set_precompute_matrix_for_LM_and_edges(m, A);
         set_AT_for_LM_and_edges(m, AT);
@@ -271,6 +273,8 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 			}
 		}
 		AT = A.transpose();
+		cout << "computing 4" << endl;
+
 		solver2.compute(AT*A);
 		set_precompute_matrix_for_positions(m, A);
         set_AT_for_positions(m, AT);
