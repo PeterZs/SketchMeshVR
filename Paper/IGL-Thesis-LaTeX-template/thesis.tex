@@ -1,4 +1,5 @@
-\documentclass[a4paper,twoside,12pt,nochapterprefix]{scrbook}
+% !TeX spellcheck = en_GB
+\documentclass[a4paper,twoside,12pt,nochapterprefix,pdftex]{scrbook}
 
 
 \usepackage{amsmath,amssymb,amsthm}
@@ -6,6 +7,7 @@
 \usepackage{longtable} % tables over several pages
 \usepackage[font={small,sl},hang,labelfont=bf]{caption} % configure captions
 \usepackage{booktabs} % publication quality tables for LaTeX
+
 \newcommand{\ra}[1]{\renewcommand{\arraystretch}{#1}}
 
 \ifpdfoutput{%
@@ -17,6 +19,7 @@
 \usepackage{rotating} % rotate figures
 
 \usepackage[headinclude]{scrpage2}
+\usepackage[colorinlistoftodos,prependcaption,textsize=tiny]{todonotes}
 
 % Font packages:
 \usepackage{times}
@@ -30,7 +33,7 @@
 		bookmarks,
 		bookmarksopen=true,
 		bookmarksnumbered=true,
-		pdfauthor={My Name},       % FILL THIS IN PROPERLY
+		pdfauthor={Floor Verhoeven},       % FILL THIS IN PROPERLY
 		pdftitle={Thesis Title},   % FILL THIS IN PRPERLY
 		colorlinks,
 		linkcolor=black,
@@ -113,12 +116,12 @@
 	\vspace{3cm}
 	\sffamily
 	\Large
-	My Name
+	Floor Verhoeven
 	\\[0.8cm]
 	\large
-	Master Thesis % Bachelor Thesis
+	Master Thesis
 	\\
-	September 2042
+	April 2018
 	\\[1.3cm]
 	\emph{Supervisors:}\\
 	Dr.\ My Supervisor\\ 					% The name of the thesis supervisor
@@ -170,7 +173,8 @@
 \include{ch01-introduction}
 \include{ch02-related-work}
 \include{ch03-more-chapters}
-\include{ch04-conclusion}
+\include{ch04-results}
+\include{ch05-conclusion}
 
 
 % ---- END MAIN PART ----
