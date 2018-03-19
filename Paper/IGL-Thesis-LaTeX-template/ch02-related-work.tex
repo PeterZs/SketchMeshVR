@@ -72,24 +72,24 @@ The systems for solving for target Laplacian magnitudes, average edge lengths an
 Over the last couple of years, plenty of VR applications have been published that involve creating some type of digital 3D content. The software can roughly be split into 2 categories, namely for creating 3D paintings \todo{somehow mention that this is art-focused} and for creating 3D models (in many different ways).  \todo{somehwo mention that this is for re-use in different applicatons}
 This section will described a variety of 3D virtual reality applications, their possibilities and interfaces. \todo{ugly senctence}
 \subsection{Google Tilt Brush}
-Google's Tilt Brush is available for Oculus Rift and HTC Vive and allows the user to  create room-scale art in the style of 3D paintings. The software provides different types of tools and brushes, including special effects tools like a fire or stars brush. Users cannot export their creations to typical model formats such as .obj or .off, but they can upload them to Google Poly where other users can explore their work, or create a GIF from them.
+Google's Tilt Brush is available for Oculus Rift and HTC Vive and allows the user to  create room-scale art in the style of 3D paintings. The software provides different types of tools and brushes, including special effects tools like a fire or stars brush. Users cannot export their creations to typical model formats such as .obj or .off, but they can turn them into a GIF or upload them to Google Poly where other users can explore their work.
 Figure ~\ref{fig:tiltart}~(a) shows a screenshot of example 3D artwork that has been made with Google Tilt Brush (the original work has stars that change their light intensity). In order to give the user access to the large set of different painting tools, Tilt Brush has created an embedded menu in the form of painters palette that is attached to the controller in the user's non-dominant hand. Several of the menus allow for browsing through further submenus. The dominant hand is used to select a tool and paint with it. Figures ~\ref{fig:tiltart}~(b) and ~\ref{fig:tiltart}~(c) show two examples of what the hand-held palette menus looks like.
 
 
 
-\begin{figure}
+\begin{figure}[!h]
     \centering
     \setlength{\tabcolsep}{0.0130\linewidth}
     \begin{tabular}{@{}c@{}}
-    \includegraphics[width=\linewidth]{figures/TiltBrush_StarryNight}\\
+    \includegraphics[width=0.7260\linewidth]{figures/TiltBrush_StarryNight}\\
     (a)
     \end{tabular}
     
     \centering
     \setlength{\tabcolsep}{0.0130\linewidth}
     \begin{tabular}{@{}cc@{}}
-   	\includegraphics[width=0.487\textwidth]{figures/Tilt_menu2}&
-    \includegraphics[width=0.487\textwidth]{figures/Tilt_menu1}\\
+   	\includegraphics[width=0.35\linewidth]{figures/Tilt_menu2}&
+    \includegraphics[width=0.35\linewidth]{figures/Tilt_menu1}\\
     (b)&(c)\\
     \end{tabular}
     \caption[Google Tilt Brush]{Google Tilt Brush.
@@ -99,9 +99,69 @@ Figure ~\ref{fig:tiltart}~(a) shows a screenshot of example 3D artwork that has 
 \end{figure}
 
 \subsection{Oculus Medium}
+Oculus Medium is a 3D sculpting tool that is only available for the Oculus. Conceptually the user can paint with volumetric brushes, much like sculpting with clay. For example the user will draw a circle and this will result in a donut shape. With several tools the user can sculpt away or add extra clay, as well as assigning multiple colors to the surface.
+Unlike Google Tilt Brush, Oculus Medium does allow the user to store created models in .obj format, so they can be exported for use in other programs. The interface is quite intuitive since it shows a very strong connection to the method of creating 3D shapes with the use of clay in real life. Users can quickly create rough shapes and refine them by adapting the brush size and adding small-scale details. The dominant hand of the user serves as the so-called "Tool hand" which can be used to sculpt with, while the non-dominant hand serves as the "Support hand" which can be used to open up several hand-held menus. Figures ~\ref{fig:medium}~(a) and ~\ref{fig:medium}~(b) show examples of complicated 3D models that have been made in Oculus Medium. One of the unique features of Oculus Medium is the functionality to create and use stamps, which helps easily create interesting textures on the models like the fur and grass in Figure ~\ref{fig:medium}~(a).
+
+
+\begin{figure}[!h]
+    \centering
+    \setlength{\tabcolsep}{0.0130\linewidth}
+    \begin{tabular}{@{}cc@{}}
+    \includegraphics[width=0.35\linewidth]{figures/medium_goro_fujita} &
+    \includegraphics[width=0.35\linewidth]{figures/medium_goro_fujita2}\\
+
+    (a)&(b)\\
+    \end{tabular}
+    
+    \centering
+    \setlength{\tabcolsep}{0.0130\linewidth}
+    \begin{tabular}{@{}cc@{}}
+   	\includegraphics[width=0.35\linewidth]{figures/medium_interface1}&
+   	\includegraphics[width=0.35\linewidth]{figures/medium_interface2}\\
+    (c)&(d)\\
+    \end{tabular}
+    \caption[Oculus Medium]{Oculus Medium.
+    	  \textup{(a)} Model of a furry monster created in Oculus Medium by artist Goro Fujita.
+			  \textup{(b)} Model of an African figure created in Oculus Medium by artist Goro Fujita. \textup{(c)} Sculpting view in Oculus Medium. \textup{(d)} Menu view in Oculus Medium.
+      \label{fig:medium}}
+\end{figure}
+
 \subsection{MasterpieceVR}
+MasterpieceVR brings a combination of the design paradigms used by Oculus Medium and Google Tilt Brush, letting the user mix volume sculpting with 3D painting. It is available for Oculus, HTC Vive and Windows Mixed Reality, and for each of them it requires the accompanying controllers for input. One of MasterpieceVR's biggest selling points is that it allows multiple users to work on one model simultaneously, allowing interactive collaboration with direct feedback between artists. Like Oculus Medium, MasterpieceVR lets the user export models (including vertex colors) to .obj, as well as .fbx format. Additionally, users can load reference images or models into the program, which can greatly simplify modelling. MasterpieceVR implements menus in a similar fashion as Google Tilt Brush and Oculus Medium, with a menu of icons held in the non-dominant hand. Compared to these two, MasterpieceVR however has a larger and less intuitive menu layout. Figure ~\ref{fig:masterpieceVR}~(a) shows a complex model created in MasterpieceVR and Figure ~\ref{fig:masterpieceVR}~(b) shows the menu interface.
+
+\begin{figure}[!h]
+    \centering
+    \setlength{\tabcolsep}{0.0130\linewidth}
+    \begin{tabular}{@{}cc@{}}
+   	\includegraphics[width=0.35\linewidth]{figures/MasterpieceVR_Vladimir_Ilic}&
+   	\includegraphics[width=0.5\linewidth]{figures/MasterpieceVR_interface}\\
+    (a)&(b)\\
+    \end{tabular}
+    \caption[MasterpieceVR]{MasterpieceVR.
+    	  \textup{(a)} Model of a warrior created in MasterpieceVR by artist Vladimir Ilic.
+			  \textup{(b)} Interface of MasterpieceVR (model by Mary Ellis). 
+      \label{fig:masterpieceVR}}
+\end{figure}
+
 \subsection{Google Blocks}
+Google Blocks is available for Oculus abd HTC Vive and is Google's software for creating 3D objects in VR. From the programs mentioned in this section, Google Blocks seems the most similar to professional non-VR based modelling software like Blender or Maya. Users can start with several predefined shapes like spheres, cubes or cones and can edit the models on face, edge or vertex level. While this gives the user a lot of artistic freedom and extra modelling possibilities, it also makes its usage a lot less intuitive then the other VR 3D modelling software. Although the user has low-level control, the created meshes are very low-poly compared to the models created with for example Oculus Medium. The user does not have control over the number of polygons, resulting in less realistic models. Again the created models can be exported as .obj file. Figures ~\ref{fig:blocks}~(a) and ~\ref{fig:blocks}~(b) show a simple model of an anglerfish created in Google Blocks, and the simple Google Blocks interface.
+
+\begin{figure}[!h]
+    \centering
+    \setlength{\tabcolsep}{0.0130\linewidth}
+    \begin{tabular}{@{}cc@{}}
+   	\includegraphics[width=0.487\linewidth]{figures/blocks_anglerfish}&
+   	\includegraphics[width=0.487\linewidth]{figures/blocks_interface}\\
+    (a)&(b)\\
+    \end{tabular}
+    \caption[Google Blocks]{Google Blocks.
+    	  \textup{(a)} Model of an anglerfish created in Google Blocks.
+			  \textup{(b)} Interface of Google Blocks. 
+      \label{fig:blocks}}
+\end{figure}
+
 \subsection{Makebox}
+\todo{consider to remove this, doesn't really fit in with the rest}
 
 
 
