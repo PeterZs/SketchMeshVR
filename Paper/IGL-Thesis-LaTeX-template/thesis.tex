@@ -7,7 +7,7 @@
 \usepackage{longtable} % tables over several pages
 \usepackage[font={small,sl},hang,labelfont=bf]{caption} % configure captions
 \usepackage{booktabs} % publication quality tables for LaTeX
-
+\usepackage{color}
 \newcommand{\ra}[1]{\renewcommand{\arraystretch}{#1}}
 
 \ifpdfoutput{%
@@ -20,7 +20,7 @@
 
 \usepackage[headinclude]{scrpage2}
 \usepackage[colorinlistoftodos,prependcaption,textsize=tiny]{todonotes}
-
+%\usepackage[disable]{todonotes}
 % Font packages:
 \usepackage{times}
 \usepackage{helvet}   % sets sans serif font
@@ -178,13 +178,6 @@
 
 
 % ---- END MAIN PART ----
-
-
-\appendix
-\clearpage
-\renewcommand*{\chapterpagestyle}{myappendixpagestyle}
-
-\include{apx-sample-appendix}
 
 \clearpage
 \renewcommand*{\chapterpagestyle}{empty}
