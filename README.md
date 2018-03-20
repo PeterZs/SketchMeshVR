@@ -6,7 +6,7 @@ Master thesis on a sketch-based 3D modeling system for VR.
 
 ### Prerequisites
 
-The VR version is tested on Windows 10 with Microsoft Visual Studio 17 (with Visual C++), the non-VR version is additionally also tested on OS X El Capitan with clang 8.0.0.
+The VR version is tested on Windows 10 with Microsoft Visual Studio 15 2017 (with Visual C++), the non-VR version is additionally also tested on OS X El Capitan with clang 8.0.0.
 
 ### Installing
 
@@ -17,13 +17,13 @@ git clone --recursive https://github.com/FloorVerhoeven/thesis.git
 ```
 
 Create a build folder in the "SketchMesh" and/or "VR-SketchMesh" folder.
-Use CMake to build the binaries for your system. You can either do this via the CMake GUI (press configure and then generate; use the Unix Makefiles generator on macOS) or via the command line by navigating into the build folder and running:
+Use CMake to build the makefiles for your system. You can either do this via the CMake GUI (press configure and then generate; use the "Unix Makefiles" generator on macOS or the "Visual Studio 15 2017 Win64" one on Windows) or via the command line by navigating into the build folder and running:
 
 ```
 cmake -DCMAKE_BUILD_TYPE=Release ../
 ```
 
-Then, from inside the build folder run the following to compile and run the executable:
+Then for macOS, use the terminal to navigate to inside the build folder run the following to compile and run the executable (replace ./SketchMesh_bin with ./VR-SketchMesh_bin for the VR version:
 ```
 make && ./SketchMesh_bin
 ```
