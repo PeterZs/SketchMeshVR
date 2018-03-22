@@ -16,8 +16,6 @@ int MeshExtrusion::ID = -1;
 
 void MeshExtrusion::extrude_prepare(Stroke& base, SurfacePath& surface_path) {
 	base.counter_clockwise();
-
-	//TODO: maybe need to do teddy.cleanstroke.clean like in Model line 1020 (ON BOTH BASE AND SILHOUETTE)
 	
 	surface_path.create_from_stroke_extrude(base);
 	post_extrude_prepare_update_points(base, surface_path);
@@ -65,8 +63,6 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	Eigen::Vector3d normal2 = normal.cross(camera_to_center);
 	normal2.normalize();
 
-
-	Eigen::Vector3d center_to_vertex = m.V.row(boundary_vertices[0]) - center;
 	double max, min;
 	int most_left_vertex_idx = 0, most_right_vertex_idx = 0;
 	find_left_and_right(most_left_vertex_idx, most_right_vertex_idx, min, max, m, center, boundary_vertices, normal2);
@@ -88,8 +84,6 @@ void MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	if((m.V.row(boundary_vertices[most_left_vertex_idx]) - silhouette_vertices.row(0)).norm() > (m.V.row(boundary_vertices[most_right_vertex_idx]) - silhouette_vertices.row(0)).norm()) {
 		silhouette_vertices = silhouette_vertices.colwise().reverse().eval();
 	}
-
-	//TODO: FOR NOW SKIPPING OVER RESAMPLING IN LAPLACIANEXTRUSION LINE 311-315 (SEEMS TO BE A SIMPLE RESAMPLE THOUGH)
 	
 	vector<int> sil_original_indices = add_silhouette_vertices(m, stroke.get_ID(), silhouette_vertices);
 	stroke.set_closest_vert_bindings(sil_original_indices);

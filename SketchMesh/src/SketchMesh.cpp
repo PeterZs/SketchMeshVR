@@ -451,7 +451,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 			MeshCut::cut(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, *added_stroke);
 			stroke_collection.push_back(*added_stroke);
 
-			initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers);//Don't test if the initial one dies, cause then we have mayhem anyway? TODO
+			initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers);//Don't test if the initial one dies
 			
 			int nr_removed = 0, original_collection_size = stroke_collection.size();
 			for(int i = 0; i < original_collection_size; i++) {
@@ -551,7 +551,6 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 	return skip_standardcallback;
 }
 
-//TODO: make callback for this in viewer, like in exercise 5 of shapemod
 bool callback_load_mesh(Viewer& viewer, string filename) {
 	igl::readOFF(filename, V, F);
 	viewer.data.clear();

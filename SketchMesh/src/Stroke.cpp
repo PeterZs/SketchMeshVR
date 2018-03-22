@@ -134,7 +134,7 @@ bool Stroke::strokeAddSegmentAdd(int mouse_x, int mouse_y) {
 			}
 		}
 
-		if(closest_vert_bindings.size() == 0 || closest_vert_idx != closest_vert_bindings.back()) { //TODO: might become redundant
+		if(closest_vert_bindings.size() == 0 || closest_vert_idx != closest_vert_bindings.back()) {
 			closest_vert_bindings.push_back(closest_vert_idx);
 		}
 

@@ -201,7 +201,6 @@ bool SurfacePath::front_facing(int faceID) {
 
 /** Determines whether the vertices of an edge are in counter-clockwise order as seen from the current viewpoint. **/
 bool SurfacePath::is_counter_clockwise(int faceID) {
-	//TODO: Not sure if we should zero-mean the face vertices first
 	Eigen::Matrix4f modelview = origin_stroke->viewer.core.view * origin_stroke->viewer.core.model;
 	double total_area = 0.0;
 	Eigen::RowVector3d prev, next, pt, center(0, 0, 0);

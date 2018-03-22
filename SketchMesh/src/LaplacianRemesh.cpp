@@ -433,7 +433,6 @@ vector<int> LaplacianRemesh::reorder(vector<int> boundary_vertices, Eigen::Vecto
 	return reordered;
 }
 
-//TODO: check this or remove if not necessary
 void LaplacianRemesh::reverse_path(vector<int> path_vertices) {
 	reverse(path_vertices.begin(), path_vertices.end());
 	int v = path_vertices[path_vertices.size() - 1];

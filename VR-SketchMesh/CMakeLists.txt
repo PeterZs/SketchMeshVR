@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.6)
 project(VR-SketchMesh)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -80,5 +80,7 @@ else (TRAVISCI_BUILD)
 endif (TRAVISCI_BUILD)
 
 add_executable(${PROJECT_NAME}_bin ${SOURCES} ${LIBIGL_EXTRA_SOURCES})
-target_link_libraries(${PROJECT_NAME}_bin ${LIBIGL_LIBRARIES} ${LIBIGL_EXTRA_LIBRARIES} LibOVR.lib Winmm.lib ws2_32.lib)
-#target_link_libraries(${PROJECT_NAME}_bin Debug ${PROJECT_SOURCE_DIR}/../OculusSDK/LibOVR/Lib/Windows/x64/Debug/VS2015/OVRLib.lib Release ${PROJECT_SOURCE_DIR}/../OculusSDK/LibOVR/Lib/Windows/x64/Release/VS2015/OVRLib.lib)
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME}_bin)
+target_link_libraries(${PROJECT_NAME}_bin ${LIBIGL_LIBRARIES} ${LIBIGL_EXTRA_LIBRARIES} Winmm.lib ws2_32.lib)
+target_link_libraries(${PROJECT_NAME}_bin debug ${PROJECT_SOURCE_DIR}/../OculusSDK/LibOVR/Lib/Windows/x64/Debug/VS2015/LibOVR.lib)
+target_link_libraries(${PROJECT_NAME}_bin optimized ${PROJECT_SOURCE_DIR}/../OculusSDK/LibOVR/Lib/Windows/x64/Release/VS2015/LibOVR.lib)
