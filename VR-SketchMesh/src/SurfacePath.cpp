@@ -37,10 +37,11 @@ bool SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 		PathElement newElement(faceID, PathElement::FACE, pt);
 		path.push_back(newElement);
 
-		faceID = extend_path_extrude(prev_p, next_p, faceID);
+ 		faceID = extend_path_extrude(prev_p, next_p, faceID);
 		if (faceID == -1) {
 			return false;
 		}
+		cout << "surfacepath: " << next_p << " " << start_p << "  " << faceID << "   " << start_face << endl << endl;
 		if (next_p == start_p && faceID == start_face) {
 			break;
 		}
@@ -57,6 +58,7 @@ bool SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 int SurfacePath::extend_path_extrude(int prev_p, int next_p, int faceID) {
 	Eigen::Vector3d edge_cut_point;
 	int edge = -1;
+	int iter = 0;
 
 	while (true) {
 		if (origin_stroke->get_hit_faces()(next_p, 0) == faceID) { //next_p is in same face as prev_p
@@ -64,7 +66,8 @@ int SurfacePath::extend_path_extrude(int prev_p, int next_p, int faceID) {
 		}
 
 		edge = find_next_edge_extrude(next_p, prev_p, edge, faceID, edge_cut_point);
-		if (edge == -1) { //Something is wrong with the stroke, exit gracefully
+		iter++;
+		if (edge == -1 || iter >= 200) { //Something is wrong with the stroke, exit gracefully
 			return -1;
 		}
 

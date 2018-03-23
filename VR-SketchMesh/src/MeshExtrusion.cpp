@@ -15,6 +15,7 @@ bool MeshExtrusion::extrude_prepare(Stroke& base, SurfacePath& surface_path) {
 	base.counter_clockwise();
 	
 	bool success = surface_path.create_from_stroke_extrude(base);
+
 	if (!success) {
 		return false;
 	}
@@ -64,7 +65,6 @@ bool MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	} else {
 		silhouette_vertices = sil_3D_points.topRows(sil_3D_points.rows()-1);
 	}
-	cout << "reversed" << stroke.has_been_reversed << endl << endl;
 
 
 	int most_left_vertex_idx = 0, most_right_vertex_idx = 0;
@@ -254,7 +254,6 @@ void MeshExtrusion::find_left_and_right(int& most_left_vertex_idx, int& most_rig
 			most_right_vertex_idx = i;
 		}
 	}
-	cout << "left and right"<< endl << m.V.row(boundary_vertices[most_left_vertex_idx]) << endl << m.V.row(boundary_vertices[most_right_vertex_idx]) << endl << endl;
 }
 
 /** Adds the silhouette vertices to the mesh and also inserts their tracking variables. **/

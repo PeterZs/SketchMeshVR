@@ -436,7 +436,6 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		}
 		else if (prev_tool_mode == DRAW) {
 			prev_tool_mode = NONE;
-		//	initial_stroke->strokeAddSegment(pos);
 
 			if (initial_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
 
@@ -642,12 +641,12 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			else { //mouse released after extrusion base drawn
 				if (!extrusion_base->has_points_on_mesh) {
 					viewervr.draw_while_computing = false;
+					prev_tool_mode = NONE;
 					return;
 				}
 
 				dirty_boundary = true;
 				extrusion_base->toLoop();
-
 				bool succes_extrude_prepare = MeshExtrusion::extrude_prepare(*extrusion_base, base_surface_path); //Don't need to update all strokes here, since it didn't remove any vertices
 				if (!succes_extrude_prepare) { //Catches the case that face == -1 in SurfacePath
 #ifdef _WIN32
