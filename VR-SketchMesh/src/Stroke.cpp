@@ -335,7 +335,6 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 		}
 	}
 	else {
-		cout << "Extrusion stroke was drawn outside of mesh. Won't be added." << endl;
 		return;
 	}
 
@@ -473,7 +472,7 @@ bool Stroke::toLoop() {
 unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::MatrixXd& mesh_V, Eigen::MatrixXi& mesh_F) {
 	counter_clockwise(); //Ensure the stroke is counter-clockwise, handy later
 	Eigen::MatrixXd original_stroke2DPoints = stroke2DPoints;
-	//stroke2DPoints = resample_stroke2D(original_stroke2DPoints); //TODO: decide on whether to include this or not. Might give a discrepancy between what is drawn and the result you get
+	//stroke2DPoints = resample_stroke2D(original_stroke2DPoints); //Enabling this might give a discrepancy between what is drawn and the result you get but does give smoother meshes
 
 	Eigen::MatrixXd V2_tmp, V2;
 	Eigen::MatrixXi F2, F2_back, vertex_markers, edge_markers;

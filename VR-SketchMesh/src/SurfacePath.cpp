@@ -41,7 +41,7 @@ bool SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 		if (faceID == -1) {
 			return false;
 		}
-		cout << "surfacepath: " << next_p << " " << start_p << "  " << faceID << "   " << start_face << endl << endl;
+
 		if (next_p == start_p && faceID == start_face) {
 			break;
 		}
@@ -67,7 +67,7 @@ int SurfacePath::extend_path_extrude(int prev_p, int next_p, int faceID) {
 
 		edge = find_next_edge_extrude(next_p, prev_p, edge, faceID, edge_cut_point);
 		iter++;
-		if (edge == -1 || iter >= 200) { //Something is wrong with the stroke, exit gracefully
+		if (edge == -1 || iter > 1000) { //Something is wrong with the stroke, exit gracefully
 			return -1;
 		}
 

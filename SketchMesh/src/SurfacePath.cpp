@@ -14,7 +14,7 @@ SurfacePath::SurfacePath() {
 }
 
 /** Creates a SurfacePath that contains both the original points in stroke, and new points at the locations where stroke segments cross face edges. Won't wrap around to the backside of the mesh (because it will arrive at the first index again before having to switch direction). Used for extrusion **/
-void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
+bool SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 	origin_stroke = new Stroke(stroke);
 	path.clear();
 	Eigen::Matrix4f modelview = stroke.viewer.core.view * stroke.viewer.core.model;
@@ -41,6 +41,9 @@ void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 
 		bool forward;
 		faceID = extend_path(prev_p, next_p, faceID, forward, modelview);
+		if (faceID == -1) {
+			return false;
+		}
 
 		if(!forward) {
 			next_p = prev_p;
@@ -60,12 +63,12 @@ void SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 	pt = unproject_onto_polygon(stroke.get_stroke2DPoints().row(start_p), faceID, modelview);
 	PathElement lastElement(faceID, PathElement::FACE, pt);
 	path.push_back(lastElement);
-
+	return true;
 }
 
 
 /** Creates a SurfacePath that contains both the original points in stroke, and new points at the locations where stroke segments cross face edges. Also wraps around to the backside of the mesh. Used for cutting **/
-void SurfacePath::create_from_stroke(const Stroke & stroke) {
+bool SurfacePath::create_from_stroke(const Stroke & stroke) {
 	origin_stroke = new Stroke(stroke);
 	path.clear();
 	Eigen::Matrix4f modelview = stroke.viewer.core.view * stroke.viewer.core.model;
@@ -92,6 +95,9 @@ void SurfacePath::create_from_stroke(const Stroke & stroke) {
 
 		bool forward;
 		faceID = extend_path(prev_p, next_p, faceID, forward, modelview);
+		if (faceID == -1) {
+			return false;
+		}
 
 		if(!forward) {
 			next_p = prev_p;
@@ -108,7 +114,7 @@ void SurfacePath::create_from_stroke(const Stroke & stroke) {
 		}
 		prev_p = next_p;
 	}
-
+	return true;
 }
 
 /** Determines the moving direction when going from prev_p to next_p and adds new vertices at mesh edges when the segment from prev_p to next_p crosses an edge. **/
@@ -125,6 +131,7 @@ int SurfacePath::extend_path(int prev_p, int next_p, int faceID, bool& forward, 
 	int edge = -1, proj_faceID = -1;
 	pair<int, int> strokeEdge(prev_p, next_p);
 	Eigen::Vector3f bc;
+	int iter = 0;
 
 	while(true) {
 		if(is_projected_inside(stroke2DPoints.row(next_p), faceID, modelview)) {
@@ -133,8 +140,8 @@ int SurfacePath::extend_path(int prev_p, int next_p, int faceID, bool& forward, 
 		}
 
 		edge = find_next_edge(strokeEdge, edge, faceID, modelview);
-		if(edge == -1) {
-			cout << "This (maybe) shouldn't happen" << endl; //TODO
+		iter++;
+		if(edge == -1 || iter > 1000) { //Something is wrong with the stroke, exit gracefully
 			return -1;
 		}
 
