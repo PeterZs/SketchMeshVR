@@ -3,6 +3,7 @@
 Master thesis on a sketch-based 3D modeling system for VR.
 
 ## Getting Started
+This git repository contains both a VR (VR-SketchMesh) and non-VR (SketchMesh) version of the sketch-based 3D modeling software. SketchMesh depends on the included version of libigl and VR-SketchMesh depends on the specially adapted version of libigl called VR-Viewer plus the OculusSDK. 
 
 ### Prerequisites
 
