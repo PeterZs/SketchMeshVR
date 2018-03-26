@@ -716,7 +716,7 @@ int main(int argc, char *argv[]) {
 	CurveDeformation::smooth_deform_mode = true;
 	viewervr.init();
 	viewervr.callback_button_down = button_down;
-	viewervr.corevr.point_size = 55;
+	viewervr.corevr.point_size = 15;
 	viewervr.launch();
 }
 
