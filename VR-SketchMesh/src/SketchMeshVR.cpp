@@ -157,6 +157,7 @@ ToolMode get_chosen_mode(ViewerVR::ButtonCombo pressed) {
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_end_time - _start_time).count();
 		if (timePast > 100000000) {
 			button_A_is_set = !button_A_is_set;
+			extrusion_base_already_drawn = false;
 			return TOGGLE;
 		}
 		else {
