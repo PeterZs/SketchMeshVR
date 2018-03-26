@@ -86,7 +86,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		}
 	}
 
-	if (outer_boundary_vertices.size() == 0) { //There are no vertices left behind (cut that removes everthing or extrude that doesn't include at least 1 triangle)
+	if (outer_boundary_vertices.size() == 0) { //There are no vertices left behind (cut that removes everthing or extrude that doesn't include at least 1 vertex)
 		remesh_success = false;
 		return Eigen::VectorXi::Zero(1);
 	}
@@ -198,7 +198,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	Eigen::MatrixXi added_sharpEV(path.size() - 1, 2);
 	for(int i = 0; i < path.size() - 1; i++) {
 		surface_path.get_path_element(i).set_v_idx(size_before_removing + i);
-		added_sharpEV.row(i) << vertex_is_clean.rows() + i, vertex_is_clean.rows() + ((i + 1) + path.size() - 1) % (path.size() - 1); //Use mod (path.size() - 1) to compensate for start point that is in path double
+		added_sharpEV.row(i) << vertex_is_clean.rows() + i, vertex_is_clean.rows() + ((i + 1) + path.size() - 1) % (path.size() - 1); //Use mod (path.size() - 1) to compensate for start point that is in path twice
 	}
 
 	//Update the outer_boundary_vertices (which are indices into V before it was sliced to keep only the clean vertices)
@@ -442,7 +442,6 @@ vector<int> LaplacianRemesh::reorder(vector<int> boundary_vertices, Eigen::Vecto
 	return reordered;
 }
 
-//TODO: check this or remove if not necessary
 void LaplacianRemesh::reverse_path(vector<int> path_vertices) {
 	reverse(path_vertices.begin(), path_vertices.end());
 	int v = path_vertices[path_vertices.size() - 1];

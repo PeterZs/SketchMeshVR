@@ -86,7 +86,6 @@ void SurfaceSmoothing::smooth_main(Mesh &m, bool BOUNDARY_IS_DIRTY) {
 						no_boundary_adjacent_vertices++;
 					}
 				}
-			//	no_boundary_adjacent_vertices += neighbors[i].size();
 			}
 		}
 	}
@@ -151,19 +150,17 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 			}
 		}
 		AT = A.transpose();
-		cout << "computing" << endl;
 		solver1.compute(AT*A);
 		set_precompute_matrix_for_LM_and_edges(m, A);
         set_AT_for_LM_and_edges(m, AT);
 	}
-	else if(BOUNDARY_IS_DIRTY && iteration == 0) { //TODO : check that this is needed
+	else if(BOUNDARY_IS_DIRTY && iteration == 0) {
 		for(int i = 0; i < m.V.rows(); i++) {
 			if(m.vertex_boundary_markers[i] > 0) { //Constrain only the boundary in the first iteration
 				A.coeffRef(m.V.rows() + i, i) = 1; //For target LM'/edge length'
 			}
 		}
 		AT = A.transpose();
-		cout << "computing 2" << endl;
 		solver1.compute(AT*A);
 		set_precompute_matrix_for_LM_and_edges(m, A);
 		set_AT_for_LM_and_edges(m, AT);
@@ -176,8 +173,6 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 			}
 		}
 		AT = A.transpose();
-		cout << "computing 3" << endl;
-
 		solver1.compute(AT*A);
 		set_precompute_matrix_for_LM_and_edges(m, A);
         set_AT_for_LM_and_edges(m, AT);
@@ -273,8 +268,6 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 			}
 		}
 		AT = A.transpose();
-		cout << "computing 4" << endl;
-
 		solver2.compute(AT*A);
 		set_precompute_matrix_for_positions(m, A);
         set_AT_for_positions(m, AT);

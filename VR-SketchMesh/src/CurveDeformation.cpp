@@ -1,7 +1,6 @@
 #include "CurveDeformation.h"
 #include <Eigen/Sparse>
 
-
 using namespace std;
 using namespace igl;
 
@@ -13,15 +12,13 @@ vector<Eigen::Matrix3d> Rot;
 vector<int> vert_bindings;
 
 Eigen::RowVector3d start_pos;
-Eigen::VectorXi fixed_indices, fixed_indices_local, is_fixed; //Indicates for every vertex on the pulled curve whether or not it is fixed (aka it is 0 when it is in the ROI and 1 when it is not);
+Eigen::VectorXi fixed_indices, fixed_indices_local, is_fixed; //Indicates for every vertex on the pulled curve whether or not it is fixed (aka it is 0 when it is in the ROI and 1 when it is not)
 Eigen::VectorXd B, PosRot;
 Eigen::MatrixXd original_L0, original_L1;
 
 Eigen::SparseMatrix<double> A, A_L1_T;
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solverL1; //Solver for final vertex positions (with L1)
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solverPosRot;
-//Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solverPosRot; //TODO
-
 
 void CurveDeformation::startPullCurve(Stroke& _stroke, int _handle_ID) {
 	start_pos = (_stroke.get3DPoints()).row(_handle_ID);

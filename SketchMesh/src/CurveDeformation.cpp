@@ -18,7 +18,6 @@ Eigen::MatrixXd original_L0, original_L1;
 Eigen::SparseMatrix<double> A, A_L1_T;
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solverL1; //Solver for final vertex positions (with L1)
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solverPosRot;
-//Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solverPosRot;
 
 
 void CurveDeformation::startPullCurve(Stroke& _stroke, int _handle_ID) {

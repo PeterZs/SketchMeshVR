@@ -134,7 +134,7 @@ bool Stroke::strokeAddSegmentAdd(int mouse_x, int mouse_y) {
 			}
 		}
 
-		if(closest_vert_bindings.size() == 0 || closest_vert_idx != closest_vert_bindings.back()) { //TODO: might become redundant
+		if(closest_vert_bindings.size() == 0 || closest_vert_idx != closest_vert_bindings.back()) {
 			closest_vert_bindings.push_back(closest_vert_idx);
 		}
 
@@ -160,7 +160,6 @@ bool Stroke::strokeAddSegmentAdd(int mouse_x, int mouse_y) {
 	_time1 = std::chrono::high_resolution_clock::now();
 	return result;
 }
-
 
 /** Used for CUT. Will add a new 2D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its unprojection onto the existing as a 3D point. If the unprojection isn't on the mesh, it will unproject it and use it as the start or end point. After adding the new point it will restart the timer. **/
 void Stroke::strokeAddSegmentCut(int mouse_x, int mouse_y) {
@@ -259,7 +258,6 @@ void Stroke::strokeAddSegmentExtrusionBase(int mouse_x, int mouse_y) {
 			stroke3DPoints.row(stroke3DPoints.rows() - 1) << pt[0], pt[1], pt[2];
 		}
 	} else {
-		cout << "Extrusion stroke was drawn outside of mesh. Won't be added." << endl;
 		return;
 	}
 
@@ -327,6 +325,7 @@ void Stroke::strokeReset() {
 	_time1 = std::chrono::high_resolution_clock::now();
 	closest_vert_bindings.clear();
 	has_been_reversed = false;
+	is_loop = false;
 }
 
 bool Stroke::toLoop() {
@@ -347,7 +346,7 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	counter_clockwise(); //Ensure the stroke is counter-clockwise, handy later
 
 	Eigen::MatrixXd original_stroke2DPoints = stroke2DPoints;
-	stroke2DPoints = resample_stroke2D(original_stroke2DPoints);
+	//stroke2DPoints = resample_stroke2D(original_stroke2DPoints);
 
 	Eigen::MatrixXd V2_tmp, V2;
 	Eigen::MatrixXi F2, F2_back, vertex_markers, edge_markers;

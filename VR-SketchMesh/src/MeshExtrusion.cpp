@@ -13,10 +13,9 @@ using namespace igl;
 
 bool MeshExtrusion::extrude_prepare(Stroke& base, SurfacePath& surface_path) {
 	base.counter_clockwise();
-
-	//TODO: maybe need to do teddy.cleanstroke.clean like in Model line 1020 (ON BOTH BASE AND SILHOUETTE)
 	
 	bool success = surface_path.create_from_stroke_extrude(base);
+
 	if (!success) {
 		return false;
 	}
@@ -54,9 +53,6 @@ bool MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	igl::slice(EV, sharpEV_row_idx, sharpEV_col_idx, sharpEV);
 
 
-
-
-
     //Compute the real 3D positions of the silhouette stroke
 	Eigen::RowVector3d center(0, 0, 0);
 	Eigen::Vector3d normal(0, 0, 0);
@@ -78,45 +74,77 @@ bool MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	remove_out_of_bounds_silhouette(silhouette_vertices, center, m.V.row(boundary_vertices[most_left_vertex_idx]), m.V.row(boundary_vertices[most_right_vertex_idx]), dir);
 
 	if(silhouette_vertices.rows() == 0) {
-		cout << "returning: THIS IS BAD" << endl; //Todo: handle this neatly
+		cout << "No valid silhouette vertices. Try again." << endl;
 		return false;
 	}
-
-
-	//TODO: FOR NOW SKIPPING OVER RESAMPLING IN LAPLACIANEXTRUSION LINE 311-315 (SEEMS TO BE A SIMPLE RESAMPLE THOUGH)
 	
 	vector<int> sil_original_indices = add_silhouette_vertices(m, stroke.get_ID(), silhouette_vertices);
 	vector<int> sil_original_indices_looped = sil_original_indices;
 	sil_original_indices_looped.push_back(sil_original_indices[0]);
 	stroke.set_closest_vert_bindings(sil_original_indices_looped);
 
-	//Create one of the two loops
+	//Create the first loops
 	Eigen::MatrixXd front_loop3D = silhouette_vertices;
 	vector<int> front_loop_base_original_indices;
 	create_loop(m, front_loop3D, boundary_vertices, front_loop_base_original_indices, most_left_vertex_idx, most_right_vertex_idx);
-
 	//Create the second loop
 	Eigen::MatrixXd back_loop3D = silhouette_vertices.colwise().reverse();
 	vector<int> back_loop_base_original_indices;
 	create_loop(m, back_loop3D, boundary_vertices, back_loop_base_original_indices, most_right_vertex_idx, most_left_vertex_idx);
 
-	Eigen::Vector3d x_vec = dir;
-	Eigen::Vector3d y_vec = normal.cross(x_vec);
+
+	
+	//Get center and normal for first half-dome and generate mesh
+	Eigen::RowVector3d new_center_front(0,0,0);
+	for (int i = 0; i < front_loop3D.rows(); i++) {
+		new_center_front += front_loop3D.row(i);
+	}
+	for (int i = 0; i < silhouette_vertices.rows(); i++) {
+		new_center_front -= silhouette_vertices.row(i);
+	}
+	new_center_front /= (front_loop3D.rows() - silhouette_vertices.rows());
+
+	Eigen::Vector3d normal_front(0,0,0);
+	Eigen::Vector3d vec0, vec1;
+	for (int i = 0; i < front_loop3D.rows(); i++) {
+		vec0 = front_loop3D.row(i) - new_center_front;
+		vec1 = front_loop3D.row((i + 1) % front_loop3D.rows()) - new_center_front;
+		normal_front += vec0.cross(vec1);
+	}
+	normal_front.normalize();
+
+	Eigen::Vector3d x_vec = (m.V.row(boundary_vertices[most_right_vertex_idx]) - m.V.row(boundary_vertices[most_left_vertex_idx])).normalized();
+	Eigen::Vector3d y_vec = normal_front.cross(x_vec);
 	Eigen::Vector3d offset = x_vec.cross(y_vec);
 	offset *= 0.05;
 
-    //Generate the two half-domes
-	generate_mesh(m, front_loop3D, center, x_vec, y_vec, offset, silhouette_vertices.rows(), front_loop_base_original_indices, sil_original_indices);
+	generate_mesh(m, front_loop3D, new_center_front, x_vec, y_vec, offset, silhouette_vertices.rows(), front_loop_base_original_indices, sil_original_indices);
+
+	//Get center and normal for second half-dome and generate mesh
+	Eigen::RowVector3d new_center_back(0, 0, 0);
+	for (int i = 0; i < back_loop3D.rows(); i++) {
+		new_center_back += back_loop3D.row(i);
+	}
+	for (int i = 0; i < silhouette_vertices.rows(); i++) {
+		new_center_back -= silhouette_vertices.row(i);
+	}
+	new_center_back /= (back_loop3D.rows() - silhouette_vertices.rows());
+
+
+	Eigen::Vector3d normal_back(0, 0, 0);
+	for (int i = 0; i < back_loop3D.rows(); i++) {
+		vec0 = back_loop3D.row(i) - new_center_front;
+		vec1 = back_loop3D.row((i + 1) % back_loop3D.rows()) - new_center_back;
+		normal_back += vec0.cross(vec1);
+	}
+	normal_back.normalize();
+
+	y_vec = normal_back.cross(x_vec);
+	offset = x_vec.cross(y_vec);
+	offset *= 0.05;
+
 	reverse(sil_original_indices.begin(), sil_original_indices.end());
-	generate_mesh(m, back_loop3D, center, x_vec, y_vec, offset, silhouette_vertices.rows(), back_loop_base_original_indices, sil_original_indices);
-
-
-
-
-
-
-
-
+	generate_mesh(m, back_loop3D, new_center_back, x_vec, y_vec, offset, silhouette_vertices.rows(), back_loop_base_original_indices, sil_original_indices);
 
     //Update tracking variables with new vertex indices
 	post_extrude_main_update_points(stroke, silhouette_vertices);
@@ -136,8 +164,7 @@ void MeshExtrusion::remove_out_of_bounds_silhouette(Eigen::MatrixXd& silhouette_
 	for (int i = 0; i < silhouette_vertices.rows(); i++) {
 		center_to_vertex = silhouette_vertices.row(i) - center;
 		dot_prod = dir.dot(center_to_vertex);
-		if (dot_prod > most_left_dot_prod || dot_prod < most_right_dot_prod) {
-			cerr << "silhouette point " << i << " is outside of range, it will be skipped." << endl;
+		if (dot_prod > most_left_dot_prod || dot_prod < most_right_dot_prod) { //Skip silhouette point because it's out of range
 			continue;
 		}
 		else {
@@ -145,14 +172,12 @@ void MeshExtrusion::remove_out_of_bounds_silhouette(Eigen::MatrixXd& silhouette_
 		}
 	}
 
-
 	Eigen::MatrixXd result;
 	Eigen::VectorXi keep_row_idx, keep_col_idx(3);
 	keep_row_idx = Eigen::VectorXi::Map(keep_indices.data(), keep_indices.size());
 	keep_col_idx.col(0) << 0, 1, 2;
 	igl::slice(silhouette_vertices, keep_row_idx, keep_col_idx, result);
 	silhouette_vertices = result;
-
 }
 
 /** Generates a mesh inside the loop3D vertices. **/
@@ -171,8 +196,8 @@ void MeshExtrusion::generate_mesh(Mesh& m, Eigen::MatrixXd loop3D, Eigen::Vector
 	Eigen::MatrixXd V2;
 	Eigen::MatrixXi F2;
 	Eigen::MatrixXi vertex_markers, edge_markers;
-	igl::triangle::triangulate(loop2D, loop_stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(loop2D.rows(), 1, 1), Eigen::MatrixXi::Constant(loop_stroke_edges.rows(), 1, 1), "Yq25Q", V2, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
-																																																																	  
+	igl::triangle::triangulate(loop2D, loop_stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(loop2D.rows(), 1, 1), Eigen::MatrixXi::Constant(loop_stroke_edges.rows(), 1, 1), "Yq25", V2, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
+							
 	Eigen::RowVector3d vert;
 	for(int i = 0; i < V2.rows(); i++) {
 		if(i >= loop2D.rows()) { //Interior vertices
@@ -192,6 +217,7 @@ void MeshExtrusion::generate_mesh(Mesh& m, Eigen::MatrixXd loop3D, Eigen::Vector
 	
 }
 
+/** Gets the center point in the extrusion base and the normal of its average plane. **/
 void MeshExtrusion::get_normal_and_center(Eigen::RowVector3d& center, Eigen::Vector3d& normal, Mesh& m, Eigen::VectorXi &boundary_vertices) {
 	for(int i = 0; i < boundary_vertices.rows(); i++) {
 		center += m.V.row(boundary_vertices[i]);

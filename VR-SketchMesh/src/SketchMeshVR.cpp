@@ -23,8 +23,7 @@
 using namespace std;
 using ViewerVR = igl::viewer::VR_Viewer;
 
-ViewerVR viewervr; //TODO: I made this a global variable so we don't need to send a viewerVR into the callback for button down, which was giving problems due to copy constructors of classes involving atomic variables. Document any possible side effects of this (not sure if there was any benefit of sending in the viewerVR anyway)
-
+ViewerVR viewervr; 
 
 // Vertex array, #V x3
 Eigen::MatrixXd V(0,3);
@@ -133,29 +132,22 @@ void select_dragging_handle(Eigen::Vector3f& pos) {
 ToolMode get_chosen_mode(ViewerVR::ButtonCombo pressed) {
 	if (pressed == ViewerVR::ButtonCombo::GRIPTRIG) {
 		if (button_B_is_set) {
-			cout << "pull mode" << endl;
 			return PULL;
 		} else {
-			cout << "draw" << endl;
 			return DRAW;
 		}
 	}
 	else if (pressed == ViewerVR::ButtonCombo::GRIP) {
 		if (button_A_is_set) {
-			cout << "extrud" << endl;
 			return EXTRUDE;
 		} else {
-			cout << "cut mode" << endl;
-
 			return CUT;
 		}
 	}
 	else if (pressed == ViewerVR::ButtonCombo::TRIG) {
 		if (button_thumb_is_set) {
-			cout << "remove mode" << endl;
 			return REMOVE;
 		} else {
-			cout << "Add mode" << endl;
 			return ADD;
 		}
 	}
@@ -165,7 +157,6 @@ ToolMode get_chosen_mode(ViewerVR::ButtonCombo pressed) {
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_end_time - _start_time).count();
 		if (timePast > 100000000) {
 			button_A_is_set = !button_A_is_set;
-			cout << "Switching A " << endl;
 			return TOGGLE;
 		}
 		else {
@@ -178,7 +169,6 @@ ToolMode get_chosen_mode(ViewerVR::ButtonCombo pressed) {
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_end_time - _start_time).count();
 		if (timePast > 100000000) {
 			button_B_is_set = !button_B_is_set;
-			cout << "switching buttonB" << endl;
 			return TOGGLE;
 		}
 		else {
@@ -191,7 +181,6 @@ ToolMode get_chosen_mode(ViewerVR::ButtonCombo pressed) {
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_end_time - _start_time).count();
 		if (timePast > 100000000) {
 			button_thumb_is_set = !button_thumb_is_set;
-			cout << "switching thumb button" << endl;
 			return TOGGLE;
 		}
 		else {
@@ -202,7 +191,6 @@ ToolMode get_chosen_mode(ViewerVR::ButtonCombo pressed) {
 		return NONE;
 	}
 	else {
-		cout << "default" << endl;
 		return DEFAULT;
 	}
 }
@@ -219,7 +207,6 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 	}
 	else if (pressed_type == PULL || pressed_type == ADD || pressed_type == CUT || pressed_type == EXTRUDE) {
 		if (initial_stroke->empty2D()) { //Don't go into these modes when there is no mesh yet
-			cout << "exiting due to initial stroke's empty2d" << endl;
 			return;
 		}
 	}
@@ -258,6 +245,8 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				prev_tool_mode = DRAW;
 			}
 			else {
+				cut_stroke_already_drawn = false;
+				extrusion_base_already_drawn = false;
 				viewervr.data.clear_without_floor();
 				viewervr.request_recenter();
 				has_recentered = true;
@@ -447,7 +436,6 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		}
 		else if (prev_tool_mode == DRAW) {
 			prev_tool_mode = NONE;
-			initial_stroke->strokeAddSegment(pos);
 
 			if (initial_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
 
@@ -557,7 +545,7 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				}
 				stroke_collection.push_back(*added_stroke);
 
-				initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers);//Don't test if the initial one dies, cause then we have mayhem anyway? TODO
+				initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers); //Don't test if the initial one dies
 
 				int nr_removed = 0, original_collection_size = stroke_collection.size();
 				for (int i = 0; i < original_collection_size; i++) {
@@ -648,17 +636,17 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 				draw_all_strokes();
 
-				extrusion_base_already_drawn = false; //Reset
+				extrusion_base_already_drawn = false;
 			}
 			else { //mouse released after extrusion base drawn
 				if (!extrusion_base->has_points_on_mesh) {
 					viewervr.draw_while_computing = false;
+					prev_tool_mode = NONE;
 					return;
 				}
 
 				dirty_boundary = true;
 				extrusion_base->toLoop();
-
 				bool succes_extrude_prepare = MeshExtrusion::extrude_prepare(*extrusion_base, base_surface_path); //Don't need to update all strokes here, since it didn't remove any vertices
 				if (!succes_extrude_prepare) { //Catches the case that face == -1 in SurfacePath
 #ifdef _WIN32
@@ -672,6 +660,7 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 					Eigen::MatrixXd drawn_points = extrusion_base->get3DPoints();
 					viewervr.data.add_edges(drawn_points.block(0, 0, drawn_points.rows() - 1, 3), drawn_points.block(1, 0, drawn_points.rows() - 1, 3), Eigen::RowVector3d(0, 0, 0)); //Display the stroke in black to show that it went wrong
 					viewervr.draw_while_computing = false;
+					extrusion_base_already_drawn = false;
 					return;
 				}
 
@@ -697,8 +686,6 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 		return;
 	}
-
-
 
 	return;
 }

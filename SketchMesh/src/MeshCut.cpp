@@ -10,24 +10,35 @@ using namespace igl;
 int MeshCut::prev_vertex_count = -1;
 int MeshCut::ID = -1;
 
-void MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::VectorXi &new_mapped_indices, Eigen::VectorXi &sharp_edge, Stroke& stroke) {
+bool MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::VectorXi &new_mapped_indices, Eigen::VectorXi &sharp_edge, Stroke& stroke) {
 	if(V.rows() != prev_vertex_count) {
 		ID++;
 		prev_vertex_count = V.rows();
 	}
 	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, ID);
 	SurfacePath surface_path;
-	surface_path.create_from_stroke(stroke); //Prepares the drawn stroke (inserts extra points at the edges that it crosses)
-	cut_main(m, surface_path, stroke);
+	bool success = surface_path.create_from_stroke(stroke); //Prepares the drawn stroke (inserts extra points at the edges that it crosses)
+	if (!success) {
+		return false;
+	}
+	success = cut_main(m, surface_path, stroke);
+	if (!success) {
+		return false;
+	}
 
 	post_cut_update_points(stroke, surface_path);
 
-	return;
+	return true;
 }
 
-void MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke) {
-	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_cut_remove_inside(m, surface_path, stroke.viewer.core.model, stroke.viewer.core.view, stroke.viewer.core.proj, stroke.viewer.core.viewport);
+bool MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke) {
+	bool remesh_success = true;
+	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_cut_remove_inside(m, surface_path, stroke.viewer.core.model, stroke.viewer.core.view, stroke.viewer.core.proj, stroke.viewer.core.viewport, remesh_success);
+	if (!remesh_success) {
+		return false;
+	}
 	mesh_open_hole(boundary_vertices, m);
+	return true;
 }
 
 void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {

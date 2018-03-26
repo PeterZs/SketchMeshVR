@@ -26,7 +26,7 @@ bool SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 	Eigen::RowVector3d pt(0, 0, 0);
 
 	int nr3DPoints = origin_stroke->get3DPoints().rows() - 1; //Don't take the loop duplicate
-	looped_3DPoints = origin_stroke->get3DPoints().topRows(nr3DPoints);//TODO: check how to fix. Need something like we had before in extend path or so (due to order change after counter_clock after to_loop)
+	looped_3DPoints = origin_stroke->get3DPoints().topRows(nr3DPoints);
 
 	igl::edge_topology(stroke.get_V(), stroke.get_F(), EV, FE, EF);	
 
@@ -37,10 +37,11 @@ bool SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 		PathElement newElement(faceID, PathElement::FACE, pt);
 		path.push_back(newElement);
 
-		faceID = extend_path_extrude(prev_p, next_p, faceID);
+ 		faceID = extend_path_extrude(prev_p, next_p, faceID);
 		if (faceID == -1) {
 			return false;
 		}
+
 		if (next_p == start_p && faceID == start_face) {
 			break;
 		}
@@ -57,6 +58,7 @@ bool SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 int SurfacePath::extend_path_extrude(int prev_p, int next_p, int faceID) {
 	Eigen::Vector3d edge_cut_point;
 	int edge = -1;
+	int iter = 0;
 
 	while (true) {
 		if (origin_stroke->get_hit_faces()(next_p, 0) == faceID) { //next_p is in same face as prev_p
@@ -64,8 +66,8 @@ int SurfacePath::extend_path_extrude(int prev_p, int next_p, int faceID) {
 		}
 
 		edge = find_next_edge_extrude(next_p, prev_p, edge, faceID, edge_cut_point);
-		if (edge == -1) {
-			cout << "This (maybe) shouldn't happen" << endl; //TODO
+		iter++;
+		if (edge == -1 || iter > 1000) { //Something is wrong with the stroke, exit gracefully
 			return -1;
 		}
 
@@ -78,8 +80,7 @@ int SurfacePath::extend_path_extrude(int prev_p, int next_p, int faceID) {
 
 //Finds the edge index of the edge to cross in order to get from polygon to (somewhere closer to) next_p
 int SurfacePath::find_next_edge_extrude(int next_p, int prev_p, int prev_edge, int polygon, Eigen::Vector3d& edge_cut_point) {
-	//polygon is the faceID of prev_p
-	::Plane cutPlane(origin_stroke->get_hand_pos().row(prev_p), looped_3DPoints.row(prev_p), looped_3DPoints.row(next_p)); //TODO: safe
+	::Plane cutPlane(origin_stroke->get_hand_pos().row(prev_p), looped_3DPoints.row(prev_p), looped_3DPoints.row(next_p));
 	int next_faceID = origin_stroke->get_hit_faces()(next_p, 0);
 
 	for (int i = 0; i < 3; i++) {
@@ -184,9 +185,11 @@ int SurfacePath::extend_path_cut(int prev_p, int next_p, int faceID, bool& on_fr
 	Eigen::Vector3d edge_cut_point;
 
 	while(true) {
-		next_p = (next_p > nr_looped_3DPoints / 2) ? nr_looped_3DPoints - next_p : next_p; //next_p is used to index into hit_faces, which only has data stored for "the front half" and then has the info for the "back half" in the second column
-		prev_p = (prev_p > nr_looped_3DPoints / 2) ? nr_looped_3DPoints - prev_p : prev_p; //prev_p is used to index into hit_faces, which only has data stored for "the front half" and then has the info for the "back half" in the second column
-		
+		//next_p and prev_P are used to index into hit_faces, which only has data stored for "the front half" and then has the info for the "back half" in the second column
+		next_p = (next_p > nr_looped_3DPoints / 2) ? nr_looped_3DPoints - next_p : next_p; 
+		prev_p = (prev_p > nr_looped_3DPoints / 2) ? nr_looped_3DPoints - prev_p : prev_p; 
+
+
 		if(origin_stroke->get_hit_faces()(next_p, 0) == faceID || origin_stroke->get_hit_faces()(next_p, 1) == faceID){ //next_p is in same face as prev_p
 			return faceID;
 		}
@@ -194,8 +197,7 @@ int SurfacePath::extend_path_cut(int prev_p, int next_p, int faceID, bool& on_fr
 		pair<int, int> strokeEdge(prev_p, next_p);
 		edge = find_next_edge_cut(strokeEdge, edge, faceID, on_front_side, cutPlane, start_pos, end_pos, first_iter, edge_cut_point);
 		first_iter = false;
-		if(edge == -1) {
-			cout << "This (maybe) shouldn't happen" << endl; //TODO
+		if(edge == -1) { //Something is wrong with the stroke, exit gracefully
 			return -1;
 		}
 
@@ -214,7 +216,6 @@ int SurfacePath::extend_path_cut(int prev_p, int next_p, int faceID, bool& on_fr
 
 /** Finds and returns the edge ID of the edge that is being crossed by the segment from strokeEdge.start to strokeEdge.end. Returns -1 if no such edge exists. **/
 int SurfacePath::find_next_edge_cut(pair<int, int> strokeEdge, int prev_edge, int polygon, bool on_front_side, ::Plane& cutPlane, Eigen::RowVector3d& start_pos, Eigen::RowVector3d& end_pos, bool first_iter, Eigen::Vector3d& edge_cut_point) {
-	//polygon is the faceID of prev_p
 	int next_faceID;
 	if (origin_stroke->get_hit_faces()(strokeEdge.second, !on_front_side) == -1) { //Next point is a point outside of the mesh. Find the edge with prev_p's hit on the other side instead
 		next_faceID = origin_stroke->get_hit_faces()(strokeEdge.first, on_front_side);
@@ -252,8 +253,7 @@ int SurfacePath::find_next_edge_cut(pair<int, int> strokeEdge, int prev_edge, in
 	}
 
 
-	return -1; //shouldn't happen
-
+	return -1;
 }
 
 Eigen::MatrixX3d SurfacePath::create_loop_from_front_and_back(Eigen::MatrixX3d& front_3DPoints, Eigen::MatrixX3d& back_3DPoints) {

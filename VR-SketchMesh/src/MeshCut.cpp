@@ -114,7 +114,7 @@ void MeshCut::update_face_indices(Mesh& m, Eigen::MatrixXi& F2, Eigen::VectorXi&
 	int vert_idx_in_mesh, size_before = m.F.rows();
 	m.F.conservativeResize(m.F.rows() + F2.rows(), Eigen::NoChange);
 	for(int i = 0; i < F2.rows(); i++) {
-		for(int j = 0; j < 3; j++) { //Go over the face vertices
+		for(int j = 0; j < 3; j++) {
 			if(F2(i, j) < boundary_vertices.rows()) { //Original boundary vertex
 				vert_idx_in_mesh = boundary_vertices[F2(i, j)];
 			} else { //Interior to cut plane
