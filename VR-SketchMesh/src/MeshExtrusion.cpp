@@ -17,6 +17,7 @@ bool MeshExtrusion::extrude_prepare(Stroke& base, SurfacePath& surface_path) {
 	bool success = surface_path.create_from_stroke_extrude(base);
 
 	if (!success) {
+		cout << "problem already here" << endl;
 		return false;
 	}
 	post_extrude_prepare_update_points(base, surface_path);
