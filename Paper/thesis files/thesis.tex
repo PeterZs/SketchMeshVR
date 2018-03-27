@@ -8,6 +8,8 @@
 \usepackage[font={small,sl},hang,labelfont=bf]{caption} % configure captions
 \usepackage{booktabs} % publication quality tables for LaTeX
 \usepackage{color}
+\usepackage{url}
+
 \newcommand{\ra}[1]{\renewcommand{\arraystretch}{#1}}
 
 \ifpdfoutput{%
@@ -54,8 +56,9 @@
 	\DeclareGraphicsExtensions{.pdf,.png}
 }{}
 
-\bibliographystyle{acmsiggraph}
 
+
+\bibliographystyle{acmsiggraph}
 
 
 % A4
@@ -143,7 +146,8 @@
 %include task description here:
 \cleardoublepage
 %\includegraphics[viewport=3cm 0cm 20cm 27.5cm]{task_description} %better use includepdf below!
-%\includepdf{task_description}
+\includepdf[pages={1,2}]{Thesis_task_description}
+\includepdf{declaration-originality}
 \cleardoublepage
 %-----------------------------------------------------------------------------------------------
 
@@ -186,6 +190,6 @@
 \cleardoublepage
 \phantomsection
 \addcontentsline{toc}{chapter}{Bibliography}
-\bibliography{graphics}
+\bibliography{testbib}
 
 \end{document}
