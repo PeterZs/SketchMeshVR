@@ -346,7 +346,7 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	counter_clockwise(); //Ensure the stroke is counter-clockwise, handy later
 
 	Eigen::MatrixXd original_stroke2DPoints = stroke2DPoints;
-	//stroke2DPoints = resample_stroke2D(original_stroke2DPoints);
+	stroke2DPoints = resample_stroke2D(original_stroke2DPoints);
 
 	Eigen::MatrixXd V2_tmp, V2;
 	Eigen::MatrixXi F2, F2_back, vertex_markers, edge_markers;

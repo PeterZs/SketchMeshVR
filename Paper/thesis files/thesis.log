@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.18 (MiKTeX 2.9.6600) (preloaded format=pdflatex 2018.3.14)  27 MAR 2018 09:54
+This is pdfTeX, Version 3.14159265-2.6-1.40.18 (MiKTeX 2.9.6600) (preloaded format=pdflatex 2018.3.14)  27 MAR 2018 14:07
 entering extended mode
 **./thesis.tex
 (thesis.tex
@@ -1042,11 +1042,11 @@ File: t1phv.fd 2001/06/04 scalable font definitions for T1/phv.
 )
 LaTeX Font Info:    Font shape `T1/phv/bx/n' in size <24.88> not available
 (Font)              Font shape `T1/phv/b/n' tried instead on input line 117.
-<figures/teaser.png, id=122, 801.99625pt x 422.57875pt>
-File: figures/teaser.png Graphic file (type png)
-<use figures/teaser.png>
-Package pdftex.def Info: figures/teaser.png  used on input line 118.
-(pdftex.def)             Requested size: 364.24236pt x 191.92543pt.
+<figures/vr_front_img.png, id=122, 2749.27126pt x 2472.23625pt>
+File: figures/vr_front_img.png Graphic file (type png)
+<use figures/vr_front_img.png>
+Package pdftex.def Info: figures/vr_front_img.png  used on input line 118.
+(pdftex.def)             Requested size: 273.1835pt x 245.65373pt.
 LaTeX Font Info:    Font shape `T1/phv/m/it' in size <14.4> not available
 (Font)              Font shape `T1/phv/m/sl' tried instead on input line 129.
 
@@ -1067,8 +1067,8 @@ Package pdftex.def Info: figures/IGL_logo.pdf  used on input line 134.
 
 
 {/Users/floorverhoeven/Library/Application Support/MiKTeX/texmfs/data/pdftex/co
-nfig/pdftex.map} <./figures/teaser.png> <./figures/ETH_logo.pdf> <./figures/IGL
-_logo.pdf>] [2
+nfig/pdftex.map} <./figures/vr_front_img.png> <./figures/ETH_logo.pdf> <./figur
+es/IGL_logo.pdf>] [2
 
 ]
 \openout2 = `abstract.aux'.
@@ -1283,9 +1283,9 @@ LaTeX Font Info:    Font shape `T1/phv/bx/n' in size <17.28> not available
 LaTeX Font Info:    Font shape `T1/phv/bx/n' in size <14.4> not available
 (Font)              Font shape `T1/phv/b/n' tried instead on input line 13.
 
-Overfull \hbox (46.06544pt too wide) in paragraph at lines 15--16
+Overfull \hbox (43.78542pt too wide) in paragraph at lines 15--16
 \T1/ptm/m/n/12 FiberMesh is a system that allows modeling freeform surfaces by 
-drawing 3D curves  [[]].
+drawing 3D curves [[]].
  []
 
 
@@ -1317,53 +1317,50 @@ Overfull \hbox (31.23178pt too wide) detected at line 23
 File: figures/TiltBrush_StarryNight.png Graphic file (type png)
 <use figures/TiltBrush_StarryNight.png>
 Package pdftex.def Info: figures/TiltBrush_StarryNight.png  used on input line 
-85.
+84.
 (pdftex.def)             Requested size: 330.54773pt x 148.41725pt.
 <figures/Tilt_menu2.png, id=444, 356.33125pt x 339.2675pt>
 File: figures/Tilt_menu2.png Graphic file (type png)
 <use figures/Tilt_menu2.png>
-Package pdftex.def Info: figures/Tilt_menu2.png  used on input line 92.
+Package pdftex.def Info: figures/Tilt_menu2.png  used on input line 91.
 (pdftex.def)             Requested size: 159.3582pt x 151.72678pt.
 <figures/Tilt_menu1.png, id=445, 356.33125pt x 339.2675pt>
 File: figures/Tilt_menu1.png Graphic file (type png)
 <use figures/Tilt_menu1.png>
-Package pdftex.def Info: figures/Tilt_menu1.png  used on input line 93.
+Package pdftex.def Info: figures/Tilt_menu1.png  used on input line 92.
 (pdftex.def)             Requested size: 159.3582pt x 151.72678pt.
 LaTeX Font Info:    Font shape `T1/ptm/bx/sl' in size <10.95> not available
-(Font)              Font shape `T1/ptm/b/sl' tried instead on input line 99.
-
-
-LaTeX Warning: `!h' float specifier changed to `!ht'.
-
+(Font)              Font shape `T1/ptm/b/sl' tried instead on input line 98.
 <figures/medium_goro_fujita.png, id=449, 1414.28375pt x 1414.28375pt>
 File: figures/medium_goro_fujita.png Graphic file (type png)
 <use figures/medium_goro_fujita.png>
-Package pdftex.def Info: figures/medium_goro_fujita.png  used on input line 111
+Package pdftex.def Info: figures/medium_goro_fujita.png  used on input line 110
 .
 (pdftex.def)             Requested size: 159.3582pt x 159.34822pt.
 <figures/medium_goro_fujita2.png, id=450, 963.6pt x 963.6pt>
 File: figures/medium_goro_fujita2.png Graphic file (type png)
 <use figures/medium_goro_fujita2.png>
 Package pdftex.def Info: figures/medium_goro_fujita2.png  used on input line 11
-2.
+1.
 (pdftex.def)             Requested size: 159.3582pt x 159.35472pt.
 <figures/medium_interface1.png, id=451, 423.5825pt x 252.945pt>
 File: figures/medium_interface1.png Graphic file (type png)
 <use figures/medium_interface1.png>
-Package pdftex.def Info: figures/medium_interface1.png  used on input line 120.
+Package pdftex.def Info: figures/medium_interface1.png  used on input line 119.
 
 (pdftex.def)             Requested size: 159.3582pt x 95.15904pt.
 <figures/medium_interface2.png, id=452, 423.5825pt x 252.945pt>
 File: figures/medium_interface2.png Graphic file (type png)
 <use figures/medium_interface2.png>
-Package pdftex.def Info: figures/medium_interface2.png  used on input line 121.
+Package pdftex.def Info: figures/medium_interface2.png  used on input line 120.
 
 (pdftex.def)             Requested size: 159.3582pt x 95.15904pt.
+
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
 
 
-Overfull \hbox (16.64189pt too wide) in paragraph at lines 131--132
+Overfull \hbox (16.64189pt too wide) in paragraph at lines 130--131
 \T1/ptm/m/n/12 reference images or models into the program, which can greatly s
 implify modeling. MasterpieceVR
  []
@@ -1373,13 +1370,13 @@ implify modeling. MasterpieceVR
 File: figures/MasterpieceVR_Vladimir_Ilic.png Graphic file (type png)
 <use figures/MasterpieceVR_Vladimir_Ilic.png>
 Package pdftex.def Info: figures/MasterpieceVR_Vladimir_Ilic.png  used on input
- line 137.
+ line 136.
 (pdftex.def)             Requested size: 159.3582pt x 224.98047pt.
 <figures/MasterpieceVR_interface.png, id=460, 880.79062pt x 495.35063pt>
 File: figures/MasterpieceVR_interface.png Graphic file (type png)
 <use figures/MasterpieceVR_interface.png>
 Package pdftex.def Info: figures/MasterpieceVR_interface.png  used on input lin
-e 138.
+e 137.
 (pdftex.def)             Requested size: 227.6506pt x 128.02472pt.
 
 
@@ -1393,13 +1390,13 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 <figures/blocks_anglerfish.png, id=473, 963.6pt x 542.025pt>
 File: figures/blocks_anglerfish.png Graphic file (type png)
 <use figures/blocks_anglerfish.png>
-Package pdftex.def Info: figures/blocks_anglerfish.png  used on input line 154.
+Package pdftex.def Info: figures/blocks_anglerfish.png  used on input line 153.
 
 (pdftex.def)             Requested size: 221.73146pt x 124.72101pt.
 <figures/blocks_interface.png, id=474, 963.6pt x 542.025pt>
 File: figures/blocks_interface.png Graphic file (type png)
 <use figures/blocks_interface.png>
-Package pdftex.def Info: figures/blocks_interface.png  used on input line 155.
+Package pdftex.def Info: figures/blocks_interface.png  used on input line 154.
 (pdftex.def)             Requested size: 221.73146pt x 124.72101pt.
 
 
@@ -1425,6 +1422,12 @@ ift including one Touch controller
  []
 
 
+Overfull \hbox (33.68259pt too wide) in paragraph at lines 6--7
+\T1/ptm/m/n/12 additional control curves and deform control curves on the mesh.
+ Unlike in FiberMesh, SketchMeshVR
+ []
+
+
 Overfull \hbox (2.28004pt too wide) has occurred while \output is active
 []|[] []
  []
@@ -1439,20 +1442,26 @@ Overfull \hbox (8.73349pt too wide) in paragraph at lines 12--13
 ome changes were made in comparison
  []
 
+
+Overfull \hbox (1.97806pt too wide) in paragraph at lines 17--19
+[]\T1/ptm/m/n/12 Headset movement will result in a changing view matrix, as the
+ position of the headset represents
+ []
+
 <figures/pre_draw.png, id=501, 1927.2pt x 1084.05pt>
 File: figures/pre_draw.png Graphic file (type png)
 <use figures/pre_draw.png>
-Package pdftex.def Info: figures/pre_draw.png  used on input line 25.
+Package pdftex.def Info: figures/pre_draw.png  used on input line 24.
 (pdftex.def)             Requested size: 204.88414pt x 115.24287pt.
 <figures/during_draw.png, id=502, 1927.2pt x 1084.05pt>
 File: figures/during_draw.png Graphic file (type png)
 <use figures/during_draw.png>
-Package pdftex.def Info: figures/during_draw.png  used on input line 26.
+Package pdftex.def Info: figures/during_draw.png  used on input line 25.
 (pdftex.def)             Requested size: 204.88414pt x 115.24287pt.
 <figures/post_draw.png, id=503, 1927.2pt x 1084.05pt>
 File: figures/post_draw.png Graphic file (type png)
 <use figures/post_draw.png>
-Package pdftex.def Info: figures/post_draw.png  used on input line 33.
+Package pdftex.def Info: figures/post_draw.png  used on input line 32.
 (pdftex.def)             Requested size: 421.60658pt x 237.1519pt.
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
@@ -1460,153 +1469,149 @@ LaTeX Warning: `!h' float specifier changed to `!ht'.
 <figures/pre_add.png, id=506, 1927.2pt x 1084.05pt>
 File: figures/pre_add.png Graphic file (type png)
 <use figures/pre_add.png>
-Package pdftex.def Info: figures/pre_add.png  used on input line 50.
+Package pdftex.def Info: figures/pre_add.png  used on input line 49.
 (pdftex.def)             Requested size: 204.88414pt x 115.24287pt.
 <figures/during_add.png, id=507, 1927.2pt x 1084.05pt>
 File: figures/during_add.png Graphic file (type png)
 <use figures/during_add.png>
-Package pdftex.def Info: figures/during_add.png  used on input line 51.
+Package pdftex.def Info: figures/during_add.png  used on input line 50.
 (pdftex.def)             Requested size: 204.88414pt x 115.24287pt.
 <figures/post_add.png, id=508, 1927.2pt x 1084.05pt>
 File: figures/post_add.png Graphic file (type png)
 <use figures/post_add.png>
-Package pdftex.def Info: figures/post_add.png  used on input line 58.
+Package pdftex.def Info: figures/post_add.png  used on input line 57.
 (pdftex.def)             Requested size: 421.60658pt x 237.1519pt.
-[12]
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
 
-<figures/pre_remove.png, id=513, 1927.2pt x 1084.05pt>
+<figures/pre_remove.png, id=509, 1927.2pt x 1084.05pt>
 File: figures/pre_remove.png Graphic file (type png)
 <use figures/pre_remove.png>
-Package pdftex.def Info: figures/pre_remove.png  used on input line 70.
+Package pdftex.def Info: figures/pre_remove.png  used on input line 69.
 (pdftex.def)             Requested size: 204.88414pt x 115.24287pt.
-<figures/during_remove.png, id=514, 1927.2pt x 1084.05pt>
+<figures/during_remove.png, id=510, 1927.2pt x 1084.05pt>
 File: figures/during_remove.png Graphic file (type png)
 <use figures/during_remove.png>
-Package pdftex.def Info: figures/during_remove.png  used on input line 71.
+Package pdftex.def Info: figures/during_remove.png  used on input line 70.
 (pdftex.def)             Requested size: 204.88414pt x 115.24287pt.
-<figures/post_remove.png, id=515, 1927.2pt x 1084.05pt>
+<figures/post_remove.png, id=511, 1927.2pt x 1084.05pt>
 File: figures/post_remove.png Graphic file (type png)
 <use figures/post_remove.png>
-Package pdftex.def Info: figures/post_remove.png  used on input line 78.
+Package pdftex.def Info: figures/post_remove.png  used on input line 77.
 (pdftex.def)             Requested size: 421.60658pt x 237.1519pt.
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
 
-[13 <./figures/pre_draw.png> <./figures/during_draw.png> <./figures/post_draw.p
-ng>]
-LaTeX Font Info:    Font shape `T1/ptm/bx/n' in size <12> not available
-(Font)              Font shape `T1/ptm/b/n' tried instead on input line 93.
+[12]
+Underfull \vbox (badness 3428) has occurred while \output is active []
 
-
-LaTeX Warning: Reference `fig:cutstrokepoints' on page 14 undefined on input li
-ne 93.
-
+ [13 <./figures/pre_draw.png> <./figures/during_draw.png> <./figures/post_draw.
+png>]
 [14 <./figures/pre_add.png> <./figures/during_add.png> <./figures/post_add.png>
 ]
-<figures/pre_cut.png, id=526, 1927.2pt x 1084.05pt>
-File: figures/pre_cut.png Graphic file (type png)
-<use figures/pre_cut.png>
-Package pdftex.def Info: figures/pre_cut.png  used on input line 99.
-(pdftex.def)             Requested size: 204.88414pt x 115.24287pt.
-<figures/during_cut.png, id=527, 1927.2pt x 1084.05pt>
-File: figures/during_cut.png Graphic file (type png)
-<use figures/during_cut.png>
-Package pdftex.def Info: figures/during_cut.png  used on input line 100.
-(pdftex.def)             Requested size: 204.88414pt x 115.24287pt.
-<figures/post_cut.png, id=528, 1927.2pt x 1084.05pt>
-File: figures/post_cut.png Graphic file (type png)
-<use figures/post_cut.png>
-Package pdftex.def Info: figures/post_cut.png  used on input line 107.
-(pdftex.def)             Requested size: 421.60658pt x 237.1519pt.
-
-
-LaTeX Warning: `!h' float specifier changed to `!ht'.
-
-<figures/voldiff_ui.png, id=529, 1015.795pt x 707.64375pt>
-File: figures/voldiff_ui.png Graphic file (type png)
-<use figures/voldiff_ui.png>
-Package pdftex.def Info: figures/voldiff_ui.png  used on input line 117.
-(pdftex.def)             Requested size: 330.54773pt x 230.27303pt.
-
-LaTeX Warning: `!h' float specifier changed to `!ht'.
-
-Package hyperref Info: bookmark level for unknown todo defaults to 0 on input l
-ine 121.
-
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
  [15 <./figures/pre_remove.png> <./figures/during_remove.png> <./figures/post_r
-emove.png>] [16 <./figures/pre_cut.png> <./figures/during_cut.png> <./figures/p
-ost_cut.png>]
+emove.png>]
+<figures/pre_cut.png, id=531, 1927.2pt x 1084.05pt>
+File: figures/pre_cut.png Graphic file (type png)
+<use figures/pre_cut.png>
+Package pdftex.def Info: figures/pre_cut.png  used on input line 102.
+(pdftex.def)             Requested size: 204.88414pt x 115.24287pt.
+<figures/during_cut.png, id=532, 1927.2pt x 1084.05pt>
+File: figures/during_cut.png Graphic file (type png)
+<use figures/during_cut.png>
+Package pdftex.def Info: figures/during_cut.png  used on input line 103.
+(pdftex.def)             Requested size: 204.88414pt x 115.24287pt.
+<figures/post_cut.png, id=533, 1927.2pt x 1084.05pt>
+File: figures/post_cut.png Graphic file (type png)
+<use figures/post_cut.png>
+Package pdftex.def Info: figures/post_cut.png  used on input line 110.
+(pdftex.def)             Requested size: 421.60658pt x 237.1519pt.
+Package hyperref Info: bookmark level for unknown todo defaults to 0 on input l
+ine 117.
+<figures/schematic_error_cut1.png, id=534, 570.13pt x 598.235pt>
+File: figures/schematic_error_cut1.png Graphic file (type png)
+<use figures/schematic_error_cut1.png>
+Package pdftex.def Info: figures/schematic_error_cut1.png  used on input line 1
+22.
+(pdftex.def)             Requested size: 227.6506pt x 238.86986pt.
+
+LaTeX Warning: `!h' float specifier changed to `!ht'.
+
+[16 <./figures/pre_cut.png> <./figures/during_cut.png> <./figures/post_cut.png>
+]
+Overfull \hbox (11.08575pt too wide) in paragraph at lines 131--132
+\T1/ptm/m/n/12 This can give problems when projecting the silhouette points to 
+2D in preparation for triangulation.
+ []
+
 <figures/pre_extrude.png, id=541, 1927.2pt x 1084.05pt>
 File: figures/pre_extrude.png Graphic file (type png)
 <use figures/pre_extrude.png>
-Package pdftex.def Info: figures/pre_extrude.png  used on input line 132.
+Package pdftex.def Info: figures/pre_extrude.png  used on input line 137.
 (pdftex.def)             Requested size: 204.88414pt x 115.24287pt.
 <figures/during_extrude2.png, id=542, 1927.2pt x 1084.05pt>
 File: figures/during_extrude2.png Graphic file (type png)
 <use figures/during_extrude2.png>
-Package pdftex.def Info: figures/during_extrude2.png  used on input line 133.
+Package pdftex.def Info: figures/during_extrude2.png  used on input line 138.
 (pdftex.def)             Requested size: 204.88414pt x 115.24287pt.
 <figures/post_extrude.png, id=543, 1927.2pt x 1084.05pt>
 File: figures/post_extrude.png Graphic file (type png)
 <use figures/post_extrude.png>
-Package pdftex.def Info: figures/post_extrude.png  used on input line 140.
+Package pdftex.def Info: figures/post_extrude.png  used on input line 145.
 (pdftex.def)             Requested size: 421.60658pt x 237.1519pt.
-
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
 
 <figures/error_extrusion.png, id=544, 1927.2pt x 1084.05pt>
 File: figures/error_extrusion.png Graphic file (type png)
 <use figures/error_extrusion.png>
-Package pdftex.def Info: figures/error_extrusion.png  used on input line 150.
+Package pdftex.def Info: figures/error_extrusion.png  used on input line 155.
 (pdftex.def)             Requested size: 330.54773pt x 185.92365pt.
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
 
-[17 <./figures/voldiff_ui.png>]
-<figures/pre_pull.png, id=552, 1927.2pt x 1084.05pt>
+
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [17 <./figures/schematic_error_cut1.png>]
+Underfull \vbox (badness 3428) has occurred while \output is active []
+
+ [18 <./figures/pre_extrude.png> <./figures/during_extrude2.png> <./figures/pos
+t_extrude.png>]
+<figures/pre_pull.png, id=556, 1927.2pt x 1084.05pt>
 File: figures/pre_pull.png Graphic file (type png)
 <use figures/pre_pull.png>
-Package pdftex.def Info: figures/pre_pull.png  used on input line 164.
+Package pdftex.def Info: figures/pre_pull.png  used on input line 169.
 (pdftex.def)             Requested size: 204.88414pt x 115.24287pt.
-<figures/during_pull.png, id=553, 1927.2pt x 1084.05pt>
+<figures/during_pull.png, id=557, 1927.2pt x 1084.05pt>
 File: figures/during_pull.png Graphic file (type png)
 <use figures/during_pull.png>
-Package pdftex.def Info: figures/during_pull.png  used on input line 165.
+Package pdftex.def Info: figures/during_pull.png  used on input line 170.
 (pdftex.def)             Requested size: 204.88414pt x 115.24287pt.
-<figures/post_pull.png, id=554, 1927.2pt x 1084.05pt>
+<figures/post_pull.png, id=558, 1927.2pt x 1084.05pt>
 File: figures/post_pull.png Graphic file (type png)
 <use figures/post_pull.png>
-Package pdftex.def Info: figures/post_pull.png  used on input line 172.
+Package pdftex.def Info: figures/post_pull.png  used on input line 177.
 (pdftex.def)             Requested size: 421.60658pt x 237.1519pt.
 
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
 
-[18 <./figures/pre_extrude.png> <./figures/during_extrude2.png> <./figures/post
-_extrude.png>]
-<figures/touch_controllers.png, id=560, 875.27pt x 400.49625pt>
+[19 <./figures/error_extrusion.png>]
+<figures/touch_controllers.png, id=564, 875.27pt x 400.49625pt>
 File: figures/touch_controllers.png Graphic file (type png)
 <use figures/touch_controllers.png>
-Package pdftex.def Info: figures/touch_controllers.png  used on input line 187.
+Package pdftex.def Info: figures/touch_controllers.png  used on input line 192.
 
 (pdftex.def)             Requested size: 330.54773pt x 151.24904pt.
 
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
 
-
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
- [19 <./figures/error_extrusion.png>]
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
- [20 <./figures/pre_pull.png> <./figures/during_pull.png> <./figures/post_pull.
-png> <./figures/touch_controllers.png>] [21]) [22]
+[20 <./figures/pre_pull.png> <./figures/during_pull.png> <./figures/post_pull.p
+ng>] [21 <./figures/touch_controllers.png>]) [22]
 \openout2 = `ch04-results.aux'.
 
  (ch04-results.tex
@@ -1614,12 +1619,12 @@ chapter 4.
 <figures/interface_point.png, id=580, 682.55pt x 742.775pt>
 File: figures/interface_point.png Graphic file (type png)
 <use figures/interface_point.png>
-Package pdftex.def Info: figures/interface_point.png  used on input line 12.
+Package pdftex.def Info: figures/interface_point.png  used on input line 11.
 (pdftex.def)             Requested size: 136.59175pt x 148.64304pt.
 <figures/interface_ray.png, id=581, 682.55pt x 742.775pt>
 File: figures/interface_ray.png Graphic file (type png)
 <use figures/interface_ray.png>
-Package pdftex.def Info: figures/interface_ray.png  used on input line 13.
+Package pdftex.def Info: figures/interface_ray.png  used on input line 12.
 (pdftex.def)             Requested size: 136.59175pt x 148.64304pt.
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
@@ -1638,22 +1643,24 @@ Overfull \vbox (459.06232pt too high) has occurred while \output is active []
 
 
 ]
-<figures/example_model_figure.png, id=592, 500.87125pt x 830.10126pt>
+<figures/example_model_figure.png, id=591, 500.87125pt x 830.10126pt>
 File: figures/example_model_figure.png Graphic file (type png)
 <use figures/example_model_figure.png>
 Package pdftex.def Info: figures/example_model_figure.png  used on input line 3
-0.
+3.
 (pdftex.def)             Requested size: 136.59175pt x 226.37227pt.
-<figures/results_teddy_model1.png, id=593, 396.48125pt x 569.12625pt>
+<figures/results_teddy_model1.png, id=592, 396.48125pt x 569.12625pt>
 File: figures/results_teddy_model1.png Graphic file (type png)
 <use figures/results_teddy_model1.png>
 Package pdftex.def Info: figures/results_teddy_model1.png  used on input line 3
-1.
+4.
 (pdftex.def)             Requested size: 136.59175pt x 196.07088pt.
-File: figures/voldiff_ui.png Graphic file (type png)
-<use figures/voldiff_ui.png>
-Package pdftex.def Info: figures/voldiff_ui.png  used on input line 32.
-(pdftex.def)             Requested size: 136.59175pt x 95.14986pt.
+<figures/results_teddy_model_nonVR.png, id=593, 461.725pt x 624.3325pt>
+File: figures/results_teddy_model_nonVR.png Graphic file (type png)
+<use figures/results_teddy_model_nonVR.png>
+Package pdftex.def Info: figures/results_teddy_model_nonVR.png  used on input l
+ine 35.
+(pdftex.def)             Requested size: 136.59175pt x 184.69092pt.
 
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
@@ -1662,24 +1669,31 @@ LaTeX Warning: `!h' float specifier changed to `!ht'.
 File: figures/example_model_dolphin.png Graphic file (type png)
 <use figures/example_model_dolphin.png>
 Package pdftex.def Info: figures/example_model_dolphin.png  used on input line 
-48.
+51.
 (pdftex.def)             Requested size: 136.59175pt x 84.23486pt.
 <figures/results_dolphin_model.png, id=595, 432.61626pt x 275.0275pt>
 File: figures/results_dolphin_model.png Graphic file (type png)
 <use figures/results_dolphin_model.png>
 Package pdftex.def Info: figures/results_dolphin_model.png  used on input line 
-49.
+52.
 (pdftex.def)             Requested size: 136.59175pt x 86.83556pt.
-File: figures/voldiff_ui.png Graphic file (type png)
-<use figures/voldiff_ui.png>
-Package pdftex.def Info: figures/voldiff_ui.png  used on input line 50.
-(pdftex.def)             Requested size: 136.59175pt x 95.14986pt.
+<figures/results_dolphin_model_nonVR.png, id=596, 733.74126pt x 451.6875pt>
+File: figures/results_dolphin_model_nonVR.png Graphic file (type png)
+<use figures/results_dolphin_model_nonVR.png>
+Package pdftex.def Info: figures/results_dolphin_model_nonVR.png  used on input
+ line 53.
+(pdftex.def)             Requested size: 136.59175pt x 84.08467pt.
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
 
-) [24 <./figures/interface_point.png> <./figures/interface_ray.png>] [25 <./fig
-ures/example_model_figure.png> <./figures/results_teddy_model1.png> <./figures/
-example_model_dolphin.png (PNG copy)> <./figures/results_dolphin_model.png>]
+)
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [24 <./figures/interface_point.png> <./figures/interface_ray.png>] [25 <./figu
+res/example_model_figure.png> <./figures/results_teddy_model1.png> <./figures/r
+esults_teddy_model_nonVR.png> <./figures/example_model_dolphin.png (PNG copy)> 
+<./figures/results_dolphin_model.png> <./figures/results_dolphin_model_nonVR.pn
+g>]
 \openout2 = `ch05-conclusion.aux'.
 
 
@@ -1714,7 +1728,7 @@ Overfull \vbox (459.06232pt too high) has occurred while \output is active []
 
 
 [27]
-<figures/blocks_tool.png, id=619, 1122.1925pt x 1287.81125pt>
+<figures/blocks_tool.png, id=622, 1122.1925pt x 1287.81125pt>
 File: figures/blocks_tool.png Graphic file (type png)
 <use figures/blocks_tool.png>
 Package pdftex.def Info: figures/blocks_tool.png  used on input line 15.
@@ -1999,19 +2013,15 @@ Package atveryend Info: Empty hook `AfterLastShipout' on input line 195.
 Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 195.
 Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 195.
 Package rerunfilecheck Info: File `thesis.out' has not changed.
-(rerunfilecheck)             Checksum: 0D1B10A3B76A7E0E1283E89CD10A328D;1902.
-
-
-LaTeX Warning: There were undefined references.
-
+(rerunfilecheck)             Checksum: 30DFB27F0A7A3A9DCE9F84A52C22B494;1902.
 Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 195.
  ) 
 Here is how much of TeX's memory you used:
- 21880 strings out of 495223
- 423848 string characters out of 3179739
- 552324 words of memory out of 3000000
- 24559 multiletter control sequences out of 15000+200000
- 70777 words of font info for 78 fonts, out of 3000000 for 9000
+ 21868 strings out of 495223
+ 423883 string characters out of 3179739
+ 548324 words of memory out of 3000000
+ 24548 multiletter control sequences out of 15000+200000
+ 67974 words of font info for 76 fonts, out of 3000000 for 9000
  0 hyphenation exceptions out of 8191
  73i,29n,79p,8819b,710s stack positions out of 5000i,500n,10000p,200000b,50000s
 {/Users/floorverhoeven/Library/Application Support/MiKTeX/texmfs/install/font
@@ -2042,14 +2052,12 @@ vetic/uhvr8a.pfb></Users/floorverhoeven/Library/Application Support/MiKTeX/texm
 fs/install/fonts/type1/urw/helvetic/uhvro8a.pfb></Users/floorverhoeven/Library/
 Application Support/MiKTeX/texmfs/install/fonts/type1/urw/times/utmb8a.pfb></Us
 ers/floorverhoeven/Library/Application Support/MiKTeX/texmfs/install/fonts/type
-1/urw/times/utmb8a.pfb></Users/floorverhoeven/Library/Application Support/MiKTe
+1/urw/times/utmr8a.pfb></Users/floorverhoeven/Library/Application Support/MiKTe
 X/texmfs/install/fonts/type1/urw/times/utmr8a.pfb></Users/floorverhoeven/Librar
-y/Application Support/MiKTeX/texmfs/install/fonts/type1/urw/times/utmr8a.pfb></
-Users/floorverhoeven/Library/Application Support/MiKTeX/texmfs/install/fonts/ty
-pe1/urw/times/utmri8a.pfb>
-Output written on thesis.pdf (43 pages, 39514767 bytes).
+y/Application Support/MiKTeX/texmfs/install/fonts/type1/urw/times/utmri8a.pfb>
+Output written on thesis.pdf (43 pages, 45400262 bytes).
 PDF statistics:
  747 PDF objects out of 1000 (max. 8388607)
- 113 named destinations out of 1000 (max. 500000)
- 523 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 111 named destinations out of 1000 (max. 500000)
+ 533 words of extra memory for PDF output out of 10000 (max. 10000000)
 
