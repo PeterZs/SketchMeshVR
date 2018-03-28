@@ -206,8 +206,9 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		prev_tool_mode = TOGGLE; //Needed for handling multithreading in VR_Viewer
 		return;
 	}
-	else if (pressed_type == PULL || pressed_type == ADD || pressed_type == CUT || pressed_type == EXTRUDE) {
+	else if (pressed_type == PULL || pressed_type == ADD || pressed_type == REMOVE || pressed_type == CUT || pressed_type == EXTRUDE) {
 		if (initial_stroke->empty2D()) { //Don't go into these modes when there is no mesh yet
+			prev_tool_mode = FAIL;
 			return;
 		}
 	}
@@ -284,8 +285,13 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			pos_tmp[0] += cur_eye_pos[0];
 			pos_tmp[2] += cur_eye_pos[2];
 
-			igl::ray_mesh_intersect(pos_tmp, viewervr.get_right_touch_direction(), V, F, hits); //Intersect the ray from the Touch controller with the mesh to get the 3D point
-			hit_pos = (V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v).cast<float>();
+			if (igl::ray_mesh_intersect(pos_tmp, viewervr.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
+				hit_pos = (V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v).cast<float>();
+			}
+			else { //Hand ray did not intersect mesh
+				prev_tool_mode = FAIL;
+				return; 
+			}
 
 			double closest_dist = INFINITY;
 			double current_closest = closest_dist;
@@ -684,7 +690,7 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 		prev_tool_mode = NONE;
 		viewervr.draw_while_computing = false;
-
+		cout << V.rows() << endl;
 		return;
 	}
 

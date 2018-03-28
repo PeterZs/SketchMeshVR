@@ -10,6 +10,7 @@
 #include <igl/per_vertex_normals.h>
 #include <igl/dijkstra.h>
 #include "Plane.h"
+#include <ctime>
 using namespace igl;
 using namespace std;
 
@@ -80,7 +81,9 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if (timePast < 30000000) {
+	//	if (timePast < 30000000) {
+		if (timePast < 300000) {
+
 			return;
 		}
 	}
@@ -481,7 +484,12 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 		stroke_edges.row(i) << i, ((i + 1) % stroke2DPoints.rows());
 	}
 
+	cout << "nr stroke poitns " << stroke2DPoints.rows() << endl;
+	time_t tstart, tend;
+	tstart = time(0);
 	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq25", V2_tmp, F2, vertex_markers, edge_markers);
+	tend = time(0);
+	cout << "triangle took" << difftime(tend, tstart) << endl;
 	double mean_Z = stroke3DPoints.col(2).mean();
 	V2 = Eigen::MatrixXd::Constant(V2_tmp.rows(), V2_tmp.cols() + 1, mean_Z);
 	V2.block(0, 0, V2_tmp.rows(), 2) = V2_tmp;
