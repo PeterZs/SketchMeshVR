@@ -1,16 +1,22 @@
 \addvspace {10\p@ }
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {2.1}{\ignorespaces Google Tilt Brush}}{7}{figure.caption.8}
-\contentsline {figure}{\numberline {2.2}{\ignorespaces Oculus Medium}}{8}{figure.caption.9}
-\contentsline {figure}{\numberline {2.3}{\ignorespaces MasterpieceVR}}{9}{figure.caption.10}
-\contentsline {figure}{\numberline {2.4}{\ignorespaces Google Blocks}}{9}{figure.caption.11}
+\contentsline {figure}{\numberline {2.1}{\ignorespaces Google Tilt Brush}}{7}{figure.caption.7}
+\contentsline {figure}{\numberline {2.2}{\ignorespaces Oculus Medium}}{8}{figure.caption.8}
+\contentsline {figure}{\numberline {2.3}{\ignorespaces MasterpieceVR}}{9}{figure.caption.9}
+\contentsline {figure}{\numberline {2.4}{\ignorespaces Google Blocks}}{9}{figure.caption.10}
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {3.1}{\ignorespaces Error screen as result of a problematic cut stroke}}{14}{figure.caption.12}
-\contentsline {figure}{\numberline {3.2}{\ignorespaces Schematic drawing of problematic cut stroke}}{14}{figure.caption.13}
-\contentsline {figure}{\numberline {3.3}{\ignorespaces Oculus Touch controllers}}{16}{figure.caption.15}
+\contentsline {figure}{\numberline {3.1}{\ignorespaces Drawing action}}{13}{figure.caption.11}
+\contentsline {figure}{\numberline {3.2}{\ignorespaces Curve adding action}}{14}{figure.caption.12}
+\contentsline {figure}{\numberline {3.3}{\ignorespaces Stroke removal action}}{15}{figure.caption.13}
+\contentsline {figure}{\numberline {3.4}{\ignorespaces Cutting action}}{16}{figure.caption.14}
+\contentsline {figure}{\numberline {3.5}{\ignorespaces Schematic drawing of a problematic cut}}{17}{figure.caption.16}
+\contentsline {figure}{\numberline {3.6}{\ignorespaces Extrusion action}}{18}{figure.caption.17}
+\contentsline {figure}{\numberline {3.7}{\ignorespaces Error screen as result of a problematic extrusion}}{19}{figure.caption.18}
+\contentsline {figure}{\numberline {3.8}{\ignorespaces Curve deformation action}}{20}{figure.caption.19}
+\contentsline {figure}{\numberline {3.9}{\ignorespaces Oculus Touch controllers}}{21}{figure.caption.20}
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {4.1}{\ignorespaces SketchMeshVR interface}}{19}{figure.caption.19}
-\contentsline {figure}{\numberline {4.2}{\ignorespaces SketchMeshVR teddy model}}{20}{figure.caption.24}
-\contentsline {figure}{\numberline {4.3}{\ignorespaces SketchMeshVR dolphin model}}{21}{figure.caption.26}
+\contentsline {figure}{\numberline {4.1}{\ignorespaces SketchMeshVR interface}}{24}{figure.caption.22}
+\contentsline {figure}{\numberline {4.2}{\ignorespaces SketchMeshVR simplified teddy bear model}}{25}{figure.caption.23}
+\contentsline {figure}{\numberline {4.3}{\ignorespaces SketchMeshVR dolphin model}}{25}{figure.caption.24}
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {5.1}{\ignorespaces Google Blocks tool meshes}}{24}{figure.caption.28}
+\contentsline {figure}{\numberline {5.1}{\ignorespaces Google Blocks tool avatars}}{28}{figure.caption.26}

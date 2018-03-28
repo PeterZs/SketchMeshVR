@@ -388,7 +388,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 #ifdef _WIN32
 				Beep(500, 200);
 #else
-				beep();
+				cout << "error" << endl;
 #endif				
 				Eigen::MatrixXd drawn_points = initial_stroke->get3DPoints();
 				initial_stroke->strokeReset();
@@ -468,7 +468,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 #ifdef _WIN32
 				Beep(500, 200);
 #else
-				beep();
+				cout << "error" << endl;
 #endif	
 
 				draw_all_strokes(viewer); //Will remove the pink cut stroke
@@ -526,7 +526,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 #ifdef _WIN32
 				Beep(700, 200);
 #else
-				beep();
+				cout << "error" << endl;
 #endif	
 				draw_all_strokes(viewer); //Will remove the drawn base & silhouette strokes
 				Eigen::MatrixXd drawn_points = extrusion_base->get3DPoints();
@@ -583,7 +583,7 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 #ifdef _WIN32
 				Beep(900, 200);
 #else
-				beep();
+				cout << "error" << endl;
 #endif	
 				next_added_stroke_ID--;
 				draw_all_strokes(viewer); //Removes the drawn base stroke
