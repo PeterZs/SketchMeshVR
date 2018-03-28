@@ -81,18 +81,17 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-	//	if (timePast < 30000000) {
-		if (timePast < 300000) {
-
+		//if (timePast < 3000000) {
+		if (timePast < 30000) {
 			return;
 		}
 	}
 	Eigen::RowVector3d pt2D;
 	Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
 
-	Eigen::Vector3f cur_eye_pos = viewervr.get_current_eye_pos();
-	pos[0] += cur_eye_pos[0];
-	pos[2] += cur_eye_pos[2];
+	Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+	pos[0] += last_eye_origin[0];
+	pos[2] += last_eye_origin[2];
 	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
 	igl::project(pos_in, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport, pt2D);
 	double dep_val = pt2D[2];
@@ -138,9 +137,9 @@ bool Stroke::strokeAddSegmentAdd(Eigen::Vector3f& pos) {
 	Eigen::Vector3d hit_pos, hit_pos_back;
 	vector<igl::Hit> hits;
 
-	Eigen::Vector3f cur_eye_pos = viewervr.get_current_eye_pos();
-	pos[0] += cur_eye_pos[0];
-	pos[2] += cur_eye_pos[2];
+	Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+	pos[0] += last_eye_origin[0];
+	pos[2] += last_eye_origin[2];
 
 	if (!stroke3DPoints.isZero() && pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
 		return true;
@@ -200,9 +199,9 @@ void Stroke::strokeAddSegmentCut(Eigen::Vector3f& pos) {
 	Eigen::Vector3d hit_pos, hit_pos_back;
 	vector<igl::Hit> hits;
 
-	Eigen::Vector3f cur_eye_pos = viewervr.get_current_eye_pos();
-	pos[0] += cur_eye_pos[0];
-	pos[2] += cur_eye_pos[2];
+	Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+	pos[0] += last_eye_origin[0];
+	pos[2] += last_eye_origin[2];
 
 	if (igl::ray_mesh_intersect(pos, viewervr.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 		if (hits.size() < 2) { //User had hand inside mesh while cutting
@@ -294,9 +293,9 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 	Eigen::Vector3d hit_pos;
 	vector<igl::Hit> hits;
 
-	Eigen::Vector3f cur_eye_pos = viewervr.get_current_eye_pos();
-	pos[0] += cur_eye_pos[0];
-	pos[2] += cur_eye_pos[2];
+	Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+	pos[0] += last_eye_origin[0];
+	pos[2] += last_eye_origin[2];
 
 	if (igl::ray_mesh_intersect(pos, viewervr.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 		if (hits.size() < 2) { //User had hand inside mesh while drawing extrusion base stroke
@@ -361,9 +360,9 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 	Eigen::RowVector3d pt2D;
 	Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
 
-	Eigen::Vector3f cur_eye_pos = viewervr.get_current_eye_pos();
-	pos[0] += cur_eye_pos[0];
-	pos[2] += cur_eye_pos[2];
+	Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+	pos[0] += last_eye_origin[0];
+	pos[2] += last_eye_origin[2];
 	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
 	igl::project(pos_in, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport, pt2D);
 
@@ -484,12 +483,7 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 		stroke_edges.row(i) << i, ((i + 1) % stroke2DPoints.rows());
 	}
 
-	cout << "nr stroke poitns " << stroke2DPoints.rows() << endl;
-	time_t tstart, tend;
-	tstart = time(0);
 	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq25", V2_tmp, F2, vertex_markers, edge_markers);
-	tend = time(0);
-	cout << "triangle took" << difftime(tend, tstart) << endl;
 	double mean_Z = stroke3DPoints.col(2).mean();
 	V2 = Eigen::MatrixXd::Constant(V2_tmp.rows(), V2_tmp.cols() + 1, mean_Z);
 	V2.block(0, 0, V2_tmp.rows(), 2) = V2_tmp;

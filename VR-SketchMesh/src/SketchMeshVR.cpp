@@ -221,9 +221,9 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 	tool_mode = pressed_type;
 
 	Eigen::Vector3f pos_tmp = pos;
-	Eigen::Vector3f cur_eye_pos = viewervr.get_current_eye_pos();
-	pos_tmp[0] += cur_eye_pos[0];
-	pos_tmp[2] += cur_eye_pos[2];
+	Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+	pos_tmp[0] += last_eye_origin[0];
+	pos_tmp[2] += last_eye_origin[2];
 	if (tool_mode != DRAW && tool_mode != PULL) {
 		Eigen::MatrixX3d LP(2, 3);
 		LP.row(0) = pos_tmp.cast<double>();
@@ -281,9 +281,9 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			Eigen::Vector3f hit_pos;
 			vector<igl::Hit> hits;
 			Eigen::Vector3f pos_tmp = pos;
-			Eigen::Vector3f cur_eye_pos = viewervr.get_current_eye_pos();
-			pos_tmp[0] += cur_eye_pos[0];
-			pos_tmp[2] += cur_eye_pos[2];
+			Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+			pos_tmp[0] += last_eye_origin[0];
+			pos_tmp[2] += last_eye_origin[2];
 
 			if (igl::ray_mesh_intersect(pos_tmp, viewervr.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 				hit_pos = (V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v).cast<float>();
@@ -347,9 +347,9 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 	}
 	else if (tool_mode == PULL) { //Dragging an existing curve
 		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) { //Also allow to go to pull after ADD because sometimes the buttons are hard to differentiate
-			Eigen::Vector3f cur_eye_pos = viewervr.get_current_eye_pos();
-			pos[0] += cur_eye_pos[0];
-			pos[2] += cur_eye_pos[2];
+			Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+			pos[0] += last_eye_origin[0];
+			pos[2] += last_eye_origin[2];
 			select_dragging_handle(pos);
 
 			if (handleID == -1) {//User clicked too far from any of the stroke vertices
@@ -365,9 +365,9 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			prev_tool_mode = PULL;
 		}
 		else if (prev_tool_mode == PULL) {
-			Eigen::Vector3f cur_eye_pos = viewervr.get_current_eye_pos();
-            pos[0] += cur_eye_pos[0];
-            pos[2] += cur_eye_pos[2];
+			Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+            pos[0] += last_eye_origin[0];
+            pos[2] += last_eye_origin[2];
 			if (turnNr == 0) { 
 				CurveDeformation::pullCurve(pos.transpose().cast<double>(), V, part_of_original_stroke);
 				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
@@ -472,7 +472,7 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				sharp_edge.setZero(); //Set all edges to smooth after initial draw
 
 				dirty_boundary = true;
-
+			
 				for (int i = 0; i < initial_smooth_iter; i++) {
 					SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 				}
