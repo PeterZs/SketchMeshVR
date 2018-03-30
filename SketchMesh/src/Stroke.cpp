@@ -74,7 +74,7 @@ void Stroke::strokeAddSegment(int mouse_x, int mouse_y) {
 	if(!empty2D()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if(timePast < 10000000) {
+		if(timePast < 20000000) {
 			return;
 		}
 	}

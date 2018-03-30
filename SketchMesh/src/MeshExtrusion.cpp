@@ -83,6 +83,7 @@ bool MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	Eigen::Vector3d pop_surface_normal = normal.cross(v_tmp);
 	pop_surface_normal.normalize();
 
+
 	Eigen::MatrixXd silhouette_vertices(0, 3);
 	Eigen::RowVector3d pop_surface_point = m.V.row(boundary_vertices[most_left_vertex_idx]);
 	compute_silhouette_positions(silhouette_vertices, stroke, modelview, center, normal2, min, max, pop_surface_point, pop_surface_normal);
@@ -96,6 +97,7 @@ bool MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	if((m.V.row(boundary_vertices[most_left_vertex_idx]) - silhouette_vertices.row(0)).norm() > (m.V.row(boundary_vertices[most_right_vertex_idx]) - silhouette_vertices.row(0)).norm()) {
 		silhouette_vertices = silhouette_vertices.colwise().reverse().eval();
 	}
+
 	
 	vector<int> sil_original_indices = add_silhouette_vertices(m, stroke.get_ID(), silhouette_vertices);
 	vector<int> sil_original_indices_looped = sil_original_indices;
@@ -106,6 +108,7 @@ bool MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	Eigen::MatrixXd front_loop3D = silhouette_vertices;
 	vector<int> front_loop_base_original_indices;
 	create_loop(m, front_loop3D, boundary_vertices, front_loop_base_original_indices, most_right_vertex_idx, most_left_vertex_idx);
+
 
 	//Create the second loop
 	Eigen::MatrixXd back_loop3D = silhouette_vertices.colwise().reverse();
@@ -147,8 +150,8 @@ void MeshExtrusion::generate_mesh(Mesh& m, Eigen::MatrixXd loop3D, Eigen::Vector
 	Eigen::MatrixXd V2;
 	Eigen::MatrixXi F2;
 	Eigen::MatrixXi vertex_markers, edge_markers;
-	igl::triangle::triangulate(loop2D, loop_stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(loop2D.rows(), 1, 1), Eigen::MatrixXi::Constant(loop_stroke_edges.rows(), 1, 1), "Yq25Q", V2, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
-																																																																	  
+	igl::triangle::triangulate(loop2D, loop_stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(loop2D.rows(), 1, 1), Eigen::MatrixXi::Constant(loop_stroke_edges.rows(), 1, 1), "YqV", V2, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
+																																																															  
 	Eigen::RowVector3d vert;
 	for(int i = 0; i < V2.rows(); i++) {
 		if(i >= loop2D.rows()) { //Interior vertices

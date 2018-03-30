@@ -561,6 +561,8 @@ bool callback_mouse_up(Viewer& viewer, int button, int modifier) {
 				stroke_collection[i].update_Positions(V);
 			}
 
+
+
 			viewer.data.clear();
 			viewer.data.set_mesh(V, F);
 			igl::per_face_normals(V, F, N_Faces);
