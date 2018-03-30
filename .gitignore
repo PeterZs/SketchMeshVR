@@ -1,9 +1,6 @@
 build
 .vs
 *.o
-KWResearchWork
-Milton
-morphomesh-master
 cmake-build-debug
 .idea
 SketchMesh/src/.idea

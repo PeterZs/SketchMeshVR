@@ -690,7 +690,6 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 		prev_tool_mode = NONE;
 		viewervr.draw_while_computing = false;
-		cout << V.rows() << endl;
 		return;
 	}
 
