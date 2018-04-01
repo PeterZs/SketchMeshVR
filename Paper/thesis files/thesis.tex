@@ -147,7 +147,7 @@
 \cleardoublepage
 %\includegraphics[viewport=3cm 0cm 20cm 27.5cm]{task_description} %better use includepdf below!
 \includepdf[pages={1,2}]{Thesis_task_description}
-\includepdf{declaration-originality}
+\includepdf[pages={1}]{declaration-originality2}
 \cleardoublepage
 %-----------------------------------------------------------------------------------------------
 
@@ -190,6 +190,11 @@
 \cleardoublepage
 \phantomsection
 \addcontentsline{toc}{chapter}{Bibliography}
-\bibliography{testbib}
+\bibliography{thesisbib}
+%Enable the following to fill extra pages for printing/binding
+%\clearemptydoublepage
+%\newpage
+%\thispagestyle{empty}
+%\mbox{}
 
 \end{document}
