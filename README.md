@@ -9,6 +9,8 @@ This git repository contains both a VR (VR-SketchMesh) and non-VR (SketchMesh) v
 
 The VR version is tested on Windows 10 with Microsoft Visual Studio 15 2017 (with Visual C++), the non-VR version is additionally also tested on OS X El Capitan with clang 8.0.0.
 
+The Oculus Setup software should be installed on the PC.
+
 ### Installing
 
 Clone the repository including submodules (this contains an adapted version of libigl that is necessary) with 
