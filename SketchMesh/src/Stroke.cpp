@@ -74,7 +74,7 @@ void Stroke::strokeAddSegment(int mouse_x, int mouse_y) {
 	if(!empty2D()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if(timePast < 10000000) {
+		if(timePast < 20000000) {
 			return;
 		}
 	}
@@ -346,7 +346,7 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	counter_clockwise(); //Ensure the stroke is counter-clockwise, handy later
 
 	Eigen::MatrixXd original_stroke2DPoints = stroke2DPoints;
-	//stroke2DPoints = resample_stroke2D(original_stroke2DPoints);
+	stroke2DPoints = resample_stroke2D(original_stroke2DPoints);
 
 	Eigen::MatrixXd V2_tmp, V2;
 	Eigen::MatrixXi F2, F2_back, vertex_markers, edge_markers;

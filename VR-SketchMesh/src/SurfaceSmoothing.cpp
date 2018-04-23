@@ -12,6 +12,8 @@
 using namespace std;
 using namespace igl;
 
+typedef Eigen::Triplet<double> T;
+
 int SurfaceSmoothing::prev_vertex_count = -1;
 Eigen::MatrixX3d SurfaceSmoothing::vertex_normals(0, 3);
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solver1;
@@ -42,7 +44,6 @@ void SurfaceSmoothing::smooth(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::Vec
 		prev_vertex_count = V.rows();
 		iteration = 0;
 	}
-
 	if(BOUNDARY_IS_DIRTY) {
 		iteration = 0;
 	}
@@ -89,7 +90,6 @@ void SurfaceSmoothing::smooth_main(Mesh &m, bool BOUNDARY_IS_DIRTY) {
 			}
 		}
 	}
-
 	igl::per_vertex_normals(m.V, m.F, PER_VERTEX_NORMALS_WEIGHTING_TYPE_UNIFORM, vertex_normals);
 	Eigen::VectorXd target_LMs = compute_target_LMs(m, L, BOUNDARY_IS_DIRTY);
 	Eigen::VectorXd target_edge_lengths = compute_target_edge_lengths(m, L);
@@ -140,15 +140,19 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 	Eigen::SparseMatrix<double> A = get_precompute_matrix_for_LM_and_edges(m);
     Eigen::SparseMatrix<double> AT;
 	if(A.rows() == 0 && A.cols() == 0) {
-		A = Eigen::SparseMatrix<double>(m.V.rows()*2, m.V.rows());
+		std::vector<T> tripletList;
+		tripletList.reserve(m.V.rows()*(m.V.rows() + 1));
 		for(int i = 0; i < m.V.rows(); i++) {
-			for(int j = 0; j < m.V.rows(); j++) {
-				A.insert(i, j) = L(i, j);
+			for (int j = 0; j < m.V.rows(); j++) {
+				tripletList.push_back(T(i, j, L(i, j)));
 			}
+		
 			if(m.vertex_boundary_markers[i] > 0) { //Constrain only the boundary in the first iteration
-				A.insert(m.V.rows() + i, i) = 1; //For target LM'/edge length'
+				tripletList.push_back(T(m.V.rows() + i, i, 1));
 			}
 		}
+		A = Eigen::SparseMatrix<double>(m.V.rows() * 2, m.V.rows());
+		A.setFromTriplets(tripletList.begin(), tripletList.end());
 		AT = A.transpose();
 		solver1.compute(AT*A);
 		set_precompute_matrix_for_LM_and_edges(m, A);
@@ -160,31 +164,37 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 				A.coeffRef(m.V.rows() + i, i) = 1; //For target LM'/edge length'
 			}
 		}
+
 		AT = A.transpose();
 		solver1.compute(AT*A);
 		set_precompute_matrix_for_LM_and_edges(m, A);
 		set_AT_for_LM_and_edges(m, AT);
 	}
-
+	
 	if(iteration == 1) { //Constrain all vertices after the first iteration
-		for(int i = 0; i < m.V.rows(); i++) {
-			if(m.vertex_boundary_markers[i] == 0) {
-				A.coeffRef(m.V.rows() + i, i) = 1; 
+		std::vector<T> tripletList;
+		tripletList.reserve(m.V.rows()*(m.V.rows() + 1));
+		for (int i = 0; i < m.V.rows(); i++) {
+			for (int j = 0; j < m.V.rows(); j++) {
+				tripletList.push_back(T(i, j, L(i, j)));
 			}
+			tripletList.push_back(T(m.V.rows() + i, i, 1));
 		}
+
+		A.setFromTriplets(tripletList.begin(), tripletList.end());
 		AT = A.transpose();
 		solver1.compute(AT*A);
 		set_precompute_matrix_for_LM_and_edges(m, A);
         set_AT_for_LM_and_edges(m, AT);
 	}
-
+	
     Eigen::VectorXd current_curvatures;
 	if(iteration == 0) {
 		initial_curvature = compute_initial_curvature(m);
     }else{
         current_curvatures = get_curvatures(m);
     }
-    
+
 	Eigen::VectorXd b = Eigen::VectorXd::Zero(m.V.rows()*2);
     for(int i = 0; i < m.V.rows(); i++) {
 		if(iteration == 0) {
@@ -198,6 +208,7 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 
 	AT = get_AT_for_LM_and_edges(m);
 	Eigen::VectorXd target_LM = solver1.solve(AT*b);
+
 	return target_LM;
 }
 
@@ -244,29 +255,33 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 		}
 	}
 
-
 	Eigen::SparseMatrix<double> A = get_precompute_matrix_for_positions(m);
     Eigen::SparseMatrix<double> AT = get_AT_for_positions(m);
 	if((A.rows() == 0 && A.cols() == 0) || BOUNDARY_IS_DIRTY) {
-        A = Eigen::SparseMatrix<double>(m.V.rows() + no_boundary_vertices + no_boundary_adjacent_vertices, m.V.rows());
+		std::vector<T> tripletList;
+		tripletList.reserve(m.V.rows()*(m.V.rows() + 13));
 		int count = 0, count2 = 0;
+
 		for(int i = 0; i < m.V.rows(); i++) {
 			for(int j = 0; j < m.V.rows(); j++) {
-				A.insert(i, j) = L(i, j) * laplacian_weights[i];
+				tripletList.push_back(T(i, j, L(i, j)*laplacian_weights[i]));
 			}
 			if(m.vertex_boundary_markers[i] > 0) { //Constrain only the boundary LMs and edges
-				A.insert(m.V.rows() + count, i) = vertex_weight; //For target LM'/edge'
+				tripletList.push_back(T(m.V.rows() + count, i, vertex_weight));
 				count++;
 
 				for(int j = 0; j < neighbors[i].size(); j++) {
 					if(m.vertex_boundary_markers[neighbors[i][j]] == 0) {
-						A.insert(m.V.rows() + no_boundary_vertices + count2, i) = edge_weight;
-						A.insert(m.V.rows() + no_boundary_vertices + count2, neighbors[i][j]) = -edge_weight;
+						tripletList.push_back(T(m.V.rows() + no_boundary_vertices + count2, i, edge_weight));
+						tripletList.push_back(T(m.V.rows() + no_boundary_vertices + count2, neighbors[i][j], -edge_weight));
 						count2++;
 					}
 				}
 			}
 		}
+
+		A = Eigen::SparseMatrix<double>(m.V.rows() + no_boundary_vertices + no_boundary_adjacent_vertices, m.V.rows());
+		A.setFromTriplets(tripletList.begin(), tripletList.end());
 		AT = A.transpose();
 		solver2.compute(AT*A);
 		set_precompute_matrix_for_positions(m, A);
@@ -307,10 +322,10 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 		}
 	}
 
-
 	Eigen::VectorXd Vnewx = solver2.solve(AT*bx);
 	Eigen::VectorXd Vnewy = solver2.solve(AT*by);
 	Eigen::VectorXd Vnewz = solver2.solve(AT*bz);
+
 	for(int i = 0; i < m.V.rows(); i++) {
 		if(m.vertex_boundary_markers[i]==0){ //Only update non-fixed points (curve points are fixed)
 			m.V.row(i) << Vnewx[i], Vnewy[i], Vnewz[i];

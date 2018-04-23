@@ -10,6 +10,7 @@
 #include <igl/per_vertex_normals.h>
 #include <igl/dijkstra.h>
 #include "Plane.h"
+#include <ctime>
 using namespace igl;
 using namespace std;
 
@@ -80,16 +81,17 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if (timePast < 30000000) {
+		//if (timePast < 3000000) {
+		if (timePast < 30000) {
 			return;
 		}
 	}
 	Eigen::RowVector3d pt2D;
 	Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
 
-	Eigen::Vector3f cur_eye_pos = viewervr.get_current_eye_pos();
-	pos[0] += cur_eye_pos[0];
-	pos[2] += cur_eye_pos[2];
+	Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+	pos[0] += last_eye_origin[0];
+	pos[2] += last_eye_origin[2];
 	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
 	igl::project(pos_in, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport, pt2D);
 	double dep_val = pt2D[2];
@@ -135,9 +137,9 @@ bool Stroke::strokeAddSegmentAdd(Eigen::Vector3f& pos) {
 	Eigen::Vector3d hit_pos, hit_pos_back;
 	vector<igl::Hit> hits;
 
-	Eigen::Vector3f cur_eye_pos = viewervr.get_current_eye_pos();
-	pos[0] += cur_eye_pos[0];
-	pos[2] += cur_eye_pos[2];
+	Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+	pos[0] += last_eye_origin[0];
+	pos[2] += last_eye_origin[2];
 
 	if (!stroke3DPoints.isZero() && pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
 		return true;
@@ -197,9 +199,9 @@ void Stroke::strokeAddSegmentCut(Eigen::Vector3f& pos) {
 	Eigen::Vector3d hit_pos, hit_pos_back;
 	vector<igl::Hit> hits;
 
-	Eigen::Vector3f cur_eye_pos = viewervr.get_current_eye_pos();
-	pos[0] += cur_eye_pos[0];
-	pos[2] += cur_eye_pos[2];
+	Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+	pos[0] += last_eye_origin[0];
+	pos[2] += last_eye_origin[2];
 
 	if (igl::ray_mesh_intersect(pos, viewervr.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 		if (hits.size() < 2) { //User had hand inside mesh while cutting
@@ -291,9 +293,9 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 	Eigen::Vector3d hit_pos;
 	vector<igl::Hit> hits;
 
-	Eigen::Vector3f cur_eye_pos = viewervr.get_current_eye_pos();
-	pos[0] += cur_eye_pos[0];
-	pos[2] += cur_eye_pos[2];
+	Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+	pos[0] += last_eye_origin[0];
+	pos[2] += last_eye_origin[2];
 
 	if (igl::ray_mesh_intersect(pos, viewervr.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 		if (hits.size() < 2) { //User had hand inside mesh while drawing extrusion base stroke
@@ -358,9 +360,9 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 	Eigen::RowVector3d pt2D;
 	Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
 
-	Eigen::Vector3f cur_eye_pos = viewervr.get_current_eye_pos();
-	pos[0] += cur_eye_pos[0];
-	pos[2] += cur_eye_pos[2];
+	Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+	pos[0] += last_eye_origin[0];
+	pos[2] += last_eye_origin[2];
 	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
 	igl::project(pos_in, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport, pt2D);
 
@@ -472,7 +474,7 @@ bool Stroke::toLoop() {
 unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::MatrixXd& mesh_V, Eigen::MatrixXi& mesh_F) {
 	counter_clockwise(); //Ensure the stroke is counter-clockwise, handy later
 	Eigen::MatrixXd original_stroke2DPoints = stroke2DPoints;
-	//stroke2DPoints = resample_stroke2D(original_stroke2DPoints); //Enabling this might give a discrepancy between what is drawn and the result you get but does give smoother meshes
+	stroke2DPoints = resample_stroke2D(original_stroke2DPoints); //Enabling this might give a discrepancy between what is drawn and the result you get but does give smoother meshes
 
 	Eigen::MatrixXd V2_tmp, V2;
 	Eigen::MatrixXi F2, F2_back, vertex_markers, edge_markers;
@@ -552,7 +554,7 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 
 	igl::unproject(V2_with_dep, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport, V2_unproj);
 	V2.leftCols(2) = V2_unproj.leftCols(2);
-	V2.block(0, 2, stroke2DPoints.rows(), 1) = V2_unproj.block(0, 2, stroke2DPoints.rows(), 1); //Use actual z-value of drawn stroke
+	V2.block(0, 2, stroke2DPoints.rows(), 1) = V2_unproj.block(0, 2, stroke2DPoints.rows(), 1); //Use actual z-value of drawn stroke 
 	
 	mesh_V = V2;
 	mesh_F = F2;

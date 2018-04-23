@@ -119,7 +119,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		}
 	}
 
-	if (clean_faces.size() == 0) { //There are no faces left behind (cut that removes everthing or extrude that doesn't include at least 1 vertex)
+	if (clean_faces.size() == 0) { //There are no faces left behind (cut that removes everything or extrude that doesn't include at least 1 vertex)
 		remesh_success = false;
 		return Eigen::VectorXi::Zero(1);
 	}
