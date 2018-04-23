@@ -12,5 +12,6 @@ cmake-build-debug
 *.out
 *.toc
 *.synctex.gz
+*.mp4
 SketchMesh/src/.idea
 SketchMes/src/cmake-build-debug
