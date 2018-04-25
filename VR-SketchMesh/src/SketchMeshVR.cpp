@@ -472,7 +472,6 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				sharp_edge.setZero(); //Set all edges to smooth after initial draw
 
 				dirty_boundary = true;
-			
 				for (int i = 0; i < initial_smooth_iter; i++) {
 					SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 				}

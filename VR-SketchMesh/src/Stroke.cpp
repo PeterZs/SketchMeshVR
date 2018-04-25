@@ -81,8 +81,7 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		//if (timePast < 3000000) {
-		if (timePast < 30000) {
+		if (timePast < 300000) {
 			return;
 		}
 	}

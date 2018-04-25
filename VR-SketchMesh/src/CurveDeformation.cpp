@@ -4,6 +4,8 @@
 using namespace std;
 using namespace igl;
 
+typedef Eigen::Triplet<double> T;
+
 int moving_vertex_ID, handle_ID, CONSTRAINT_WEIGHT = 10000, stroke_ID, no_vertices, no_ROI_vert = -1;
 double current_ROI_size, curve_diag_length;
 bool CurveDeformation::smooth_deform_mode, stroke_is_loop, prev_loop_type;
@@ -143,6 +145,9 @@ void CurveDeformation::setup_for_update_curve(Eigen::MatrixXd& V) {
 
 void CurveDeformation::setup_for_L1_position_step(Eigen::MatrixXd& V) {
 	Eigen::SparseMatrix<double> A_L1(no_vertices + fixed_indices.size(), no_vertices);
+	std::vector<T> tripletList;
+	tripletList.reserve(no_vertices * 3);
+
 	original_L1.resize(no_vertices, 3);
 	int cur, next, prev;
 	if(stroke_is_loop) {
@@ -151,19 +156,20 @@ void CurveDeformation::setup_for_L1_position_step(Eigen::MatrixXd& V) {
 			next = vert_bindings[(i + 1) % no_vertices];
 			prev = vert_bindings[(((i - 1) + no_vertices) % no_vertices)];
 
-			A_L1.insert(i, (((i - 1) + no_vertices) % no_vertices)) = -0.5;
-			A_L1.insert(i, i) = 1;
-			A_L1.insert(i, (i + 1) % no_vertices) = -0.5;
+			tripletList.push_back(T(i, (((i - 1) + no_vertices) % no_vertices), -0.5));
+			tripletList.push_back(T(i, i, 1));
+			tripletList.push_back(T(i, (i + 1) % no_vertices, -0.5));
 
 			original_L1.row(i) = V.row(cur) - (0.5*V.row(next) + 0.5*V.row(prev));
 		}
 	} else {
-		A_L1.insert(0, 0) = 1;
-		A_L1.insert(0, 1) = -1;
+		tripletList.push_back(T(0, 0, 1));
+		tripletList.push_back(T(0, 1, -1));
 		original_L1.row(0) = V.row(vert_bindings[0]) - V.row(vert_bindings[1]);
 
-		A_L1.insert(no_vertices - 1, no_vertices - 1) = 1;
-		A_L1.insert(no_vertices - 1, no_vertices - 2) = -1;
+		tripletList.push_back(T(no_vertices - 1, no_vertices - 1, 1));
+		tripletList.push_back(T(no_vertices - 1, no_vertices - 2, -1));
+
 		original_L1.row(no_vertices - 1) = V.row(vert_bindings[no_vertices - 1]) - V.row(vert_bindings[no_vertices - 2]);
 
 		for(int i = 1; i < no_vertices - 1; i++) {
@@ -171,17 +177,19 @@ void CurveDeformation::setup_for_L1_position_step(Eigen::MatrixXd& V) {
 			next = vert_bindings[(i + 1) % no_vertices];
 			prev = vert_bindings[(((i - 1) + no_vertices) % no_vertices)];
 
-			A_L1.insert(i, i - 1) = -0.5;
-			A_L1.insert(i, i) = 1;
-			A_L1.insert(i, i + 1) = -0.5;
+			tripletList.push_back(T(i, i - 1, -0.5));
+			tripletList.push_back(T(i, i, 1));
+			tripletList.push_back(T(i, i + 1, -0.5));
 
 			original_L1.row(i) = V.row(cur) - (0.5*V.row(next) + 0.5*V.row(prev));
 		}
 	}
 
 	for(int i = 0; i < fixed_indices.size(); i++) {
-		A_L1.insert(no_vertices + i, fixed_indices_local[i]) = CONSTRAINT_WEIGHT;
+		tripletList.push_back(T(no_vertices + i, fixed_indices_local[i], CONSTRAINT_WEIGHT));
 	}
+
+	A_L1.setFromTriplets(tripletList.begin(), tripletList.end());
 
 	A_L1_T = A_L1.transpose();
 	solverL1.compute(A_L1_T*A_L1);
@@ -202,6 +210,8 @@ void CurveDeformation::update_curve(Eigen::MatrixXd& V, Eigen::VectorXi & part_o
 void CurveDeformation::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
 	A.setZero();
 	B.setZero();
+	std::vector<T> tripletList;
+	tripletList.reserve(no_vertices * 9 + no_vertices * 3 * 18 + fixed_indices.size() * 6);
 
 	int prev, cur;
 	int start = !stroke_is_loop; //Make sure to skip wrapping around for index 0
@@ -209,30 +219,30 @@ void CurveDeformation::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
 		prev = (((i - 1) + no_vertices) % no_vertices);
 		cur = i;
 		if(i > 0 || stroke_is_loop) {
-			A.insert(i * 3 + 0, prev * 3) = -1; //L0
-			A.insert(i * 3 + 0, cur * 3) = 1; //L0
+			tripletList.push_back(T(i * 3 + 0, prev * 3, -1)); //L0
+			tripletList.push_back(T(i * 3 + 0, cur * 3, 1)); //L0
 		}
-		A.insert(i * 3, no_vertices * 3 + cur * 3) = 0;
-		A.insert(i * 3, no_vertices * 3 + cur * 3 + 1) = -(Rot[i].row(2).dot(original_L0.row(i)));
-		A.insert(i * 3, no_vertices * 3 + cur * 3 + 2) = Rot[i].row(1).dot(original_L0.row(i));
+		tripletList.push_back(T(i * 3, no_vertices * 3 + cur * 3, 0));
+		tripletList.push_back(T(i * 3, no_vertices * 3 + cur * 3 + 1, -(Rot[i].row(2).dot(original_L0.row(i)))));
+		tripletList.push_back(T(i * 3, no_vertices * 3 + cur * 3 + 2, Rot[i].row(1).dot(original_L0.row(i))));
 		B[i * 3] = Rot[i].row(0).dot(original_L0.row(i)); //constant
 
 		if(i > 0 || stroke_is_loop) {
-			A.insert(i * 3 + 1, prev * 3 + 1) = -1; //L0
-			A.insert(i * 3 + 1, cur * 3 + 1) = 1; //L0
+			tripletList.push_back(T(i * 3 + 1, prev * 3 + 1, -1)); //L0
+			tripletList.push_back(T(i * 3 + 1, cur * 3 + 1, 1)); //L0
 		}
-		A.insert(i * 3 + 1, no_vertices * 3 + cur * 3) = Rot[i].row(2).dot(original_L0.row(i));
-		A.insert(i * 3 + 1, no_vertices * 3 + cur * 3 + 1) = 0;
-		A.insert(i * 3 + 1, no_vertices * 3 + cur * 3 + 2) = -Rot[i].row(0).dot(original_L0.row(i));
+		tripletList.push_back(T(i * 3 + 1, no_vertices * 3 + cur * 3, Rot[i].row(2).dot(original_L0.row(i))));
+		tripletList.push_back(T(i * 3 + 1, no_vertices * 3 + cur * 3 + 1, 0));
+		tripletList.push_back(T(i * 3 + 1, no_vertices * 3 + cur * 3 + 2, -Rot[i].row(0).dot(original_L0.row(i))));
 		B[i * 3 + 1] = Rot[i].row(1).dot(original_L0.row(i));
 
 		if(i > 0 || stroke_is_loop) {
-			A.insert(i * 3 + 2, prev * 3 + 2) = -1;//L0
-			A.insert(i * 3 + 2, cur * 3 + 2) = 1;//L0
+			tripletList.push_back(T(i * 3 + 2, prev * 3 + 2, -1)); //L0
+			tripletList.push_back(T(i * 3 + 2, cur * 3 + 2, 1)); //L0
 		}
-		A.insert(i * 3 + 2, no_vertices * 3 + cur * 3) = -Rot[i].row(1).dot(original_L0.row(i));
-		A.insert(i * 3 + 2, no_vertices * 3 + cur * 3 + 1) = Rot[i].row(0).dot(original_L0.row(i));
-		A.insert(i * 3 + 2, no_vertices * 3 + cur * 3 + 2) = 0;
+		tripletList.push_back(T(i * 3 + 2, no_vertices * 3 + cur * 3, -Rot[i].row(1).dot(original_L0.row(i))));
+		tripletList.push_back(T(i * 3 + 2, no_vertices * 3 + cur * 3 + 1, Rot[i].row(0).dot(original_L0.row(i))));
+		tripletList.push_back(T(i * 3 + 2, no_vertices * 3 + cur * 3 + 2, 0));
 		B[i * 3 + 2] = Rot[i].row(2).dot(original_L0.row(i));
 	}
 
@@ -242,37 +252,41 @@ void CurveDeformation::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
 		prev = (((i - 1) + no_vertices) % no_vertices);
 		prev_rot = (((i - 1) + no_vertices) % no_vertices);
 		for(int j = 0; j < 3; j++) {
-			A.insert(no_vertices * 3 + i * 9 + j, no_vertices * 3 + prev * 3) = 0;
-			A.insert(no_vertices * 3 + i * 9 + j, no_vertices * 3 + prev * 3 + 1) = -1 * Rot[prev_rot](2, j);
-			A.insert(no_vertices * 3 + i * 9 + j, no_vertices * 3 + prev * 3 + 2) = -1 * -Rot[prev_rot](1, j);
-			A.insert(no_vertices * 3 + i * 9 + j, no_vertices * 3 + i * 3) = 0;
-			A.insert(no_vertices * 3 + i * 9 + j, no_vertices * 3 + i * 3 + 1) = 1 * Rot[i](2, j);
-			A.insert(no_vertices * 3 + i * 9 + j, no_vertices * 3 + i * 3 + 2) = 1 * -Rot[i](1, j);
+			tripletList.push_back(T(no_vertices * 3 + i * 9 + j, no_vertices * 3 + prev * 3, 0));
+			tripletList.push_back(T(no_vertices * 3 + i * 9 + j, no_vertices * 3 + prev * 3 + 1, -1 * Rot[prev_rot](2, j)));
+			tripletList.push_back(T(no_vertices * 3 + i * 9 + j, no_vertices * 3 + prev * 3 + 2, -1 * -Rot[prev_rot](1, j)));
+			tripletList.push_back(T(no_vertices * 3 + i * 9 + j, no_vertices * 3 + i * 3, 0));
+			tripletList.push_back(T(no_vertices * 3 + i * 9 + j, no_vertices * 3 + i * 3 + 1, 1 * Rot[i](2, j)));
+			tripletList.push_back(T(no_vertices * 3 + i * 9 + j, no_vertices * 3 + i * 3 + 2, 1 * -Rot[i](1, j)));
+
+
 			B[no_vertices * 3 + i * 9 + j] = -1 * Rot[i](0, j) + 1 * Rot[prev_rot](0, j);
 
-			A.insert(no_vertices * 3 + i * 9 + 3 + j, no_vertices * 3 + prev * 3) = -1 * -Rot[prev_rot](2, j);
-			A.insert(no_vertices * 3 + i * 9 + 3 + j, no_vertices * 3 + prev * 3 + 1) = 0;
-			A.insert(no_vertices * 3 + i * 9 + 3 + j, no_vertices * 3 + prev * 3 + 2) = -1 * Rot[prev_rot](0, j);
-			A.insert(no_vertices * 3 + i * 9 + 3 + j, no_vertices * 3 + i * 3) = 1 * -Rot[i](2, j);
-			A.insert(no_vertices * 3 + i * 9 + 3 + j, no_vertices * 3 + i * 3 + 1) = 0;
-			A.insert(no_vertices * 3 + i * 9 + 3 + j, no_vertices * 3 + i * 3 + 2) = 1 * Rot[i](0, j);
+			tripletList.push_back(T(no_vertices * 3 + i * 9 + 3 + j, no_vertices * 3 + prev * 3, -1 * -Rot[prev_rot](2, j)));
+			tripletList.push_back(T(no_vertices * 3 + i * 9 + 3 + j, no_vertices * 3 + prev * 3 + 1, 0));
+			tripletList.push_back(T(no_vertices * 3 + i * 9 + 3 + j, no_vertices * 3 + prev * 3 + 2, -1 * Rot[prev_rot](0, j)));
+			tripletList.push_back(T(no_vertices * 3 + i * 9 + 3 + j, no_vertices * 3 + i * 3, 1 * -Rot[i](2, j)));
+			tripletList.push_back(T(no_vertices * 3 + i * 9 + 3 + j, no_vertices * 3 + i * 3 + 1, 0));
+			tripletList.push_back(T(no_vertices * 3 + i * 9 + 3 + j, no_vertices * 3 + i * 3 + 2, 1 * Rot[i](0, j)));
+
 			B[no_vertices * 3 + i * 9 + 3 + j] = -1 * Rot[i](1, j) + 1 * Rot[prev_rot](1, j);
 
-			A.insert(no_vertices * 3 + i * 9 + 6 + j, no_vertices * 3 + prev * 3) = -1 * Rot[prev_rot](1, j);
-			A.insert(no_vertices * 3 + i * 9 + 6 + j, no_vertices * 3 + prev * 3 + 1) = -1 * -Rot[prev_rot](0, j);
-			A.insert(no_vertices * 3 + i * 9 + 6 + j, no_vertices * 3 + prev * 3 + 2) = 0;
-			A.insert(no_vertices * 3 + i * 9 + 6 + j, no_vertices * 3 + i * 3) = 1 * Rot[i](1, j);
-			A.insert(no_vertices * 3 + i * 9 + 6 + j, no_vertices * 3 + i * 3 + 1) = 1 * -Rot[i](0, j);
-			A.insert(no_vertices * 3 + i * 9 + 6 + j, no_vertices * 3 + i * 3 + 2) = 0;
+			tripletList.push_back(T(no_vertices * 3 + i * 9 + 6 + j, no_vertices * 3 + prev * 3, -1 * Rot[prev_rot](1, j)));
+			tripletList.push_back(T(no_vertices * 3 + i * 9 + 6 + j, no_vertices * 3 + prev * 3 + 1, -1 * -Rot[prev_rot](0, j)));
+			tripletList.push_back(T(no_vertices * 3 + i * 9 + 6 + j, no_vertices * 3 + prev * 3 + 2, 0));
+			tripletList.push_back(T(no_vertices * 3 + i * 9 + 6 + j, no_vertices * 3 + i * 3, 1 * Rot[i](1, j)));
+			tripletList.push_back(T(no_vertices * 3 + i * 9 + 6 + j, no_vertices * 3 + i * 3 + 1, 1 * -Rot[i](0, j)));
+			tripletList.push_back(T(no_vertices * 3 + i * 9 + 6 + j, no_vertices * 3 + i * 3 + 2, 0));
 			B[no_vertices * 3 + i * 9 + 6 + j] = -1 * Rot[i](2, j) + 1 * Rot[prev_rot](2, j);
 		}
 	}
 
 	//Setup for v_i - v_i' = 0
 	for(int i = 0; i < fixed_indices.size(); i++) {
-		A.insert(no_vertices * 3 + no_vertices * 9 + i * 3, fixed_indices_local[i] * 3) = CONSTRAINT_WEIGHT;
-		A.insert(no_vertices * 3 + no_vertices * 9 + i * 3 + 1, fixed_indices_local[i] * 3 + 1) = CONSTRAINT_WEIGHT;
-		A.insert(no_vertices * 3 + no_vertices * 9 + i * 3 + 2, fixed_indices_local[i] * 3 + 2) = CONSTRAINT_WEIGHT;
+		tripletList.push_back(T(no_vertices * 3 + no_vertices * 9 + i * 3, fixed_indices_local[i] * 3, CONSTRAINT_WEIGHT));
+		tripletList.push_back(T(no_vertices * 3 + no_vertices * 9 + i * 3 + 1, fixed_indices_local[i] * 3 + 1, CONSTRAINT_WEIGHT));
+		tripletList.push_back(T(no_vertices * 3 + no_vertices * 9 + i * 3 + 2, fixed_indices_local[i] * 3 + 2, CONSTRAINT_WEIGHT));
+
 
 		B[no_vertices * 3 + no_vertices * 9 + i * 3] = CONSTRAINT_WEIGHT * V(fixed_indices[i], 0);
 		B[no_vertices * 3 + no_vertices * 9 + i * 3 + 1] = CONSTRAINT_WEIGHT * V(fixed_indices[i], 1);
@@ -281,13 +295,17 @@ void CurveDeformation::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
 
 	//Setup for r_i*R_i - R_i' = 0 (note that we want all off-diagonal elements in r_i to be equal to 0 in order to multiply R_i with the identity matrix)
 	for(int i = 0; i < fixed_indices.size() - 1; i++) { //Skip the last fixed index (the handle index)
-		A.insert(no_vertices * 3 + no_vertices * 9 + fixed_indices.size() * 3 + i * 3, no_vertices * 3 + fixed_indices_local[i] * 3) = CONSTRAINT_WEIGHT;
-		A.insert(no_vertices * 3 + no_vertices * 9 + fixed_indices.size() * 3 + i * 3 + 1, no_vertices * 3 + fixed_indices_local[i] * 3 + 1) = CONSTRAINT_WEIGHT;
-		A.insert(no_vertices * 3 + no_vertices * 9 + fixed_indices.size() * 3 + i * 3 + 2, no_vertices * 3 + fixed_indices_local[i] * 3 + 2) = CONSTRAINT_WEIGHT;
+		tripletList.push_back(T(no_vertices * 3 + no_vertices * 9 + fixed_indices.size() * 3 + i * 3, no_vertices * 3 + fixed_indices_local[i] * 3, CONSTRAINT_WEIGHT));
+		tripletList.push_back(T(no_vertices * 3 + no_vertices * 9 + fixed_indices.size() * 3 + i * 3 + 1, no_vertices * 3 + fixed_indices_local[i] * 3 + 1, CONSTRAINT_WEIGHT));
+		tripletList.push_back(T(no_vertices * 3 + no_vertices * 9 + fixed_indices.size() * 3 + i * 3 + 2, no_vertices * 3 + fixed_indices_local[i] * 3 + 2, CONSTRAINT_WEIGHT));
+
 		B[no_vertices * 3 + no_vertices * 9 + fixed_indices.size() * 3 + i * 3] = 0;
 		B[no_vertices * 3 + no_vertices * 9 + fixed_indices.size() * 3 + i * 3 + 1] = 0;
 		B[no_vertices * 3 + no_vertices * 9 + fixed_indices.size() * 3 + i * 3 + 2] = 0;
 	}
+
+	A.setFromTriplets(tripletList.begin(), tripletList.end());
+	A.prune(0.0);
 	Eigen::SparseMatrix<double> AT = A.transpose();
 	solverPosRot.compute(AT*A);
 	PosRot = solverPosRot.solve(AT*B);

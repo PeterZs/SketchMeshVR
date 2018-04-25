@@ -245,7 +245,7 @@ int SurfacePath::find_next_edge_cut(pair<int, int> strokeEdge, int prev_edge, in
 			seg_vec.normalize();
 			Eigen::RowVector3d its_vec = cut_point - start_pos;
 			its_vec.normalize();
-			if ((t_val<=0.99 && t_val>=0.01) && (!first_iter || (first_iter && its_vec.dot(seg_vec)>=0))) { //Else we cross the "line" outside of its range or the first extension goes into the wrong direction
+			if ((t_val<=0.99999 && t_val>=0.00001) && (!first_iter || (first_iter && its_vec.dot(seg_vec)>=0))) { //Else we cross the "line" outside of its range or the first extension goes into the wrong direction
 				edge_cut_point = cut_point;
 				return edge;
 			}

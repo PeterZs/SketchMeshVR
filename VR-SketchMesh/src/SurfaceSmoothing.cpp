@@ -35,7 +35,7 @@ std::unordered_map<int, Eigen::SparseMatrix<double>> SurfaceSmoothing::precomput
 std::unordered_map<int, Eigen::SparseMatrix<double>> SurfaceSmoothing::AT_for_LM_and_edges;
 std::unordered_map<int, Eigen::SparseMatrix<double>> SurfaceSmoothing::precompute_matrix_for_positions;
 std::unordered_map<int, Eigen::SparseMatrix<double>> SurfaceSmoothing::AT_for_positions;
-
+std::unordered_map<int, Eigen::VectorXi> SurfaceSmoothing::precomputed_laplacian_weights;
 
 void SurfaceSmoothing::smooth(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::VectorXi &new_mapped_indices, Eigen::VectorXi &sharp_edge, bool& BOUNDARY_IS_DIRTY) {
 	if(prev_vertex_count != V.rows()) { //The mesh topology has changed, so we need to reset the precomputed matrices. If only boundary constraints got added, we can reuse part of the matrices so don't clear it all out but instead overwrite certain parts
@@ -153,14 +153,18 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 		}
 		A = Eigen::SparseMatrix<double>(m.V.rows() * 2, m.V.rows());
 		A.setFromTriplets(tripletList.begin(), tripletList.end());
+		A.prune(0.0);
 		AT = A.transpose();
 		solver1.compute(AT*A);
 		set_precompute_matrix_for_LM_and_edges(m, A);
         set_AT_for_LM_and_edges(m, AT);
 	}
 	else if(BOUNDARY_IS_DIRTY && iteration == 0) {
+		int nr_V = m.V.rows();
+		A.prune([nr_V](int i, int j, float) {return i < nr_V; }); //Keeps the first #V rows (which contains L, which didn't change) and prunes the rest
+	
 		for(int i = 0; i < m.V.rows(); i++) {
-			if(m.vertex_boundary_markers[i] > 0) { //Constrain only the boundary in the first iteration
+			if(m.vertex_boundary_markers[i] > 0) { //Constrain only the current boundary in the first iteration
 				A.coeffRef(m.V.rows() + i, i) = 1; //For target LM'/edge length'
 			}
 		}
@@ -182,6 +186,7 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 		}
 
 		A.setFromTriplets(tripletList.begin(), tripletList.end());
+		A.prune(0.0);
 		AT = A.transpose();
 		solver1.compute(AT*A);
 		set_precompute_matrix_for_LM_and_edges(m, A);
@@ -247,17 +252,19 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_edge_lengths(Mesh &m, Eigen::Ma
 }
 
 void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eigen::VectorXd &target_LMs, Eigen::VectorXd &target_edge_lengths, bool BOUNDARY_IS_DIRTY) {
-	Eigen::VectorXi on_border = points_on_border(m);
-	Eigen::VectorXi laplacian_weights = Eigen::VectorXi::Ones(m.V.rows());
-	for(int i = 0; i < on_border.rows(); i++) {
-		if(on_border[i]) {
-			laplacian_weights[i] *= factor;
-		}
-	}
-
 	Eigen::SparseMatrix<double> A = get_precompute_matrix_for_positions(m);
     Eigen::SparseMatrix<double> AT = get_AT_for_positions(m);
+	Eigen::VectorXi laplacian_weights = get_precomputed_laplacian_weights(m);
 	if((A.rows() == 0 && A.cols() == 0) || BOUNDARY_IS_DIRTY) {
+		laplacian_weights = Eigen::VectorXi::Ones(m.V.rows());
+		Eigen::VectorXi on_border = points_on_border(m);
+		for (int i = 0; i < on_border.rows(); i++) {
+			if (on_border[i]) {
+				laplacian_weights[i] *= factor;
+			}
+		}
+		set_precomputed_laplacian_weights(m, laplacian_weights);
+
 		std::vector<T> tripletList;
 		tripletList.reserve(m.V.rows()*(m.V.rows() + 13));
 		int count = 0, count2 = 0;
@@ -282,6 +289,7 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 
 		A = Eigen::SparseMatrix<double>(m.V.rows() + no_boundary_vertices + no_boundary_adjacent_vertices, m.V.rows());
 		A.setFromTriplets(tripletList.begin(), tripletList.end());
+		A.prune(0.0);
 		AT = A.transpose();
 		solver2.compute(AT*A);
 		set_precompute_matrix_for_positions(m, A);
@@ -359,6 +367,8 @@ Eigen::VectorXd SurfaceSmoothing::get_curvatures(Mesh &m) {
 	return curvatures;
 }
 
+
+//TODO: instead iterate over sharp_edges, and lookup in EV the vertices that belong to these sharp edges. Set point_on_border to true for these
 Eigen::VectorXi SurfaceSmoothing::points_on_border(Mesh& m) {
     Eigen::MatrixXi EV, FE, EF;
     igl::edge_topology(m.V, m.F, EV, FE, EF);
@@ -427,4 +437,12 @@ Eigen::SparseMatrix<double> SurfaceSmoothing::get_AT_for_positions(Mesh &m) {
 
 void SurfaceSmoothing::set_AT_for_positions(Mesh &m, Eigen::SparseMatrix<double> AT) {
 	AT_for_positions[m.ID] = AT;
+}
+
+Eigen::VectorXi SurfaceSmoothing::get_precomputed_laplacian_weights(Mesh &m) {
+	return precomputed_laplacian_weights[m.ID];
+}
+
+void SurfaceSmoothing::set_precomputed_laplacian_weights(Mesh &m, Eigen::VectorXi &laplacian_weights_val) {
+	precomputed_laplacian_weights[m.ID] = laplacian_weights_val;
 }
