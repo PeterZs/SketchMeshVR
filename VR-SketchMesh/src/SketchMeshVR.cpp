@@ -472,12 +472,8 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				sharp_edge.setZero(); //Set all edges to smooth after initial draw
 
 				dirty_boundary = true;
-				cout << "Nr vertices: " << V.rows() << endl;
 				for (int i = 0; i < initial_smooth_iter; i++) {
-					std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 					SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
-					std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-					std::cout << "Time difference in sec = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()/1000000.0 << std::endl;
 				}
 
 				initial_stroke->update_Positions(V);
