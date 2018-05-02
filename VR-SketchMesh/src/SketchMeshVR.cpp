@@ -50,7 +50,7 @@ Stroke* extrusion_base;
 vector<Stroke> stroke_collection;
 
 //For smoothing
-int initial_smooth_iter = 8;
+int initial_smooth_iter = 30;
 
 //For selecting vertices
 int handleID = -1;
@@ -148,7 +148,8 @@ ToolMode get_chosen_mode(ViewerVR::ButtonCombo pressed) {
 		if (button_thumb_is_set) {
 			return REMOVE;
 		} else {
-			return ADD;
+		//	return ADD;
+			return SMOOTH;
 		}
 	}
 	else if (pressed == ViewerVR::ButtonCombo::A) {
@@ -436,6 +437,9 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			}
 		}
 	}
+	else if (tool_mode == SMOOTH) {
+		prev_tool_mode = SMOOTH;
+	}
 	else if (tool_mode == NONE) {	//Have to finish up as if we're calling mouse_up()
 		has_recentered = false;
 		if (prev_tool_mode == NONE) {
@@ -684,6 +688,15 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		}
 		else if (prev_tool_mode == TOGGLE || prev_tool_mode == FAIL) {
 			viewervr.draw_while_computing = false;
+		}
+		else if (prev_tool_mode == SMOOTH) {
+			SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
+			for (int i = 0; i < stroke_collection.size(); i++) {
+				stroke_collection[i].update_Positions(V);
+			}
+			viewervr.data.clear_all();
+			viewervr.data.set_mesh_with_floor(V, F);
+			draw_all_strokes();
 		}
 
 

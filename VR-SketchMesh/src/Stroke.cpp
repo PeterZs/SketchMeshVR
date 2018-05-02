@@ -84,14 +84,24 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 		if (timePast < 300000) {
 			return;
 		}
+		else { //If enough time has passed, check if controller moved a large enough distance
+			Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+			pos[0] += last_eye_origin[0];
+			pos[2] += last_eye_origin[2];
+			if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < 0.00005625){
+				return;
+			}
+		}
 	}
-	Eigen::RowVector3d pt2D;
-	Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
+	else {
+		Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+		pos[0] += last_eye_origin[0];
+		pos[2] += last_eye_origin[2];
+	}
 
-	Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
-	pos[0] += last_eye_origin[0];
-	pos[2] += last_eye_origin[2];
 	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
+	Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
+	Eigen::RowVector3d pt2D;
 	igl::project(pos_in, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport, pt2D);
 	double dep_val = pt2D[2];
 
@@ -478,11 +488,16 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	Eigen::MatrixXd V2_tmp, V2;
 	Eigen::MatrixXi F2, F2_back, vertex_markers, edge_markers;
 	Eigen::MatrixXi stroke_edges(stroke2DPoints.rows(), 2);
+	double mean_squared_sample_dist = 0.0;
 	for (int i = 0; i < stroke2DPoints.rows(); i++) {
 		stroke_edges.row(i) << i, ((i + 1) % stroke2DPoints.rows());
+		cout << (stroke2DPoints.row(i) - stroke2DPoints.row((i + 1) % stroke2DPoints.rows())).norm() << endl;
+		mean_squared_sample_dist += (stroke2DPoints.row(i) - stroke2DPoints.row((i + 1) % stroke2DPoints.rows())).squaredNorm();
 	}
+	mean_squared_sample_dist /= stroke2DPoints.rows();
+	cout << "dist: " << (int)mean_squared_sample_dist << endl;
 
-	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq25", V2_tmp, F2, vertex_markers, edge_markers);
+	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq25a" + to_string((int)(mean_squared_sample_dist)), V2_tmp, F2, vertex_markers, edge_markers);
 	double mean_Z = stroke3DPoints.col(2).mean();
 	V2 = Eigen::MatrixXd::Constant(V2_tmp.rows(), V2_tmp.cols() + 1, mean_Z);
 	V2.block(0, 0, V2_tmp.rows(), 2) = V2_tmp;
