@@ -512,7 +512,7 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			draw_all_strokes();
 		}
 		else if (prev_tool_mode == PULL && handleID != -1) {
-			for (int i = 0; i < 2; i++) {
+			for (int i = 0; i < 6; i++) {
 				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 			}
 
@@ -568,7 +568,7 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 					}
 				}
 
-				for (int i = 0; i < 2; i++) {
+				for (int i = 0; i < 10; i++) {
 					SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 				}
 
@@ -630,7 +630,7 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 					}
 				}
 
-				for (int i = 0; i < 6; i++) {
+				for (int i = 0; i < 10; i++) {
 					SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 				}
 
