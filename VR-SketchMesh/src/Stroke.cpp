@@ -84,14 +84,24 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 		if (timePast < 300000) {
 			return;
 		}
+		else { //If enough time has passed, check if controller moved a large enough distance
+			Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+			pos[0] += last_eye_origin[0];
+			pos[2] += last_eye_origin[2];
+			if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < 0.00005625){
+				return;
+			}
+		}
 	}
-	Eigen::RowVector3d pt2D;
-	Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
+	else {
+		Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+		pos[0] += last_eye_origin[0];
+		pos[2] += last_eye_origin[2];
+	}
 
-	Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
-	pos[0] += last_eye_origin[0];
-	pos[2] += last_eye_origin[2];
 	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
+	Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
+	Eigen::RowVector3d pt2D;
 	igl::project(pos_in, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport, pt2D);
 	double dep_val = pt2D[2];
 
@@ -189,7 +199,7 @@ void Stroke::strokeAddSegmentCut(Eigen::Vector3f& pos) {
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if (timePast < 30000000) {
+		if(timePast < 300000){
 			return;
 		}
 	}
@@ -210,22 +220,24 @@ void Stroke::strokeAddSegmentCut(Eigen::Vector3f& pos) {
 		hit_pos = V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v;
 		hit_pos_back = V.row(F(hits[1].id, 0))*(1.0 - hits[1].u - hits[1].v) + V.row(F(hits[1].id, 1))*hits[1].u + V.row(F(hits[1].id, 2))*hits[1].v;
 
-		has_points_on_mesh = true;
-
-		Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
-		Eigen::Vector3f hit_pos_tmp = hit_pos.cast<float>();
-		Eigen::Vector3d hit_pos2D = igl::project(hit_pos_tmp, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport).cast<double>();
-
-
+		//Early return (no point added)
 		if (!stroke3DPoints.isZero() && hit_pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && hit_pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && hit_pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
 			return;
 		}
-
 		if (stroke2DPoints.rows() == 1 && dir_before_cut.isZero()) {
 			cout << "This shouldn't happen. Draw the first point outside of the mesh" << endl;
 			return;
 		}
-		else if (stroke2DPoints.rows() == 1 && !dir_before_cut.isZero() && stroke2DPoints.isZero()) {
+		if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - hit_pos.transpose()).squaredNorm() < 0.00005625) {
+			return;
+		}
+
+		has_points_on_mesh = true;
+		Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
+		Eigen::Vector3f hit_pos_tmp = hit_pos.cast<float>();
+		Eigen::Vector3d hit_pos2D = igl::project(hit_pos_tmp, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport).cast<double>();
+
+		if (stroke2DPoints.rows() == 1 && !dir_before_cut.isZero() && stroke2DPoints.isZero()) {
 			stroke2DPoints.row(0) << hit_pos2D[0], hit_pos2D[1];
 			stroke3DPoints.row(0) << hit_pos[0], hit_pos[1], hit_pos[2];
 			stroke3DPointsBack.row(0) << hit_pos_back[0], hit_pos_back[1], hit_pos_back[2];
@@ -284,7 +296,7 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if (timePast < 60000000) {
+		if (timePast < 300000) {
 			return;
 		}
 	}
@@ -310,6 +322,9 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 
 
 		if (!stroke2DPoints.isZero() && hit_pos2D[0] == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && hit_pos2D[1] == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) {//Check that the point is new compared to last time
+			return;
+		}
+		else if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - hit_pos.transpose()).squaredNorm() < 0.000028125) {
 			return;
 		}
 
@@ -351,7 +366,7 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if (timePast < 90000000) {
+		if (timePast < 300000) {
 			return;
 		}
 	}
@@ -367,6 +382,9 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 
 
 	if (!stroke2DPoints.isZero() && pt2D[0] == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && pt2D[1] == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) {//Check that the point is new compared to last time
+		return;
+	}
+	else if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < 0.000028125) {
 		return;
 	}
 
@@ -478,11 +496,17 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	Eigen::MatrixXd V2_tmp, V2;
 	Eigen::MatrixXi F2, F2_back, vertex_markers, edge_markers;
 	Eigen::MatrixXi stroke_edges(stroke2DPoints.rows(), 2);
+	double mean_squared_sample_dist = 0.0;
 	for (int i = 0; i < stroke2DPoints.rows(); i++) {
 		stroke_edges.row(i) << i, ((i + 1) % stroke2DPoints.rows());
+		mean_squared_sample_dist += (stroke2DPoints.row(i) - stroke2DPoints.row((i + 1) % stroke2DPoints.rows())).squaredNorm();
+		cout << stroke2DPoints.row(i) << endl;
 	}
+	cout << endl << endl << endl;
+	mean_squared_sample_dist /= stroke2DPoints.rows();
 
-	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq25", V2_tmp, F2, vertex_markers, edge_markers);
+	//Set a sample-distance dependent maximum triangle area. Setting this too small will result in inflation in the wrong direction.
+	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq25a" + to_string((int)(mean_squared_sample_dist)), V2_tmp, F2, vertex_markers, edge_markers);
 	double mean_Z = stroke3DPoints.col(2).mean();
 	V2 = Eigen::MatrixXd::Constant(V2_tmp.rows(), V2_tmp.cols() + 1, mean_Z);
 	V2.block(0, 0, V2_tmp.rows(), 2) = V2_tmp;
