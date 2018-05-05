@@ -47,6 +47,7 @@ public:
 	int get_ID() { return ID; };
 	int get_v_idx() { return corresponding_vertex_idx; };
 	void set_v_idx(int idx) { corresponding_vertex_idx = idx; };
+	static PathElement interpolate_path_elements(PathElement el1, PathElement el2, double t);
 
 private:
 	int ID;

@@ -45,6 +45,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	vector<vector<int>> VF, VI;
 	igl::edge_topology(m.V, m.F, EV, FE, EF);
 	igl::vertex_triangle_adjacency(m.V.rows(), m.F, VF, VI);
+	Eigen::MatrixXi start_EV = EV;
 
 	Eigen::MatrixXi sharpEV;
 	Eigen::VectorXi sharpEV_row_idx, sharpEV_col_idx(2);
@@ -403,22 +404,23 @@ void LaplacianRemesh::stitch(std::vector<int> path_vertices, std::vector<int> bo
 
 		//Add faces
 		if(proceed_outer_v) {
-			m.F.conservativeResize(m.F.rows() + 1, Eigen::NoChange);
-			m.F.row(m.F.rows() - 1) << path_v_idx, outer_v_idx, next_outer_v_idx;
-			outer_v = next_outer_v;
-			outer_v_idx = next_outer_v_idx;
-			outer_idx++;
-		} else {
-			m.F.conservativeResize(m.F.rows() + 1, Eigen::NoChange);
-			m.F.row(m.F.rows() - 1) << next_path_v_idx, path_v_idx, outer_v_idx;
-			path_v = next_path_v;
-			path_v_idx = next_path_v_idx;
-			path_idx++;
+m.F.conservativeResize(m.F.rows() + 1, Eigen::NoChange);
+m.F.row(m.F.rows() - 1) << path_v_idx, outer_v_idx, next_outer_v_idx;
+outer_v = next_outer_v;
+outer_v_idx = next_outer_v_idx;
+outer_idx++;
 		}
+ else {
+	 m.F.conservativeResize(m.F.rows() + 1, Eigen::NoChange);
+	 m.F.row(m.F.rows() - 1) << next_path_v_idx, path_v_idx, outer_v_idx;
+	 path_v = next_path_v;
+	 path_v_idx = next_path_v_idx;
+	 path_idx++;
+ }
 
-		if(path_idx == path_vertices.size() && outer_idx == boundary_vertices.size()) {
-			break;
-		}
+ if (path_idx == path_vertices.size() && outer_idx == boundary_vertices.size()) {
+	 break;
+ }
 	}
 }
 
@@ -426,17 +428,17 @@ void LaplacianRemesh::stitch(std::vector<int> path_vertices, std::vector<int> bo
 vector<int> LaplacianRemesh::reorder(vector<int> boundary_vertices, Eigen::Vector3d start_v, Mesh& m) {
 	int index = 0;
 	double min = INFINITY;
-	for(int i = 0; i < boundary_vertices.size(); i++) {
+	for (int i = 0; i < boundary_vertices.size(); i++) {
 		Eigen::Vector3d vert = m.V.row(boundary_vertices[i]);
 		double d = (vert - start_v).norm();
-		if(d < min) {
+		if (d < min) {
 			min = d;
 			index = i;
 		}
 	}
 
 	vector<int> reordered;
-	for(int i = 0; i < boundary_vertices.size(); i++) {
+	for (int i = 0; i < boundary_vertices.size(); i++) {
 		reordered.push_back(boundary_vertices[(i + index) % boundary_vertices.size()]);
 	}
 	return reordered;
@@ -453,23 +455,25 @@ void LaplacianRemesh::reverse_path(vector<int> path_vertices) {
 	For extrusion we simply look at the sign of the inner area of the projected points (since we're looking from the "correct" viewpoint)
 **/
 bool LaplacianRemesh::is_counter_clockwise_boundaries(Eigen::MatrixXd boundary_points, Eigen::Matrix4f modelview, Eigen::Matrix4f proj, Eigen::Vector4f viewport, Eigen::RowVector3d mean_viewpoint, bool cut) {
-	if(cut) {
+	if (cut) {
 		Eigen::RowVector3d center = boundary_points.colwise().mean();
 		Eigen::Vector3d normal(0, 0, 0);
 		Eigen::Vector3d vec0, vec1;
-		for(int i = 0; i < boundary_points.rows(); i++) {
+		for (int i = 0; i < boundary_points.rows(); i++) {
 			vec0 = boundary_points.row(i) - center;
 			vec1 = boundary_points.row((i + 1) % boundary_points.rows()) - center;
 			normal += vec1.cross(vec0);
 		}
 		normal.normalize();
 
-		if(normal.dot(center - mean_viewpoint) < 0) {
+		if (normal.dot(center - mean_viewpoint) < 0) {
 			return false;
-		} else {
+		}
+		else {
 			return true;
 		}
-	} else {
+	}
+	else {
 		double total_area = 0.0;
 		Eigen::RowVector3d pt, vert;
 		Eigen::RowVector2d prev, next;
@@ -477,7 +481,7 @@ bool LaplacianRemesh::is_counter_clockwise_boundaries(Eigen::MatrixXd boundary_p
 		igl::project(vert, modelview, proj, viewport, pt);
 		prev = pt.leftCols(2);
 
-		for(int i = 0; i < boundary_points.rows(); i++) {
+		for (int i = 0; i < boundary_points.rows(); i++) {
 			vert = boundary_points.row(i);
 			igl::project(vert, modelview, proj, viewport, pt);
 			next = pt.leftCols(2);
@@ -485,10 +489,38 @@ bool LaplacianRemesh::is_counter_clockwise_boundaries(Eigen::MatrixXd boundary_p
 			prev = next;
 		}
 
-		if(total_area > 0) {
+		if (total_area > 0) {
 			return false;
 		}
 
 		return true;
 	}
+}
+
+double LaplacianRemesh::compute_average_distance_bewteen_onPolygon_vertices(std::vector<PathElement> path) {
+	Eigen::MatrixX3d onPoly_vertices = Eigen::MatrixX3d::Zero(0);
+	for (int i = 0; i < path.size(); i++) {
+		if (path[i].get_type == PathElement::ElementType::FACE) {
+			onPoly_vertices.conservativeResize(onPoly_vertices.rows() + 1, Eigen::NoChange);
+			onPoly_vertices.row(onPoly_vertices.rows() - 1) = path[i].get_vertex().transpose();
+		}
+	}
+
+	double total = 0.0;
+	for (int i = 0; i < onPoly_vertices.rows() - 1; i++){
+		total += (onPoly_vertices.row(i)-onPoly_vertices.row(i+1)).norm();
+	}
+	return total / (onPoly_vertices.rows() - 1);
+}
+
+double LaplacianRemesh::compute_average_length_of_crossing_edges(std::vector<PathElement> path) {
+	double total = 0.0;
+	int count = 0;
+	for (int i = 0; i < path.size(); i++) {
+		if (path[i].get_type == PathElement::ElementType::EDGE) {
+			total += (m.V.row(EV(path[i].get_ID(), 0)) - m.V.row(EV(path[i].get_ID(),1))).norm();
+			count++;
+		}
+	}
+	return total / count;
 }
