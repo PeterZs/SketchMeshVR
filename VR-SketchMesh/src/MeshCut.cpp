@@ -60,11 +60,15 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 	Eigen::MatrixXi stroke_edges(boundary_vertices.rows(), 2);
 	Eigen::RowVector3d center(0, 0, 0);
 	Eigen::Vector3d x_vec, y_vec;
-	project_points_to_2D(boundary_vertices, m, boundary_vertices_2D, stroke_edges, center, x_vec, y_vec);
+	double mean_squared_sample_dist = 0.0;
+	project_points_to_2D(boundary_vertices, m, boundary_vertices_2D, stroke_edges, center, x_vec, y_vec, mean_squared_sample_dist);
 
 	Eigen::MatrixXd V2;
 	Eigen::MatrixXi F2, vertex_markers, edge_markers;
-	igl::triangle::triangulate(boundary_vertices_2D.leftCols(2), stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(boundary_vertices_2D.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "Yq25Q", V2, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
+	cout << mean_squared_sample_dist << endl;
+	//The 2D points are multiplied by a factor 1000 because otherwise triangulate runs out of precision. Multiply max. allowed triangle area with a factor because we need to accomodate for largest edge triangles in order to prevent the new surface from becoming concave during smoothing, and the average distance gets pulled down a lot because of edge-crossing sample parts.
+	igl::triangle::triangulate(boundary_vertices_2D.leftCols(2), stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(boundary_vertices_2D.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "Yq25a" + to_string(6*mean_squared_sample_dist), V2, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
+	V2 /= 1000.0;
 
 	int original_v_size = m.V.rows() - boundary_vertices.rows();		
 	m.V.conservativeResize(original_v_size + V2.rows(), Eigen::NoChange);
@@ -125,7 +129,7 @@ void MeshCut::update_face_indices(Mesh& m, Eigen::MatrixXi& F2, Eigen::VectorXi&
 	}
 }
 
-void MeshCut::project_points_to_2D(Eigen::VectorXi& boundary_vertices, Mesh& m, Eigen::MatrixXd& boundary_vertices_2D, Eigen::MatrixXi& stroke_edges, Eigen::RowVector3d& center, Eigen::Vector3d& x_vec, Eigen::Vector3d& y_vec) {
+void MeshCut::project_points_to_2D(Eigen::VectorXi& boundary_vertices, Mesh& m, Eigen::MatrixXd& boundary_vertices_2D, Eigen::MatrixXi& stroke_edges, Eigen::RowVector3d& center, Eigen::Vector3d& x_vec, Eigen::Vector3d& y_vec, double& mean_squared_sample_dist) {
 	for(int i = 0; i < boundary_vertices.rows(); i++) {
 		center += m.V.row(boundary_vertices[i]);
 	}
@@ -146,10 +150,16 @@ void MeshCut::project_points_to_2D(Eigen::VectorXi& boundary_vertices, Mesh& m, 
 
 	Eigen::Vector3d vec;
 	for(int i = 0; i < boundary_vertices.rows(); i++) {
-		vec = m.V.row(boundary_vertices[i]) - center;
+		vec = 1000*(m.V.row(boundary_vertices[i]) - center);
 		boundary_vertices_2D.row(i) << vec.dot(x_vec), vec.dot(y_vec);
 		stroke_edges.row(i) << i, ((i + 1) % boundary_vertices.size());
+		cout << boundary_vertices_2D.row(i) << endl;
 	}
+
+	for (int i = 0; i < boundary_vertices_2D.rows(); i++) {
+		mean_squared_sample_dist += (boundary_vertices_2D.row(i) - boundary_vertices_2D.row((i + 1) % boundary_vertices_2D.rows())).squaredNorm();
+	}
+	mean_squared_sample_dist /= boundary_vertices_2D.rows();
 }
 
 //Updates the stroke's 3DPoints and closest_vert_bindings with the new vertices
