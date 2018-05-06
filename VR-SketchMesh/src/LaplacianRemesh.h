@@ -19,7 +19,8 @@ private:
 
 	static int find_closest(std::vector<int> vertices, Eigen::Vector3d base, Mesh & m);
 	static bool is_counter_clockwise_boundaries(Eigen::MatrixXd boundary_points, Eigen::Matrix4f modelview, Eigen::Matrix4f proj, Eigen::Vector4f viewport, Eigen::RowVector3d mean_viewpoint, bool cut);
-	double compute_average_distance_bewteen_onPolygon_vertices(std::vector<PathElement> path);
+	static double compute_average_distance_bewteen_onPolygon_vertices(std::vector<PathElement> path);
+	static double compute_average_length_of_crossing_edges(std::vector<PathElement> path, Eigen::MatrixXd startV, Eigen::MatrixXi startEV);
 	static std::vector<int> sort_boundary_vertices(Eigen::Vector3d start_vertex, std::vector<int> boundary_vertices, Mesh & m);
 	static std::vector<int> reorder(std::vector<int> boundary_vertices, Eigen::Vector3d start_v, Mesh & m);
 	static Eigen::RowVector3d compute_mean_viewpoint(Mesh & m, std::vector<int> inner_boundary_vertices);
@@ -27,7 +28,7 @@ private:
 	static void stitch(std::vector<int> path_vertices, std::vector<int> boundary_vertices, Mesh & m);
 	static void reverse_path(std::vector<int> path_vertices);
 	static void update_sharp_edges(Mesh & m, Eigen::MatrixXi & all_sharpEV);
-	static void update_mesh_values(Mesh & m, std::vector<PathElement> path, int stroke_ID, int new_mapped_start);
+	static void update_mesh_values(Mesh & m, Eigen::MatrixXd path, int stroke_ID, int new_mapped_start);
 	static void update_face_indices(Mesh & m);
 
 

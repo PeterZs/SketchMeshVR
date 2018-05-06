@@ -266,6 +266,10 @@ vector<PathElement> SurfacePath::get_path() {
 	return path;
 }
 
+void SurfacePath::set_path(std::vector<PathElement> new_path){
+	path = new_path;
+}
+
 int SurfacePath::get_origin_stroke_ID() {
 	return origin_stroke->get_ID();
 }

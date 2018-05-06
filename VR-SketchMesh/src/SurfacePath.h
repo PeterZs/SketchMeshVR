@@ -16,6 +16,7 @@ public:
 	bool create_from_stroke_cut(const Stroke& stroke);
 	int get_origin_stroke_ID();
     std::vector<PathElement> get_path();
+	void set_path(std::vector<PathElement>);
 	PathElement& get_path_element(int i);
 
 private:
@@ -42,18 +43,26 @@ public:
 		corresponding_vertex_idx(){
 	};
 
+	PathElement(Eigen::Vector3d vertex_, int corresponding_vertex_idx_) : //Barebones pathelement that's used at the end of LaplacianRemesh
+		vertex(vertex_),
+		corresponding_vertex_idx(corresponding_vertex_idx_) {
+	};
+
+
 	Eigen::Vector3d get_vertex() { return vertex; };
 	ElementType get_type() { return type; };
 	int get_ID() { return ID; };
 	int get_v_idx() { return corresponding_vertex_idx; };
 	void set_v_idx(int idx) { corresponding_vertex_idx = idx; };
 	static PathElement interpolate_path_elements(PathElement el1, PathElement el2, double t);
+	bool fixed = false; //TODO: implement this
 
 private:
 	int ID;
 	ElementType type;
 	Eigen::Vector3d vertex;
 	int corresponding_vertex_idx;
+	
 };
 
 #endif

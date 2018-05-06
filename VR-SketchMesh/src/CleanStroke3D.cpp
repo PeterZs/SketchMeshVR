@@ -4,15 +4,19 @@
 using namespace std;
 using namespace igl;
 
-std::vector<PathElement> CleanStroke3D::resample_by_length_with_fixes(std::vector<PathElement> path_vertices, double unit_length) {
+Eigen::MatrixXd CleanStroke3D::resample_by_length_with_fixes(std::vector<PathElement> path_vertices, double unit_length) {
 	if (path_vertices.size() <= 1) {
-		return path_vertices;
+		Eigen::MatrixXd result(path_vertices.size(), 3);
+		for (int i = 0; i < path_vertices.size(); i++) {
+			result.row(i) = path_vertices[i].get_vertex();
+		}
+		return result;
 	}
 
 	if (path_vertices[0].get_vertex() == path_vertices[path_vertices.size() - 1].get_vertex()) {
 		for (int i = 0; i < path_vertices.size(); i++) {
-			if (path_vertices[0].fixed) {
-				path_vertices.erase(path_vertices.begin() + path_vertices.size() - 1);
+			if (path_vertices[i].fixed) {
+				path_vertices.pop_back();
 				std::vector<PathElement> reordered;
 				for (int j = 0; j < path_vertices.size(); j++) {
 					reordered.push_back(path_vertices[(i + j) % path_vertices.size()]);
@@ -24,14 +28,16 @@ std::vector<PathElement> CleanStroke3D::resample_by_length_with_fixes(std::vecto
 		}
 	}
 
-	vector<PathElement> resampled, resample_sub;
-	resampled.push_back(path_vertices[0]);
+	Eigen::MatrixXd resampled(1, 3), resample_sub(0, 3);
+	resampled.row(0) = path_vertices[0].get_vertex();
 
 	int idx0 = 0;
 	while (true) {
 		int idx1 = find_next_fixed_vertex(path_vertices, idx0);
 		resample_sub = resample_by_length_sub(path_vertices, idx0, idx1, unit_length);
-		resampled.insert(resampled.end(), resample_sub.begin(), resample_sub.end());
+		//resampled.insert(resampled.end(), resample_sub.begin(), resample_sub.end());
+		resampled.conservativeResize(resampled.rows() + resample_sub.rows(), Eigen::NoChange);
+		resampled.bottomRows(resample_sub.rows()) = resample_sub;
 		if (idx1 == path_vertices.size() - 1) {
 			break;
 		}
@@ -49,30 +55,32 @@ int CleanStroke3D::find_next_fixed_vertex(std::vector<PathElement> path_vertices
 	return path_vertices.size() - 1;
 }
 
-std::vector<PathElement> CleanStroke3D::resample_by_length_sub(std::vector<PathElement> path_vertices, int start_index, int end_index, double unit_length) {
+Eigen::MatrixXd CleanStroke3D::resample_by_length_sub(std::vector<PathElement> path_vertices, int start_index, int end_index, double unit_length) {
 	double length = get_stroke_length(path_vertices, start_index, end_index);
 	int n = 1 + (int)(length / unit_length);
 
-	PathElement v0 = path_vertices[start_index];
-	PathElement v1 = path_vertices[end_index];
+	Eigen::RowVector3d v0 = path_vertices[start_index].get_vertex();
+	Eigen::RowVector3d v1 = path_vertices[end_index].get_vertex();
 
-	vector<PathElement> resampled;
+	Eigen::MatrixXd resampled_points(0,3);
 
 	if (length < unit_length) { //Actual stroke is shorter than requested inter-sample length
-		resampled.push_back(v1);
-		return resampled;
+		resampled_points.conservativeResize(resampled_points.rows() + 1, Eigen::NoChange);
+		resampled_points.row(resampled_points.rows()-1) = v1;
+		return resampled_points;
 	}
 
 	double total = 0.0, prev_total = 0.0, next_spot = unit_length;
-	PathElement prev = v0, next = path_vertices[start_index + 1];
+	Eigen::RowVector3d prev = v0, next = path_vertices[start_index + 1].get_vertex();
 	int index = start_index + 1, count = 0;
 
 	while (true) {
-		next = path_vertices[index];
-		total += vertex_distance(prev, next);
+		next = path_vertices[index].get_vertex();
+		total += (prev - next).norm();
 		while (total >= next_spot) { //The along-path distance to the next path_vertex is bigger than where we would want the next sample, so we create an interpolated sample
-			PathElement new_sample = PathElement::interpolate_path_elements(prev, next, (next_spot - prev_total) / (total - prev_total));
-			resampled.push_back(new_sample);
+			double t = (next_spot - prev_total) / (total - prev_total);
+			resampled_points.conservativeResize(resampled_points.rows() + 1, Eigen::NoChange);
+			resampled_points.row(resampled_points.rows() - 1) = prev*(1 - t) + next*t;
 			next_spot += unit_length;
 			count++;
 			if (count == n - 1) {
@@ -91,8 +99,10 @@ std::vector<PathElement> CleanStroke3D::resample_by_length_sub(std::vector<PathE
 			break;
 		}
 	}
-	resampled.push_back(v1);
-	return resampled;
+
+	resampled_points.conservativeResize(resampled_points.rows() + 1, Eigen::NoChange);
+	resampled_points.row(resampled_points.rows()-1) = v1;
+	return resampled_points;
 }
 
 double CleanStroke3D::get_stroke_length(std::vector<PathElement> path_vertices, int start_index, int end_index) {

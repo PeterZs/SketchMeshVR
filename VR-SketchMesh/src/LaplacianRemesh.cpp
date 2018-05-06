@@ -1,4 +1,5 @@
 #include "LaplacianRemesh.h"
+#include "CleanStroke3D.h"
 #include <igl/edge_topology.h>
 #include <igl/vertex_triangle_adjacency.h>
 #include <igl/slice.h>
@@ -35,6 +36,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	vector<int> dirty_vertices(m.V.rows());
 	m.new_mapped_indices.resize(m.V.rows()); //Resize the map from old to new (clean) vertex indices to allow it to contain the number of vertices that are in the mesh at the start
 
+	//TODO: START
 	vector<int> sharp_edge_indices;
 	for(int i = 0; i < m.sharp_edge.rows(); i++) {
 		if(m.sharp_edge[i]) {
@@ -45,7 +47,8 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	vector<vector<int>> VF, VI;
 	igl::edge_topology(m.V, m.F, EV, FE, EF);
 	igl::vertex_triangle_adjacency(m.V.rows(), m.F, VF, VI);
-	Eigen::MatrixXi start_EV = EV;
+	Eigen::MatrixXi startEV = EV;
+	Eigen::MatrixXd startV = m.V;
 
 	Eigen::MatrixXi sharpEV;
 	Eigen::VectorXi sharpEV_row_idx, sharpEV_col_idx(2);
@@ -58,6 +61,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	if(!is_front_loop) { //Append first element at the end in case of cutting, to make it a loop and compatible with extrusion's loop
 		path.push_back(path[0]);
 	}
+	//TODO: END
 
 	//Find outside and inside vertices. +1 means that the vertex will stay, -1 means it will be destroyed
 	for(int i = 0; i < path.size(); i++) {
@@ -131,10 +135,10 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	for(int i = 0; i < m.V.rows(); i++) {
 		if(dirty_vertices[i] == 0) { //Vertices with a - value are already known to be removed and vertices with a + value are already known to stay
 			for(int j = 0; j < VF[i].size(); j++) {
-				if(!dirty_face[VF[i][j]]) { //If the vertex is adjacent to a clean face, then the vertex has to be clean
+				if(!dirty_face[VF[i][j]]) { //If the vertex is part of a clean face, then the vertex has to be clean
 					vertex_is_clean(i) = 1;
 					clean_vertices.push_back(i);
-					break; //Can skip checking all other adjacent faces
+					break; //Can skip checking all other adjacent faces for this vertex
 				}
 			}
 		} else if(dirty_vertices[i] > 0) {
@@ -152,9 +156,9 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 
 	//NOTE: Output from sort_boundary_vertices is not necessarily counter-clockwise
 	outer_boundary_vertices = sort_boundary_vertices(path[0].get_vertex(), outer_boundary_vertices, m);
-	if(!remove_inside_faces) {
+	/*if(!remove_inside_faces) {
 		inner_boundary_vertices = sort_boundary_vertices(path[0].get_vertex(), inner_boundary_vertices, m);
-	}
+	}*/
 
 	Eigen::RowVector3d mean_viewpoint = compute_mean_viewpoint(m, inner_boundary_vertices);
 	
@@ -164,7 +168,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	row_idx = Eigen::VectorXi::Map(clean_vertices.data(), clean_vertices.size());
 	col_idx.col(0) << 0, 1, 2;
 	igl::slice(m.V, row_idx, col_idx, tmp_V);
-	m.V = tmp_V;
+	m.V = tmp_V; //Takes care of removing vertices that no longer exist due to all their adjacent faces being removed
 
 	col_idx.resize(1);
 	col_idx.col(0) << 0;
@@ -186,47 +190,80 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	
 	update_face_indices(m);
 
+	//TODO: up till here we seem to be good. Disappearing vertices and faces have been removed from the mesh and corresponding indices/markers have been updated
+
+
+	//TODO START: make sense of this all
+	double unit_length = (is_front_loop) ? compute_average_distance_bewteen_onPolygon_vertices(path) : compute_average_length_of_crossing_edges(path, startV, startEV);
+	
+	if (CleanStroke3D::get_stroke_length(path, 0, path.size()-1) / unit_length < 12) { //We'd end up with less than 12 samples
+		unit_length = CleanStroke3D::get_stroke_length(path, 0, path.size()-1) / 12; //Adapt length such that we get 12 samples
+	}
+
+	Eigen::MatrixXd resampled_path = CleanStroke3D::resample_by_length_with_fixes(path, unit_length);
+	cout << "I seem to assume that first and last vertex are the same. check that: " << resampled_path.row(0) << "        " << resampled_path.row(resampled_path.rows() - 1) << endl;
 
 	vector<int> path_vertices;
 	int original_V_size = m.V.rows();
-	for(int i = 0; i < path.size() - 1; i++) { //Do not use the last path vertex, as it is a copy of the first and creates unwanted behaviour
+	for (int i = 0; i < resampled_path.size() - 1; i++) { //Do not use the last path vertex, as it is a copy of the first and creates unwanted behaviour
 		path_vertices.push_back(original_V_size + i); //Store the vertex indices (in m.V) of the path vertices
+													  //TODO: set sharp edges and seam edges to fixed here. See lines 646-657 in LaplacianRemesh of FiberMesh
 	}
 
+	//TODO START: This adds the path vertices to the mesh. FiberMesh does not do this till AFTER the path has been RESAMPLED
+	update_mesh_values(m, resampled_path, surface_path.get_origin_stroke_ID(), vertex_is_clean.rows());
+	//TODO END
 
-	update_mesh_values(m, path, surface_path.get_origin_stroke_ID(), vertex_is_clean.rows());
+	//TODO: in the referenced surface_path, we need to ensure it has the correct length and vertex indices
 
-	Eigen::MatrixXi added_sharpEV(path.size() - 1, 2);
-	for(int i = 0; i < path.size() - 1; i++) {
-		surface_path.get_path_element(i).set_v_idx(size_before_removing + i);
-		added_sharpEV.row(i) << vertex_is_clean.rows() + i, vertex_is_clean.rows() + ((i + 1) + path.size() - 1) % (path.size() - 1); //Use mod (path.size() - 1) to compensate for start point that is in path twice
+	vector<PathElement> new_surface_path;
+	for (int i = 0; i < resampled_path.rows() -1; i++) {
+		new_surface_path.push_back(PathElement(resampled_path.row(i), size_before_removing + i));
 	}
+	surface_path.set_path(new_surface_path);
 
+	//TODO START: not sure how this maps to FiberMesh
+	Eigen::MatrixXi added_sharpEV(resampled_path.rows() - 1, 2);
+	for (int i = 0; i < resampled_path.rows() - 1; i++) {
+		//surface_path.get_path_element(i).set_v_idx(size_before_removing + i);
+		added_sharpEV.row(i) << vertex_is_clean.rows() + i, vertex_is_clean.rows() + ((i + 1) + resampled_path.rows() - 1) % (resampled_path.rows() - 1); //Use mod (path.size() - 1) to compensate for start point that is in path twice
+	}
+	//TODO END
+
+
+	//TODO: maybe move this up to right after V slicing?
 	//Update the outer_boundary_vertices (which are indices into V before it was sliced to keep only the clean vertices)
-	for(int i = 0; i < outer_boundary_vertices.size(); i++) {
+	for (int i = 0; i < outer_boundary_vertices.size(); i++) {
 		outer_boundary_vertices[i] = m.new_mapped_indices[outer_boundary_vertices[i]];
 	}
 
+	//TODO: maybe move this up to right after V slicing?
 	//Make the outer_boundary_vertices CCW
 	Eigen::Matrix4f modelview = view * model;
 	Eigen::VectorXi row_idx2, col_idx2(3);
 	row_idx2 = Eigen::VectorXi::Map(outer_boundary_vertices.data(), outer_boundary_vertices.size());
 	col_idx2.col(0) << 0, 1, 2;
 	igl::slice(m.V, row_idx2, col_idx2, tmp_V); //Keep only the clean "boundary" vertices in the mesh
-	if(!is_counter_clockwise_boundaries(tmp_V, modelview, proj, viewport, mean_viewpoint, !is_front_loop)) {
+	if (!is_counter_clockwise_boundaries(tmp_V, modelview, proj, viewport, mean_viewpoint, !is_front_loop)) {
 		reverse(outer_boundary_vertices.begin(), outer_boundary_vertices.end());
 	}
+	
+	//TODO END
 
 
-	stitch(path_vertices, outer_boundary_vertices, m);
-	if(!remove_inside_faces) {
+	//Need to feed stitch indices into m.V that are currently correct. Make sure that resampled stroke points are updated in mesh before this
+	stitch(path_vertices, outer_boundary_vertices, m); //TODO: should be dealing with the newly sampled path vertices //TODO: need to fix that stitching sometimes fails
+	/*if(!remove_inside_faces) {
 		reverse_path(path_vertices);
 		stitch(path_vertices, inner_boundary_vertices, m);
-	}
+	}*/
 
-
+	//TODO START: is adding/updating sharp edges to the mesh. Not sure how it's done in FiberMesh. Maybe see line 708-728
 	Eigen::MatrixXi sharpEVcat = igl::cat(1, sharpEV, added_sharpEV);
 	update_sharp_edges(m, sharpEVcat);
+	//TODO END
+
+	//TODO: request new patches
 
 	return Eigen::VectorXi::Map(path_vertices.data(), path_vertices.size());
 }
@@ -254,14 +291,14 @@ void LaplacianRemesh::update_face_indices(Mesh &m) {
 }
 
 /** Adds values for a bunch of tracking variables for the new mesh vertices. **/
-void LaplacianRemesh::update_mesh_values(Mesh& m, vector<PathElement> path, int stroke_ID, int new_mapped_start) {
+void LaplacianRemesh::update_mesh_values(Mesh& m, Eigen::MatrixXd path, int stroke_ID, int new_mapped_start) {
 	int size_before = m.V.rows();
-	m.V.conservativeResize(m.V.rows() + path.size() - 1, Eigen::NoChange);
-	m.part_of_original_stroke.conservativeResize(m.part_of_original_stroke.rows() + path.size() - 1);
-	m.vertex_boundary_markers.conservativeResize(m.vertex_boundary_markers.rows() + path.size() - 1);
-	m.new_mapped_indices.conservativeResize(m.new_mapped_indices.rows() + path.size() - 1, Eigen::NoChange);
-	for(int i = 0; i < path.size() - 1; i++) {
-		m.V.row(size_before + i) << path[i].get_vertex().transpose();
+	m.V.conservativeResize(m.V.rows() + path.rows() - 1, Eigen::NoChange);
+	m.part_of_original_stroke.conservativeResize(m.part_of_original_stroke.rows() + path.rows() - 1);
+	m.vertex_boundary_markers.conservativeResize(m.vertex_boundary_markers.rows() + path.rows() - 1);
+	m.new_mapped_indices.conservativeResize(m.new_mapped_indices.rows() + path.rows() - 1, Eigen::NoChange);
+	for(int i = 0; i < path.rows() - 1; i++) {
+		m.V.row(size_before + i) << path.row(i);
 		m.part_of_original_stroke[size_before + i] = 0;
 		m.vertex_boundary_markers[size_before + i] = stroke_ID;
 		m.new_mapped_indices(new_mapped_start + i) = size_before + i;
@@ -302,6 +339,7 @@ void LaplacianRemesh::propagate_dirty_faces(int face, vector<bool>& dirty_face) 
 	}
 }
 
+//TODO: in FiberMesh, this will deal with the fully updated mesh (faces, edges and vertices removed that are dirty). here we're working with some half-half version?
 /** Sorts the boundary vertices such that they make up a continuous path that starts with the vertex that's closest to start_vertex. 
 	Takes care of backtracking over original stroke boundary vertices that is sometimes necessary. **/
 vector<int> LaplacianRemesh::sort_boundary_vertices(Eigen::Vector3d start_vertex, vector<int> boundary_vertices, Mesh& m) {
@@ -401,26 +439,27 @@ void LaplacianRemesh::stitch(std::vector<int> path_vertices, std::vector<int> bo
 		} else {
 			proceed_outer_v = false;
 		}
+		//TODO: add extra else if for "open paths" (added curves?)
 
 		//Add faces
 		if(proceed_outer_v) {
-m.F.conservativeResize(m.F.rows() + 1, Eigen::NoChange);
-m.F.row(m.F.rows() - 1) << path_v_idx, outer_v_idx, next_outer_v_idx;
-outer_v = next_outer_v;
-outer_v_idx = next_outer_v_idx;
-outer_idx++;
+			m.F.conservativeResize(m.F.rows() + 1, Eigen::NoChange);
+			m.F.row(m.F.rows() - 1) << path_v_idx, outer_v_idx, next_outer_v_idx;
+			outer_v = next_outer_v;
+			outer_v_idx = next_outer_v_idx;
+			outer_idx++;
 		}
- else {
-	 m.F.conservativeResize(m.F.rows() + 1, Eigen::NoChange);
-	 m.F.row(m.F.rows() - 1) << next_path_v_idx, path_v_idx, outer_v_idx;
-	 path_v = next_path_v;
-	 path_v_idx = next_path_v_idx;
-	 path_idx++;
- }
+		else {
+			m.F.conservativeResize(m.F.rows() + 1, Eigen::NoChange);
+			m.F.row(m.F.rows() - 1) << next_path_v_idx, path_v_idx, outer_v_idx;
+			path_v = next_path_v;
+			path_v_idx = next_path_v_idx;
+			path_idx++;
+		}
 
- if (path_idx == path_vertices.size() && outer_idx == boundary_vertices.size()) {
-	 break;
- }
+		if (path_idx == path_vertices.size() && outer_idx == boundary_vertices.size()) {
+			break;
+		}
 	}
 }
 
@@ -498,9 +537,9 @@ bool LaplacianRemesh::is_counter_clockwise_boundaries(Eigen::MatrixXd boundary_p
 }
 
 double LaplacianRemesh::compute_average_distance_bewteen_onPolygon_vertices(std::vector<PathElement> path) {
-	Eigen::MatrixX3d onPoly_vertices = Eigen::MatrixX3d::Zero(0);
+	Eigen::MatrixX3d onPoly_vertices = Eigen::MatrixX3d::Zero(0,  3);
 	for (int i = 0; i < path.size(); i++) {
-		if (path[i].get_type == PathElement::ElementType::FACE) {
+		if (path[i].get_type() == PathElement::ElementType::FACE) {
 			onPoly_vertices.conservativeResize(onPoly_vertices.rows() + 1, Eigen::NoChange);
 			onPoly_vertices.row(onPoly_vertices.rows() - 1) = path[i].get_vertex().transpose();
 		}
@@ -513,12 +552,12 @@ double LaplacianRemesh::compute_average_distance_bewteen_onPolygon_vertices(std:
 	return total / (onPoly_vertices.rows() - 1);
 }
 
-double LaplacianRemesh::compute_average_length_of_crossing_edges(std::vector<PathElement> path) {
+double LaplacianRemesh::compute_average_length_of_crossing_edges(std::vector<PathElement> path, Eigen::MatrixXd startV, Eigen::MatrixXi startEV) {
 	double total = 0.0;
 	int count = 0;
 	for (int i = 0; i < path.size(); i++) {
-		if (path[i].get_type == PathElement::ElementType::EDGE) {
-			total += (m.V.row(EV(path[i].get_ID(), 0)) - m.V.row(EV(path[i].get_ID(),1))).norm();
+		if (path[i].get_type() == PathElement::ElementType::EDGE) {
+			total += (startV.row(startEV(path[i].get_ID(), 0)) - startV.row(startEV(path[i].get_ID(),1))).norm();
 			count++;
 		}
 	}
