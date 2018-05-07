@@ -156,9 +156,6 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 
 	//NOTE: Output from sort_boundary_vertices is not necessarily counter-clockwise
 	outer_boundary_vertices = sort_boundary_vertices(path[0].get_vertex(), outer_boundary_vertices, m);
-	/*if(!remove_inside_faces) {
-		inner_boundary_vertices = sort_boundary_vertices(path[0].get_vertex(), inner_boundary_vertices, m);
-	}*/
 
 	Eigen::RowVector3d mean_viewpoint = compute_mean_viewpoint(m, inner_boundary_vertices);
 	
@@ -190,19 +187,15 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	
 	update_face_indices(m);
 
-	//TODO: up till here we seem to be good. Disappearing vertices and faces have been removed from the mesh and corresponding indices/markers have been updated
+	//Up to here disappearing vertices and faces have been removed from the mesh and corresponding indices/markers have been updated
 
 
-	//TODO START: make sense of this all
 	double unit_length = (is_front_loop) ? compute_average_distance_between_onPolygon_vertices(path) : compute_average_length_of_crossing_edges(path, startV, startEV);
-	cout << "unit length " << unit_length << endl;
 	if (CleanStroke3D::get_stroke_length(path, 0, path.size()-1) / unit_length < 12) { //We'd end up with less than 12 samples
 		unit_length = CleanStroke3D::get_stroke_length(path, 0, path.size()-1) / 12; //Adapt length such that we get 12 samples
 	}
-	cout << "unit length after " << unit_length << endl;
 
 	Eigen::MatrixXd resampled_path = CleanStroke3D::resample_by_length_with_fixes(path, unit_length);
-	cout << "I seem to assume that first and last vertex are the same. check that: " << resampled_path.row(0) << "        " << resampled_path.row(resampled_path.rows() - 1) << endl;
 
 	vector<int> path_vertices;
 	int original_V_size = m.V.rows();
@@ -211,11 +204,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 												  //TODO: set sharp edges and seam edges to fixed here. See lines 646-657 in LaplacianRemesh of FiberMesh
 	}
 
-	//TODO START: This adds the path vertices to the mesh. FiberMesh does not do this till AFTER the path has been RESAMPLED
 	update_mesh_values(m, resampled_path, surface_path.get_origin_stroke_ID(), vertex_is_clean.rows());
-	//TODO END
-
-	//TODO: in the referenced surface_path, we need to ensure it has the correct length and vertex indices
 
 	vector<PathElement> new_surface_path;
 	for (int i = 0; i < resampled_path.rows() -1; i++) {
@@ -251,13 +240,8 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	
 	//TODO END
 
+	stitch(path_vertices, outer_boundary_vertices, m); //TODO: need to fix that stitching sometimes fails
 
-	//Need to feed stitch indices into m.V that are currently correct. Make sure that resampled stroke points are updated in mesh before this
-	stitch(path_vertices, outer_boundary_vertices, m); //TODO: should be dealing with the newly sampled path vertices //TODO: need to fix that stitching sometimes fails
-	/*if(!remove_inside_faces) {
-		reverse_path(path_vertices);
-		stitch(path_vertices, inner_boundary_vertices, m);
-	}*/
 
 	//TODO START: is adding/updating sharp edges to the mesh. Not sure how it's done in FiberMesh. Maybe see line 708-728
 	Eigen::MatrixXi sharpEVcat = igl::cat(1, sharpEV, added_sharpEV);

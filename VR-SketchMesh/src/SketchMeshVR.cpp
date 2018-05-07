@@ -99,6 +99,7 @@ void draw_all_strokes(){
 	int points_to_hold_back;
 	for (int i = 0; i < stroke_collection.size(); i++) {
 		added_points = stroke_collection[i].get3DPoints();
+		cout << "added" << endl << stroke_collection[i].get3DPoints() << endl << endl;
 		points_to_hold_back = 1 + !stroke_collection[i].is_loop;
 		viewervr.data.add_points(added_points, stroke_collection[i].stroke_color);
 		viewervr.data.add_edges(added_points.block(0, 0, added_points.rows() - points_to_hold_back, 3), added_points.block(1, 0, added_points.rows() - points_to_hold_back, 3), stroke_collection[i].stroke_color);
@@ -593,6 +594,7 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				dirty_boundary = true;
 				added_stroke->toLoop();
 				added_stroke->is_loop = false; //Set to false manually, because we don't want curveDeformation to consider it as a loop (but we do need looped 3DPoints)
+				cout << "test0" << endl << extrusion_base->get3DPoints() << endl;
 
 				bool success_extrude = MeshExtrusion::extrude_main(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, base_surface_path, *added_stroke, *extrusion_base, base_model, base_view, base_proj, base_viewport);
 				if (!success_extrude) { //Catches the case that the extrusion base removes all faces/vertices
@@ -615,6 +617,7 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 
 				stroke_collection.push_back(*extrusion_base);
+				cout << "test" << endl << extrusion_base->get3DPoints() << endl;
 				stroke_collection.push_back(*added_stroke);
 
 				initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers);
@@ -630,6 +633,9 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 					}
 				}
 
+				cout << "test2" << endl << extrusion_base->get3DPoints() << endl;
+
+
 				for (int i = 0; i < 10; i++) {
 					SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 				}
@@ -639,6 +645,7 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				for (int i = 0; i < stroke_collection.size() - 1; i++) {
 					stroke_collection[i].update_Positions(V);
 				}
+				cout << "test3" << endl << extrusion_base->get3DPoints() << endl;
 
 
 				viewervr.data.clear_all();
@@ -657,6 +664,8 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 				dirty_boundary = true;
 				extrusion_base->toLoop();
+				cout << "test--1" << endl << extrusion_base->get3DPoints() << endl;
+
 				bool succes_extrude_prepare = MeshExtrusion::extrude_prepare(*extrusion_base, base_surface_path); //Don't need to update all strokes here, since it didn't remove any vertices
 				if (!succes_extrude_prepare) { //Catches the case that face == -1 in SurfacePath
 #ifdef _WIN32
@@ -673,6 +682,7 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 					extrusion_base_already_drawn = false;
 					return;
 				}
+				cout << "testtest" << endl << extrusion_base->get3DPoints() << endl;
 
 				extrusion_base_already_drawn = true;
 
