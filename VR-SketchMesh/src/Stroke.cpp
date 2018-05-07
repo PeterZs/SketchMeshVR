@@ -137,7 +137,7 @@ bool Stroke::strokeAddSegmentAdd(Eigen::Vector3f& pos) {
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if (timePast < 10000000) {
+		if (timePast < 300000) {
 			return result;
 		}
 	}
@@ -213,7 +213,7 @@ void Stroke::strokeAddSegmentCut(Eigen::Vector3f& pos) {
 	pos[2] += last_eye_origin[2];
 
 	if (igl::ray_mesh_intersect(pos, viewervr.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
-		if (hits.size() < 2) { //User had hand inside mesh while cutting
+		if (hits.size() < 2) { //User had hand inside or behind mesh while cutting
 			return;
 		}
 		current_hit = true;
@@ -309,25 +309,24 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 	pos[2] += last_eye_origin[2];
 
 	if (igl::ray_mesh_intersect(pos, viewervr.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
-		if (hits.size() < 2) { //User had hand inside mesh while drawing extrusion base stroke
+		if (hits.size() < 2) { //User had hand inside or behind mesh while drawing extrusion base stroke
 			return;
 		}
 		hit_pos = V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v;
 
-		has_points_on_mesh = true;
+		
+		if (!stroke3DPoints.isZero() && hit_pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && hit_pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && hit_pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
+		//if (!stroke2DPoints.isZero() && hit_pos2D[0] == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && hit_pos2D[1] == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) {//Check that the point is new compared to last time
+			return;
+		}
+		else if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - hit_pos.transpose()).squaredNorm() < 0.00005625) {
+			return;
+		}
 
+		has_points_on_mesh = true;
 		Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
 		Eigen::Vector3f hit_pos_tmp = hit_pos.cast<float>();
 		Eigen::Vector3d hit_pos2D = igl::project(hit_pos_tmp, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport).cast<double>();
-
-
-		if (!stroke2DPoints.isZero() && hit_pos2D[0] == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && hit_pos2D[1] == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) {//Check that the point is new compared to last time
-			return;
-		}
-		else if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - hit_pos.transpose()).squaredNorm() < 0.000028125) {
-			return;
-		}
-
 
 		if (stroke2DPoints.rows() == 1 && stroke2DPoints.isZero()) {
 			stroke2DPoints.row(0) << hit_pos2D[0], hit_pos2D[1];
@@ -384,7 +383,7 @@ void Stroke::strokeAddSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 	if (!stroke2DPoints.isZero() && pt2D[0] == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && pt2D[1] == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) {//Check that the point is new compared to last time
 		return;
 	}
-	else if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < 0.000028125) {
+	else if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < 0.00005625) {
 		return;
 	}
 
@@ -500,9 +499,7 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	for (int i = 0; i < stroke2DPoints.rows(); i++) {
 		stroke_edges.row(i) << i, ((i + 1) % stroke2DPoints.rows());
 		mean_squared_sample_dist += (stroke2DPoints.row(i) - stroke2DPoints.row((i + 1) % stroke2DPoints.rows())).squaredNorm();
-		cout << stroke2DPoints.row(i) << endl;
 	}
-	cout << endl << endl << endl;
 	mean_squared_sample_dist /= stroke2DPoints.rows();
 
 	//Set a sample-distance dependent maximum triangle area. Setting this too small will result in inflation in the wrong direction.

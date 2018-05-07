@@ -95,15 +95,16 @@ int SurfacePath::find_next_edge_extrude(int next_p, int prev_p, int prev_edge, i
 	}
 
 	//If we come here, it means that the next strokepoint (next_p) lies in a non-adjacent face (e.g. one or multiple faces away). Only then go for more elaborate checking 
+	double t_val;
 	for (int i = 0; i < 3; i++) {
 		int edge = FE(polygon, i);
 		if (edge != prev_edge) {
-			Eigen::RowVector3d cut_point = cutPlane.cross_point(origin_stroke->get_V().row(EV(edge, 0)), origin_stroke->get_V().row(EV(edge, 1)));
+			Eigen::RowVector3d cut_point = cutPlane.cross_point(origin_stroke->get_V().row(EV(edge, 0)), origin_stroke->get_V().row(EV(edge, 1)), t_val);
 			Eigen::RowVector3d seg_vec = looped_3DPoints.row(next_p) - looped_3DPoints.row(prev_p);
 			seg_vec.normalize();
 			Eigen::RowVector3d its_vec = cut_point - looped_3DPoints.row(prev_p);
 			its_vec.normalize();
-			if (its_vec.dot(seg_vec) >= 0) { //Else the projection points into the opposite direction of line segment
+			if (its_vec.dot(seg_vec) >= 0 && t_val<=0.99999 & t_val>=0.00001) { //Else the projection points into the opposite direction of line segment
 				edge_cut_point = cut_point;
 				return edge;
 			}

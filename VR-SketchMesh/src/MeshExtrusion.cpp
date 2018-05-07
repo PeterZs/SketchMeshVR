@@ -1,6 +1,7 @@
 #include "MeshExtrusion.h"
 #include "LaplacianRemesh.h"
-#include "Plane.h"
+#include "CleanStroke3D.h"
+//#include "Plane.h"
 #include <iostream>
 #include <algorithm>
 #include <igl/unproject_ray.h>
@@ -77,13 +78,32 @@ bool MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 		cout << "No valid silhouette vertices. Try again." << endl;
 		return false;
 	}
-	
+
+
+	//This makes sure that we are inserting the correct base vertices at the correct spot before/after the silhouette vertices
+	if ((m.V.row(boundary_vertices[most_right_vertex_idx]) - silhouette_vertices.row(0)).norm() > (m.V.row(boundary_vertices[most_right_vertex_idx]) - silhouette_vertices.row(silhouette_vertices.rows()-1)).norm()) {
+		Eigen::MatrixXd tmp_sil_vert = silhouette_vertices.colwise().reverse();
+		silhouette_vertices = tmp_sil_vert;
+	}
+
+	silhouette_vertices.conservativeResize(silhouette_vertices.rows() + 1, Eigen::NoChange);
+	Eigen::MatrixXd tmp_sil = silhouette_vertices.topRows(silhouette_vertices.rows() - 1);
+	silhouette_vertices.block(1, 0, silhouette_vertices.rows() - 1, 3) = tmp_sil; 
+	silhouette_vertices.row(0) = m.V.row(boundary_vertices[most_right_vertex_idx]);
+
+	silhouette_vertices.conservativeResize(silhouette_vertices.rows() + 1, Eigen::NoChange);
+	silhouette_vertices.row(silhouette_vertices.rows() - 1) = m.V.row(boundary_vertices[most_left_vertex_idx]);
+
+	silhouette_vertices = CleanStroke3D::resample(silhouette_vertices);
+	tmp_sil = silhouette_vertices.middleRows(1, silhouette_vertices.rows() - 2);
+	silhouette_vertices = tmp_sil;
+
 	vector<int> sil_original_indices = add_silhouette_vertices(m, stroke.get_ID(), silhouette_vertices);
 	vector<int> sil_original_indices_looped = sil_original_indices;
 	sil_original_indices_looped.push_back(sil_original_indices[0]);
 	stroke.set_closest_vert_bindings(sil_original_indices_looped);
 
-	//Create the first loops
+	//Create the first loop
 	Eigen::MatrixXd front_loop3D = silhouette_vertices;
 	vector<int> front_loop_base_original_indices;
 	create_loop(m, front_loop3D, boundary_vertices, front_loop_base_original_indices, most_left_vertex_idx, most_right_vertex_idx);
@@ -133,7 +153,7 @@ bool MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 
 	Eigen::Vector3d normal_back(0, 0, 0);
 	for (int i = 0; i < back_loop3D.rows(); i++) {
-		vec0 = back_loop3D.row(i) - new_center_front;
+		vec0 = back_loop3D.row(i) - new_center_back;
 		vec1 = back_loop3D.row((i + 1) % back_loop3D.rows()) - new_center_back;
 		normal_back += vec0.cross(vec1);
 	}
@@ -146,10 +166,15 @@ bool MeshExtrusion::extrude_main(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::
 	reverse(sil_original_indices.begin(), sil_original_indices.end());
 	generate_mesh(m, back_loop3D, new_center_back, x_vec, y_vec, offset, silhouette_vertices.rows(), back_loop_base_original_indices, sil_original_indices);
 
+
+	//TODO: compared to FiberMesh we should add setting sharp boundaries, settin silhoeutte seam and compute prescribed normals...? 
+
     //Update tracking variables with new vertex indices
 	post_extrude_main_update_points(stroke, silhouette_vertices);
 	post_extrude_main_update_bindings(base, surface_path);
 	update_sharp_edges(m, sharpEV);
+
+	//TODO: request new patches
 	return true;
 }
 

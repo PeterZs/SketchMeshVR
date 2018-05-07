@@ -194,20 +194,21 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 
 
 	//TODO START: make sense of this all
-	double unit_length = (is_front_loop) ? compute_average_distance_bewteen_onPolygon_vertices(path) : compute_average_length_of_crossing_edges(path, startV, startEV);
-	
+	double unit_length = (is_front_loop) ? compute_average_distance_between_onPolygon_vertices(path) : compute_average_length_of_crossing_edges(path, startV, startEV);
+	cout << "unit length " << unit_length << endl;
 	if (CleanStroke3D::get_stroke_length(path, 0, path.size()-1) / unit_length < 12) { //We'd end up with less than 12 samples
 		unit_length = CleanStroke3D::get_stroke_length(path, 0, path.size()-1) / 12; //Adapt length such that we get 12 samples
 	}
+	cout << "unit length after " << unit_length << endl;
 
 	Eigen::MatrixXd resampled_path = CleanStroke3D::resample_by_length_with_fixes(path, unit_length);
 	cout << "I seem to assume that first and last vertex are the same. check that: " << resampled_path.row(0) << "        " << resampled_path.row(resampled_path.rows() - 1) << endl;
 
 	vector<int> path_vertices;
 	int original_V_size = m.V.rows();
-	for (int i = 0; i < resampled_path.size() - 1; i++) { //Do not use the last path vertex, as it is a copy of the first and creates unwanted behaviour
+	for (int i = 0; i < resampled_path.rows() - 1; i++) { //Do not use the last path vertex, as it is a copy of the first and creates unwanted behaviour
 		path_vertices.push_back(original_V_size + i); //Store the vertex indices (in m.V) of the path vertices
-													  //TODO: set sharp edges and seam edges to fixed here. See lines 646-657 in LaplacianRemesh of FiberMesh
+												  //TODO: set sharp edges and seam edges to fixed here. See lines 646-657 in LaplacianRemesh of FiberMesh
 	}
 
 	//TODO START: This adds the path vertices to the mesh. FiberMesh does not do this till AFTER the path has been RESAMPLED
@@ -536,7 +537,7 @@ bool LaplacianRemesh::is_counter_clockwise_boundaries(Eigen::MatrixXd boundary_p
 	}
 }
 
-double LaplacianRemesh::compute_average_distance_bewteen_onPolygon_vertices(std::vector<PathElement> path) {
+double LaplacianRemesh::compute_average_distance_between_onPolygon_vertices(std::vector<PathElement> path) {
 	Eigen::MatrixX3d onPoly_vertices = Eigen::MatrixX3d::Zero(0,  3);
 	for (int i = 0; i < path.size(); i++) {
 		if (path[i].get_type() == PathElement::ElementType::FACE) {
