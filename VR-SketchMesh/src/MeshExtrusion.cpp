@@ -364,6 +364,7 @@ void MeshExtrusion::update_face_indices(Mesh& m, Eigen::MatrixXi& F2, vector<int
 	}
 }
 
+//TODO: check how FiberMesh does this. Should we resample the base stroke in extrude_prepare already?
 /** Updates the base stroke's 3DPoints with the new vertices. PathElements of the type FACE stay in the same position, but PathElements of the type EDGE get added. **/
 void MeshExtrusion::post_extrude_prepare_update_points(Stroke& stroke, SurfacePath& surface_path) {
 	vector<PathElement> path = surface_path.get_path();
@@ -389,7 +390,9 @@ void MeshExtrusion::post_extrude_main_update_points(Stroke &stroke, Eigen::Matri
 }
 
 /** Update the vertex bindings for the extrusion base stroke. Assumes indexing in m.V before any vertices are removed, so it will become the correct indexing after stroke.update_vert_bindings() is called. **/
+//TODO: extending this loop to the entire path size might give other side effects (maybe we need to make the surface_path a loop in LaplacianRemesh in the first place)???
 void MeshExtrusion::post_extrude_main_update_bindings(Stroke& base, SurfacePath& surface_path) {
+	cout << "Check that surfacepath here is the same as in LaplacianRemeshing after it has been resampled. Size = " << surface_path.size() << endl;
 	vector<PathElement> path = surface_path.get_path();
 	vector<int> new_closest_vertex_indices(path.size());
 	for(int i = 0; i < path.size() - 1; i++) {

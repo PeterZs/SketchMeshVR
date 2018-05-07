@@ -211,7 +211,11 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		new_surface_path.push_back(PathElement(resampled_path.row(i), size_before_removing + i));
 	}
 	surface_path.set_path(new_surface_path);
-
+	cout << "surface path in LaplacianRemesh: " << endl;
+	for(int i=0;i<surface_path.size();i++){
+		cout << surface_path[i].get_vertex() << endl;
+	}
+	cout << "NOTE: MeshExtrusion skips last element from surface_path when updating the mapped point indices in the base Stroke" << endl;
 	//TODO START: not sure how this maps to FiberMesh
 	Eigen::MatrixXi added_sharpEV(resampled_path.rows() - 1, 2);
 	for (int i = 0; i < resampled_path.rows() - 1; i++) {
