@@ -293,28 +293,28 @@ vector<int> MeshExtrusion::add_silhouette_vertices(Mesh& m, int stroke_ID, Eigen
 	int size_before_silhouette = m.V.rows();
 	m.V.conservativeResize(m.V.rows() + silhouette_vertices.rows(), Eigen::NoChange);
 	m.part_of_original_stroke.conservativeResize(m.part_of_original_stroke.rows() + silhouette_vertices.rows());
-	m.vertex_boundary_markers.conservativeResize(m.vertex_boundary_markers.rows() + silhouette_vertices.rows());
-	for(int i = 0; i < silhouette_vertices.rows(); i++) {
-		m.V.row(size_before_silhouette + i) = silhouette_vertices.row(i);
-		m.part_of_original_stroke[size_before_silhouette + i] = 0;
-		m.vertex_boundary_markers[size_before_silhouette + i] = stroke_ID;
-		sil_original_indices.push_back(size_before_silhouette + i);
-	}
-	return sil_original_indices;
+m.vertex_boundary_markers.conservativeResize(m.vertex_boundary_markers.rows() + silhouette_vertices.rows());
+for (int i = 0; i < silhouette_vertices.rows(); i++) {
+	m.V.row(size_before_silhouette + i) = silhouette_vertices.row(i);
+	m.part_of_original_stroke[size_before_silhouette + i] = 0;
+	m.vertex_boundary_markers[size_before_silhouette + i] = stroke_ID;
+	sil_original_indices.push_back(size_before_silhouette + i);
+}
+return sil_original_indices;
 }
 
 /** Creates a loop consisting of the silhouette vertices and half of the base stroke vertices. **/
 void MeshExtrusion::create_loop(Mesh& m, Eigen::MatrixXd& loop3D, Eigen::VectorXi& boundary_vertices, vector<int> &loop_base_original_indices, int start_idx, int end_idx) {
 	int idx = start_idx;
-	while(true) {
+	while (true) {
 		loop3D.conservativeResize(loop3D.rows() + 1, Eigen::NoChange);
 		loop3D.row(loop3D.rows() - 1) = m.V.row(boundary_vertices[idx]);
 		loop_base_original_indices.push_back(boundary_vertices[idx]);
-		if(idx == end_idx) {
+		if (idx == end_idx) {
 			break;
 		}
 		idx++;
-		if(idx == boundary_vertices.rows()) {
+		if (idx == boundary_vertices.rows()) {
 			idx = 0;
 		}
 	}
@@ -330,10 +330,10 @@ void MeshExtrusion::update_sharp_edges(Mesh& m, Eigen::MatrixXi sharpEV) {
 
 	int start, end, equal_pos;
 	Eigen::VectorXi col1Equals, col2Equals;
-	for(int i = 0; i < sharpEV.rows(); i++) {
+	for (int i = 0; i < sharpEV.rows(); i++) {
 		start = sharpEV(i, 0); //No vertices were removed in the meantime, so use indices as-is
 		end = sharpEV(i, 1);
-		if(start == -1 || end == -1) { //Sharp edge no longer exists
+		if (start == -1 || end == -1) { //Sharp edge no longer exists
 			continue;
 		}
 
@@ -350,13 +350,15 @@ void MeshExtrusion::update_face_indices(Mesh& m, Eigen::MatrixXi& F2, vector<int
 	int original_F_size = m.F.rows();
 	m.F.conservativeResize(m.F.rows() + F2.rows(), Eigen::NoChange);
 	int vert_idx_in_mesh;
-	for(int i = 0; i < F2.rows(); i++) {
-		for(int j = 0; j < 3; j++) {
-			if(F2(i, j) < nr_silhouette_vert) { //Silhouette vertex
+	for (int i = 0; i < F2.rows(); i++) {
+		for (int j = 0; j < 3; j++) {
+			if (F2(i, j) < nr_silhouette_vert) { //Silhouette vertex
 				vert_idx_in_mesh = sil_original_indices[F2(i, j)];
-			} else if(F2(i, j) < loop2D_size) { //Extrusion base vertex
+			}
+			else if (F2(i, j) < loop2D_size) { //Extrusion base vertex
 				vert_idx_in_mesh = loop_base_original_indices[F2(i, j) - nr_silhouette_vert];
-			} else {
+			}
+			else {
 				vert_idx_in_mesh = size_before_gen + F2(i, j) - loop2D_size; //Interior point
 			}
 			m.F(original_F_size + i, j) = vert_idx_in_mesh;
@@ -370,7 +372,7 @@ void MeshExtrusion::post_extrude_prepare_update_points(Stroke& stroke, SurfacePa
 	vector<PathElement> path = surface_path.get_path();
 	Eigen::MatrixX3d new_3DPoints(path.size(), 3);
 
-	for(int i = 0; i < path.size(); i++) {
+	for (int i = 0; i < path.size(); i++) {
 		new_3DPoints.row(i) = path[i].get_vertex().transpose();
 	}
 
@@ -380,19 +382,18 @@ void MeshExtrusion::post_extrude_prepare_update_points(Stroke& stroke, SurfacePa
 /** Updates the silhouette stroke's 3DPoints with the new vertices. **/
 void MeshExtrusion::post_extrude_main_update_points(Stroke &stroke, Eigen::MatrixXd new_positions) {
 	Eigen::MatrixX3d new_3DPoints(new_positions.rows() + 1, 3);
-	for(int i = 0; i < new_positions.rows(); i++) {
+	for (int i = 0; i < new_positions.rows(); i++) {
 		new_3DPoints.row(i) = new_positions.row(i);
 	}
 	new_3DPoints.row(new_3DPoints.rows() - 1) = new_positions.row(0); //Make looped
-	
 
-	stroke.set3DPoints(new_3DPoints); 
+
+	stroke.set3DPoints(new_3DPoints);
 }
 
 /** Update the vertex bindings for the extrusion base stroke. Assumes indexing in m.V before any vertices are removed, so it will become the correct indexing after stroke.update_vert_bindings() is called. **/
 //TODO: extending this loop to the entire path size might give other side effects (maybe we need to make the surface_path a loop in LaplacianRemesh in the first place)???
 void MeshExtrusion::post_extrude_main_update_bindings(Stroke& base, SurfacePath& surface_path) {
-	cout << "Check that surfacepath here is the same as in LaplacianRemeshing after it has been resampled. Size = " << surface_path.size() << endl;
 	vector<PathElement> path = surface_path.get_path();
 	vector<int> new_closest_vertex_indices(path.size());
 	for(int i = 0; i < path.size() - 1; i++) {

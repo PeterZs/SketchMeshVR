@@ -14,18 +14,18 @@ Eigen::MatrixXd CleanStroke3D::resample_by_length_with_fixes(std::vector<PathEle
 	}
 
 	if (path_vertices[0].get_vertex() == path_vertices[path_vertices.size() - 1].get_vertex()) {
-for (int i = 0; i < path_vertices.size(); i++) {
-	if (path_vertices[i].fixed) {
-		path_vertices.pop_back();
-		std::vector<PathElement> reordered;
-		for (int j = 0; j < path_vertices.size(); j++) {
-			reordered.push_back(path_vertices[(i + j) % path_vertices.size()]);
+		for (int i = 0; i < path_vertices.size(); i++) {
+			if (path_vertices[i].fixed) {
+				path_vertices.pop_back();
+				std::vector<PathElement> reordered;
+				for (int j = 0; j < path_vertices.size(); j++) {
+					reordered.push_back(path_vertices[(i + j) % path_vertices.size()]);
+				}
+				reordered.push_back(reordered[0]);
+				path_vertices = reordered;
+				break;
+			}
 		}
-		reordered.push_back(reordered[0]);
-		path_vertices = reordered;
-		break;
-	}
-}
 	}
 
 	Eigen::MatrixXd resampled(1, 3), resample_sub(0, 3);
