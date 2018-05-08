@@ -82,6 +82,7 @@ bool button_A_is_set = false, button_B_is_set = false, button_thumb_is_set = fal
 
 std::chrono::steady_clock::time_point _start_time, _end_time;
 bool has_recentered = false;
+bool draw_should_block = false;
 
 void draw_all_strokes(){
 	Eigen::MatrixXd added_points;
@@ -238,13 +239,16 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 	}
 
 	if (tool_mode == DRAW) { //Creating the first curve/mesh
+		if (draw_should_block) { //User has been too close to first sample point (closing the stroke too much), so we're in blocked state till the buttons are released again
+			return;
+		}
 		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) {
 			if (has_recentered) {
 				viewervr.set_start_action_view(viewervr.corevr.get_view());
 				stroke_collection.clear();
 				next_added_stroke_ID = 2;
 				initial_stroke->strokeReset();
-				initial_stroke->strokeAddSegment(pos);
+				initial_stroke->addSegment(pos);
 				prev_tool_mode = DRAW;
 			}
 			else {
@@ -257,7 +261,7 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		}
 		else if (prev_tool_mode == DRAW) {
 			//We had already started drawing, continue
-			initial_stroke->strokeAddSegment(pos);
+			draw_should_block = initial_stroke->addSegment(pos);
 			return;
 		}
 		else if (prev_tool_mode == CUT || prev_tool_mode == EXTRUDE || prev_tool_mode == ADD || prev_tool_mode == REMOVE) {
@@ -270,11 +274,11 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) { //Adding a new control curve onto an existing mesh
 			added_stroke = new Stroke(V, F, viewervr, next_added_stroke_ID);
 			next_added_stroke_ID++;
-			added_stroke->strokeAddSegmentAdd(pos);
+			added_stroke->addSegmentAdd(pos);
 			prev_tool_mode = ADD;
 		}
 		else if (prev_tool_mode == ADD) {
-			added_stroke->strokeAddSegmentAdd(pos);
+			added_stroke->addSegmentAdd(pos);
 		}
 	}
 	else if (tool_mode == REMOVE) {
@@ -406,11 +410,11 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			added_stroke = new Stroke(V, F, viewervr, next_added_stroke_ID);
 			viewervr.set_start_action_view(viewervr.corevr.get_view());
 			next_added_stroke_ID++;
-			added_stroke->strokeAddSegmentCut(pos);
+			added_stroke->addSegmentCut(pos);
 		}
 		else if (prev_tool_mode == CUT) {
 			if (!cut_stroke_already_drawn) {
-				added_stroke->strokeAddSegmentCut(pos);
+				added_stroke->addSegmentCut(pos);
 			}
 		}
 	}
@@ -420,20 +424,20 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			if (extrusion_base_already_drawn) { //clicked while the extrude base was already drawn
 				added_stroke = new Stroke(V, F, viewervr, next_added_stroke_ID);
 				next_added_stroke_ID++;
-				added_stroke->strokeAddSegmentExtrusionSilhouette(pos);
+				added_stroke->addSegmentExtrusionSilhouette(pos);
 			}
 			else { //clicked with no extrude base yet
 				extrusion_base = new Stroke(V, F, viewervr, next_added_stroke_ID);
 				next_added_stroke_ID++;
-				extrusion_base->strokeAddSegmentExtrusionBase(pos);
+				extrusion_base->addSegmentExtrusionBase(pos);
 			}
 		}
 		else if (prev_tool_mode == EXTRUDE) {
 			if (extrusion_base_already_drawn) {
-				added_stroke->strokeAddSegmentExtrusionSilhouette(pos);
+				added_stroke->addSegmentExtrusionSilhouette(pos);
 			}
 			else {
-				extrusion_base->strokeAddSegmentExtrusionBase(pos);
+				extrusion_base->addSegmentExtrusionBase(pos);
 			}
 		}
 	}
@@ -447,6 +451,7 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		}
 		else if (prev_tool_mode == DRAW) {
 			prev_tool_mode = NONE;
+			draw_should_block = false; 
 
 			if (initial_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
 

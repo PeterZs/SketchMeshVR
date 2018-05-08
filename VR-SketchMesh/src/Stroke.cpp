@@ -76,20 +76,25 @@ void Stroke::swap(Stroke & tmp) {//The pointers to V and F will always be the sa
 Stroke::~Stroke() {}
 
 /** Used for DRAW. Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its projection as a 2D point (and stores the projected z-value). After adding the new point it will restart the timer. **/
-void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
+bool Stroke::addSegment(Eigen::Vector3f& pos) {
 
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
 		if (timePast < 300000) {
-			return;
+			return false;
 		}
 		else { //If enough time has passed, check if controller moved a large enough distance
 			Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
 			pos[0] += last_eye_origin[0];
 			pos[2] += last_eye_origin[2];
-			if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < 0.00005625){
-				return;
+			if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < 0.00005625) {
+				return false;
+			}
+			if (stroke3DPoints.rows() > 10) {
+				if ((stroke3DPoints.row(0) - pos.transpose().cast<double>()).squaredNorm() < (stroke3DPoints.row(0) - stroke3DPoints.row(1)).squaredNorm()*4.0) { //User is too close to beginning point. Don't sample, and block DRAW mode
+					return true; //Block DRAW mode till the buttons are released again
+				}
 			}
 		}
 	}
@@ -107,7 +112,7 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 
 
 	if (!stroke2DPoints.isZero() && pt2D[0] == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && pt2D[1] == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) {//Check that the point is new compared to last time
-		return;
+		return false;
 	}
 
 	if (stroke3DPoints.rows() == 1 && stroke3DPoints.isZero()) {
@@ -127,11 +132,15 @@ void Stroke::strokeAddSegment(Eigen::Vector3f& pos) {
 	}
 	closest_vert_bindings.push_back(stroke3DPoints.rows() - 1); //In the case of DRAW this will match the vertex indices, since we start from 0
 	viewervr.data.set_stroke_points(stroke3DPoints); //Will remove all previous points but is okay for draw since it's the only points there are
+	if ((stroke3DPoints.bottomRows(1) - stroke3DPoints.row(0)).squaredNorm() < (stroke3DPoints.row(1)-stroke3DPoints.row(0)).squaredNorm()*8.0 && stroke3DPoints.rows() > 10) { //Show the closing line if the current point is close enough the first point (and we have already at least 10 samples)
+		viewervr.data.add_stroke_points(stroke3DPoints.row(0));
+	}
 	_time1 = std::chrono::high_resolution_clock::now();
+	return false;
 }
 
 /** Used for ADD. Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon). After adding the new point it will restart the timer. **/
-bool Stroke::strokeAddSegmentAdd(Eigen::Vector3f& pos) {
+bool Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
 	bool result = false;
 
 	if (!stroke3DPoints.isZero()) {
@@ -194,7 +203,7 @@ bool Stroke::strokeAddSegmentAdd(Eigen::Vector3f& pos) {
 
 /** Used for CUT. Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its projection as a 2D point. The indices of the front and backside faces that are hit will also be stored.
 If the ray doesn't intersect the mesh, we will store its origin and direction and later possible use it to compute the start or end point. After adding the new point it will restart the timer. **/
-void Stroke::strokeAddSegmentCut(Eigen::Vector3f& pos) {
+void Stroke::addSegmentCut(Eigen::Vector3f& pos) {
 	
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
@@ -291,7 +300,7 @@ void Stroke::strokeAddSegmentCut(Eigen::Vector3f& pos) {
 
 /** Used for EXTRUDE. Extrusion base strokes need to be drawn entirely on the mesh (points outside of it will be ignored) and needs to surround at least one vertex. 
 Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its projection as a 2D point. After adding the new point it will restart the timer. Will also store the indices of the faces that are hit. The closest vertex bindings are handled in SurfacePath. **/
-void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
+void Stroke::addSegmentExtrusionBase(Eigen::Vector3f& pos) {
 	
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
@@ -361,7 +370,7 @@ void Stroke::strokeAddSegmentExtrusionBase(Eigen::Vector3f& pos) {
 }
 
 /** Used for EXTRUDE. Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its projection as a 2D point. After adding the new point it will restart the timer. The closest vertex bindings are handled in SurfacePath. **/
-void Stroke::strokeAddSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
+void Stroke::addSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();

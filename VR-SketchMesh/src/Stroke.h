@@ -14,11 +14,11 @@ public:
 	void swap(Stroke & tmp);
 	~Stroke();
     
-	void strokeAddSegment(Eigen::Vector3f& pos);
-	bool strokeAddSegmentAdd(Eigen::Vector3f & pos);
-	void strokeAddSegmentCut(Eigen::Vector3f & pos);
-	void strokeAddSegmentExtrusionBase(Eigen::Vector3f & pos);
-	void strokeAddSegmentExtrusionSilhouette(Eigen::Vector3f & pos);
+	bool addSegment(Eigen::Vector3f& pos);
+	bool addSegmentAdd(Eigen::Vector3f & pos);
+	void addSegmentCut(Eigen::Vector3f & pos);
+	void addSegmentExtrusionBase(Eigen::Vector3f & pos);
+	void addSegmentExtrusionSilhouette(Eigen::Vector3f & pos);
 	void prepend_first_point();
 	void append_final_point();
     void counter_clockwise();
