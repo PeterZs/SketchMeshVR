@@ -105,31 +105,12 @@ bool Stroke::addSegment(Eigen::Vector3f& pos) {
 		pos[2] += last_eye_origin[2];
 	}
 
-	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
-	Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
-	Eigen::RowVector3d pt2D;
-	igl::project(pos_in, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport, pt2D);
-	double dep_val = pt2D[2];
-
-
-	if (!stroke2DPoints.isZero() && pt2D[0] == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && pt2D[1] == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) {//Check that the point is new compared to last time
-		return false;
-	}
-
 	if (stroke3DPoints.rows() == 1 && stroke3DPoints.isZero()) {
 		stroke3DPoints.row(0) << pos[0], pos[1], pos[2];
-		stroke2DPoints.row(0) << pt2D[0], pt2D[1];
-		dep[0] = dep_val;
 	}
 	else {
-		stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
-		stroke2DPoints.row(stroke2DPoints.rows() - 1) << pt2D[0], pt2D[1];
-
 		stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
 		stroke3DPoints.row(stroke3DPoints.rows() - 1) << pos[0], pos[1], pos[2];
-
-		dep.conservativeResize(dep.rows() + 1, Eigen::NoChange);
-		dep[dep.rows() - 1] = dep_val;
 	}
 	closest_vert_bindings.push_back(stroke3DPoints.rows() - 1); //In the case of DRAW this will match the vertex indices, since we start from 0
 	viewervr.data.set_stroke_points(stroke3DPoints); //Will remove all previous points but is okay for draw since it's the only points there are
