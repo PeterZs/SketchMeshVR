@@ -35,7 +35,6 @@ Eigen::MatrixXd CleanStroke3D::resample_by_length_with_fixes(std::vector<PathEle
 	while (true) {
 		int idx1 = find_next_fixed_vertex(path_vertices, idx0);
 		resample_sub = resample_by_length_sub(path_vertices, idx0, idx1, unit_length);
-		//resampled.insert(resampled.end(), resample_sub.begin(), resample_sub.end());
 		resampled.conservativeResize(resampled.rows() + resample_sub.rows(), Eigen::NoChange);
 		resampled.bottomRows(resample_sub.rows()) = resample_sub;
 		if (idx1 == path_vertices.size() - 1) {
@@ -105,6 +104,56 @@ Eigen::MatrixXd CleanStroke3D::resample_by_length_sub(std::vector<PathElement> p
 	return resampled_points;
 }
 
+Eigen::MatrixXd CleanStroke3D::resample_by_length_sub(Eigen::MatrixXd path_vertices, int start_index, int end_index, double unit_length) {
+	double length = get_stroke_length(path_vertices, start_index, end_index);
+	int n = 1 + (int)(length / unit_length);
+
+	Eigen::RowVector3d v0 = path_vertices.row(start_index);
+	Eigen::RowVector3d v1 = path_vertices.row(end_index);
+
+	Eigen::MatrixXd resampled_points(0, 3);
+
+	if (length < unit_length) { //Actual stroke is shorter than requested inter-sample length
+		resampled_points.conservativeResize(resampled_points.rows() + 1, Eigen::NoChange);
+		resampled_points.row(resampled_points.rows() - 1) = v1;
+		return resampled_points;
+	}
+
+	double total = 0.0, prev_total = 0.0, next_spot = unit_length;
+	Eigen::RowVector3d prev = v0, next = path_vertices.row(start_index + 1);
+	int index = start_index + 1, count = 0;
+
+	while (true) {
+		next = path_vertices.row(index);
+		total += (prev - next).norm();
+		while (total >= next_spot) { //The along-path distance to the next path_vertex is bigger than where we would want the next sample, so we create an interpolated sample
+			double t = (next_spot - prev_total) / (total - prev_total);
+			resampled_points.conservativeResize(resampled_points.rows() + 1, Eigen::NoChange);
+			resampled_points.row(resampled_points.rows() - 1) = prev*(1 - t) + next*t;
+			next_spot += unit_length;
+			count++;
+			if (count == n - 1) {
+				break;
+			}
+
+		}
+		if (count == n - 1) {
+			break;
+		}
+		prev = next;
+		prev_total = total;
+		index++;
+
+		if (index == end_index) {
+			break;
+		}
+	}
+
+	resampled_points.conservativeResize(resampled_points.rows() + 1, Eigen::NoChange);
+	resampled_points.row(resampled_points.rows() - 1) = v1;
+	return resampled_points;
+}
+
 double CleanStroke3D::get_stroke_length(std::vector<PathElement> path_vertices, int start_index, int end_index) {
 	double length = 0.0;
 	for (int i = start_index; i < end_index; i++) {
@@ -117,6 +166,14 @@ double CleanStroke3D::get_stroke_length(Eigen::MatrixXd stroke) {
 	double length = 0.0;
 	for (int i = 0; i < stroke.rows() - 1; i++){
 		length += (stroke.row(i) - stroke.row(i+1)).norm();
+	}
+	return length;
+}
+
+double CleanStroke3D::get_stroke_length(Eigen::MatrixXd stroke, int start, int end) {
+	double length = 0.0;
+	for (int i = start; i < end; i++) {
+		length += (stroke.row(i) - stroke.row(i + 1)).norm();
 	}
 	return length;
 }

@@ -1,4 +1,5 @@
 #include "Stroke.h"
+#include "CleanStroke3D.h"
 #include <igl/unproject_onto_mesh.h>
 #include <igl/unproject.h>
 #include <igl/project.h>
@@ -497,19 +498,47 @@ bool Stroke::toLoop() {
 }
 
 unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::MatrixXd& mesh_V, Eigen::MatrixXi& mesh_F) {
-	counter_clockwise(); //Ensure the stroke is counter-clockwise, handy later
+	double mean_sample_dist = 0.0;
+	for (int i = 0; i < stroke3DPoints.rows()-1; i++) {
+		mean_sample_dist += (stroke3DPoints.row(i) - stroke3DPoints.row((i + 1) % stroke3DPoints.rows())).norm();
+	}
+	mean_sample_dist /= stroke3DPoints.rows();
+	Eigen::MatrixXd closing_stroke3DPoints(2, 3);
+	closing_stroke3DPoints.row(0) = stroke3DPoints.row(stroke3DPoints.rows() - 2);
+	closing_stroke3DPoints.row(1) = stroke3DPoints.row(0);
+	Eigen::MatrixXd resampled_3DPoints = CleanStroke3D::resample_by_length_sub(closing_stroke3DPoints, 0, 1, mean_sample_dist);
+	closest_vert_bindings.pop_back();
+	int size_before = closest_vert_bindings.size();
+	for (int i = 0; i < resampled_3DPoints.rows(); i++) { //The last resampled point is a copy of the first element of the original stroke, so add it to create a loop again
+		closest_vert_bindings.push_back(size_before + i);
+	}
+	Eigen::MatrixXd new_3DPoints = stroke3DPoints.topRows(stroke3DPoints.rows()-1);
+	new_3DPoints.conservativeResize(new_3DPoints.rows() + resampled_3DPoints.rows(), Eigen::NoChange);
+	new_3DPoints.bottomRows(resampled_3DPoints.rows()) = resampled_3DPoints;
+	set3DPoints(new_3DPoints);
+
+	Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
+	Eigen::MatrixX3d projected_points;
+	igl::project(stroke3DPoints, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport, projected_points);
+	dep = projected_points.col(2).topRows(projected_points.rows()-1);
+
+	stroke2DPoints = projected_points.topRows(projected_points.rows()-1);
 	Eigen::MatrixXd original_stroke2DPoints = stroke2DPoints;
 	stroke2DPoints = resample_stroke2D(original_stroke2DPoints); //Enabling this might give a discrepancy between what is drawn and the result you get but does give smoother meshes
+
+	counter_clockwise();  //Ensure the stroke is counter-clockwise, handy later
 
 	Eigen::MatrixXd V2_tmp, V2;
 	Eigen::MatrixXi F2, F2_back, vertex_markers, edge_markers;
 	Eigen::MatrixXi stroke_edges(stroke2DPoints.rows(), 2);
 	double mean_squared_sample_dist = 0.0;
+
 	for (int i = 0; i < stroke2DPoints.rows(); i++) {
 		stroke_edges.row(i) << i, ((i + 1) % stroke2DPoints.rows());
 		mean_squared_sample_dist += (stroke2DPoints.row(i) - stroke2DPoints.row((i + 1) % stroke2DPoints.rows())).squaredNorm();
 	}
 	mean_squared_sample_dist /= stroke2DPoints.rows();
+
 
 	//Set a sample-distance dependent maximum triangle area. Setting this too small will result in inflation in the wrong direction.
 	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq25a" + to_string((int)(mean_squared_sample_dist)), V2_tmp, F2, vertex_markers, edge_markers);
@@ -575,16 +604,14 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	Eigen::VectorXd dep_tmp = Eigen::VectorXd::Constant(V2.rows(), dep.mean());
 	dep_tmp.topRows(stroke2DPoints.rows()) = dep;
 
-	Eigen::MatrixXd V2_unproj, V2_with_dep(V2.rows(), V2.cols());
+	Eigen::MatrixXd V2_unproj, V2_with_dep(V2.rows(), 3);
 	V2_with_dep.leftCols(2) = V2.leftCols(2);
 	V2_with_dep.col(2) = dep_tmp;
-
-	Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
 
 	igl::unproject(V2_with_dep, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport, V2_unproj);
 	V2.leftCols(2) = V2_unproj.leftCols(2);
 	V2.block(0, 2, stroke2DPoints.rows(), 1) = V2_unproj.block(0, 2, stroke2DPoints.rows(), 1); //Use actual z-value of drawn stroke 
-	
+
 	mesh_V = V2;
 	mesh_F = F2;
 
