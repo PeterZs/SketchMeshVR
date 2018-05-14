@@ -8,20 +8,22 @@ if(LIBIGL_FOUND)
 endif()
 
 find_path(LIBIGL_INCLUDE_DIR igl/libiglVR_finder.h
-   igl/readOBJ.h
-   ${PROJECT_SOURCE_DIR}/../../include
-   ${PROJECT_SOURCE_DIR}/../include
-   ${PROJECT_SOURCE_DIR}/include
-   ${PROJECT_SOURCE_DIR}/../libiglVR/include
-   ${PROJECT_SOURCE_DIR}/../../libiglVR/include
-   $ENV{LIBIGL}/include
-   $ENV{LIBIGLROOT}/include
-   $ENV{LIBIGL_ROOT}/include
-   $ENV{LIBIGL_DIR}/include
-   $ENV{LIBIGL_DIR}/inc
-   /usr/include
-   /usr/local/include
-   /usr/local/igl/libiglVR/include
+    HINTS
+        ENV LIBIGL
+        ENV LIBIGLROOT
+        ENV LIBIGL_ROOT
+        ENV LIBIGL_DIR
+    PATHS
+        ${CMAKE_SOURCE_DIR}/../..
+        ${CMAKE_SOURCE_DIR}/..
+        ${CMAKE_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/libiglVR
+        ${CMAKE_SOURCE_DIR}/../libiglVR
+        ${CMAKE_SOURCE_DIR}/../../libiglVR
+        /usr
+        /usr/local
+        /usr/local/igl/libiglVR
+    PATH_SUFFIXES include
 )
 
 include(FindPackageHandleStandardArgs)

@@ -17,7 +17,7 @@ using namespace std;
 
 std::chrono::steady_clock::time_point _time2, _time1;
 
-Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::viewer::VR_Viewer &v, int stroke_ID_) :
+Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::opengl::glfw::Viewer &v, int stroke_ID_) :
 	V(V_),
 	F(F_),
 	viewervr(v),

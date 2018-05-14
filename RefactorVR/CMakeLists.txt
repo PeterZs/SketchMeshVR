@@ -30,10 +30,10 @@ find_package(LIBIGL REQUIRED QUIET)
 
 # Prepare the build environment
 include_directories(${LIBIGL_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/../OculusSDK/LibOVR/Include ${PROJECT_SOURCE_DIR}/../OculusSDK/LibOVR/Src ${PROJECT_SOURCE_DIR}/src)
-add_definitions(${LIBIGL_DEFINITIONS})
+#add_definitions(${LIBIGL_DEFINITIONS})
 
 # Add your project files
-file(GLOB SRCFILES *.cpp)
+file(GLOB SRCFILES src/*.cpp)
 add_executable(${PROJECT_NAME}_bin ${SRCFILES})
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME}_bin)
 target_link_libraries(${PROJECT_NAME}_bin ${LIBIGL_LIBRARIES} ${LIBIGL_EXTRA_LIBRARIES} Winmm.lib ws2_32.lib)

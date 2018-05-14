@@ -1,6 +1,6 @@
 #ifndef _VR_Stroke_H_
 #define _VR_Stroke_H_
-#include <igl/viewer/VR_Viewer.h>
+#include <igl/opengl/glfw/Viewer.h>
 #include <Eigen/Core>
 
 #include <vector>
@@ -8,7 +8,7 @@
 class Stroke {
 public:
 	
-	Stroke(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,  igl::viewer::VR_Viewer &v, int stroke_ID_);
+	Stroke(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,  igl::opengl::glfw::Viewer &v, int stroke_ID_);
 	Stroke(const Stroke& origin);
     Stroke& operator=(Stroke);
 	void swap(Stroke & tmp);
@@ -42,16 +42,16 @@ public:
 	Eigen::MatrixX3d get3DPointsBack();
 	Eigen::MatrixX3d get_hand_pos();
 	Eigen::MatrixXi get_hit_faces();
-	std::vector<int> get_closest_vert_bindings();
+	::std::vector<int> get_closest_vert_bindings();
     void set3DPoints(Eigen::MatrixX3d new_3DPoints);
-    void set_closest_vert_bindings(std::vector<int> new_vert_bindings);
+    void set_closest_vert_bindings(::std::vector<int> new_vert_bindings);
 
 
 	bool is_loop;
 	bool has_points_on_mesh;
 	bool has_been_reversed;
 	Eigen::RowVector3d stroke_color;
-	igl::viewer::VR_Viewer &viewervr;
+	igl::opengl::glfw::Viewer &viewervr;
 	
 
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
