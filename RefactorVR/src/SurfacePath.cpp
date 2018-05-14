@@ -104,7 +104,7 @@ int SurfacePath::find_next_edge_extrude(int next_p, int prev_p, int prev_edge, i
 			seg_vec.normalize();
 			Eigen::RowVector3d its_vec = cut_point - looped_3DPoints.row(prev_p);
 			its_vec.normalize();
-			if (its_vec.dot(seg_vec) >= 0 && t_val<=0.99999 & t_val>=0.00001) { //Else the projection points into the opposite direction of line segment
+			if (its_vec.dot(seg_vec) >= 0 && t_val<=0.99999 && t_val>=0.00001) { //Else the projection points into the opposite direction of line segment
 				edge_cut_point = cut_point;
 				return edge;
 			}

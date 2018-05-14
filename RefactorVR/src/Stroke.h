@@ -51,7 +51,7 @@ public:
 	bool has_points_on_mesh;
 	bool has_been_reversed;
 	Eigen::RowVector3d stroke_color;
-	igl::opengl::glfw::Viewer &viewervr;
+	igl::opengl::glfw::Viewer &viewer;
 	
 
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW

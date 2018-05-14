@@ -28,7 +28,7 @@ bool MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &verte
 
 bool MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke) {
 	bool remesh_success = true;
-	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_cut_remove_inside(m, surface_path, stroke.viewervr.corevr.get_model(), stroke.viewervr.get_start_action_view(), stroke.viewervr.corevr.get_proj(), stroke.viewervr.corevr.viewport, remesh_success);
+	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_cut_remove_inside(m, surface_path, stroke.viewer.core.get_model(), stroke.viewer.oculusVR.get_start_action_view(), stroke.viewer.core.get_proj(), stroke.viewer.core.viewport, remesh_success);
 	if (!remesh_success) {
 		return false;
 	}

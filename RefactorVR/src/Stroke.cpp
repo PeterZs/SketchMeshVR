@@ -20,7 +20,7 @@ std::chrono::steady_clock::time_point _time2, _time1;
 Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::opengl::glfw::Viewer &v, int stroke_ID_) :
 	V(V_),
 	F(F_),
-	viewervr(v),
+	viewer(v),
 	stroke_ID(stroke_ID_) {
 	stroke2DPoints = Eigen::MatrixXd::Zero(1, 2);
 	stroke3DPoints = Eigen::MatrixX3d::Zero(1, 3);
@@ -38,7 +38,7 @@ Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::opengl
 Stroke::Stroke(const Stroke& origin) :
 	V(origin.V),
 	F(origin.F),
-	viewervr(origin.viewervr),
+	viewer(origin.viewer),
 	stroke_ID(origin.stroke_ID),
 	stroke2DPoints(origin.stroke2DPoints),
 	stroke3DPoints(origin.stroke3DPoints),
@@ -86,7 +86,7 @@ bool Stroke::addSegment(Eigen::Vector3f& pos) {
 			return false;
 		}
 		else { //If enough time has passed, check if controller moved a large enough distance
-			Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+			Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
 			pos[0] += last_eye_origin[0];
 			pos[2] += last_eye_origin[2];
 			if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < 0.00005625) {
@@ -100,7 +100,7 @@ bool Stroke::addSegment(Eigen::Vector3f& pos) {
 		}
 	}
 	else {
-		Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+		Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
 		pos[0] += last_eye_origin[0];
 		pos[2] += last_eye_origin[2];
 	}
@@ -113,9 +113,9 @@ bool Stroke::addSegment(Eigen::Vector3f& pos) {
 		stroke3DPoints.row(stroke3DPoints.rows() - 1) << pos[0], pos[1], pos[2];
 	}
 	closest_vert_bindings.push_back(stroke3DPoints.rows() - 1); //In the case of DRAW this will match the vertex indices, since we start from 0
-	viewervr.data.set_stroke_points(stroke3DPoints); //Will remove all previous points but is okay for draw since it's the only points there are
+	viewer.data().set_stroke_points(stroke3DPoints); //Will remove all previous points but is okay for draw since it's the only points there are
 	if ((stroke3DPoints.bottomRows(1) - stroke3DPoints.row(0)).squaredNorm() < (stroke3DPoints.row(1)-stroke3DPoints.row(0)).squaredNorm()*8.0 && stroke3DPoints.rows() > 10) { //Show the closing line if the current point is close enough the first point (and we have already at least 10 samples)
-		viewervr.data.add_stroke_points(stroke3DPoints.row(0));
+		viewer.data().add_stroke_points(stroke3DPoints.row(0));
 	}
 	_time1 = std::chrono::high_resolution_clock::now();
 	return false;
@@ -137,7 +137,7 @@ bool Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
 	Eigen::Vector3d hit_pos, hit_pos_back;
 	vector<igl::Hit> hits;
 
-	Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+	Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
 	pos[0] += last_eye_origin[0];
 	pos[2] += last_eye_origin[2];
 
@@ -146,7 +146,7 @@ bool Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
 	}
 
 
-	if (igl::ray_mesh_intersect(pos, viewervr.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
+	if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 		hit_pos = V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v;
 
 		double cur_dist, min_dist = INFINITY;
@@ -174,7 +174,7 @@ bool Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
 		}
 
 		if (stroke3DPoints.rows() > 1) {
-			viewervr.data.add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0, 1, 0));
+			viewer.data().add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0, 1, 0));
 		}
 		result = true;
 	}
@@ -199,11 +199,11 @@ void Stroke::addSegmentCut(Eigen::Vector3f& pos) {
 	Eigen::Vector3d hit_pos, hit_pos_back;
 	vector<igl::Hit> hits;
 
-	Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+	Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
 	pos[0] += last_eye_origin[0];
 	pos[2] += last_eye_origin[2];
 
-	if (igl::ray_mesh_intersect(pos, viewervr.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
+	if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 		if (hits.size() < 2) { //User had hand inside or behind mesh while cutting
 			return;
 		}
@@ -224,9 +224,9 @@ void Stroke::addSegmentCut(Eigen::Vector3f& pos) {
 		}
 
 		has_points_on_mesh = true;
-		Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
+		Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
 		Eigen::Vector3f hit_pos_tmp = hit_pos.cast<float>();
-		Eigen::Vector3d hit_pos2D = igl::project(hit_pos_tmp, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport).cast<double>();
+		Eigen::Vector3d hit_pos2D = igl::project(hit_pos_tmp, modelview, viewer.core.get_proj(), viewer.core.viewport).cast<double>();
 
 		if (stroke2DPoints.rows() == 1 && !dir_before_cut.isZero() && stroke2DPoints.isZero()) {
 			stroke2DPoints.row(0) << hit_pos2D[0], hit_pos2D[1];
@@ -249,9 +249,9 @@ void Stroke::addSegmentCut(Eigen::Vector3f& pos) {
 			faces_hit.row(faces_hit.rows() - 1) << hits[0].id, hits[1].id;
 		}
 
-		viewervr.data.add_points(stroke3DPoints.row(stroke3DPoints.rows() - 1), Eigen::RowVector3d(1, 0, 1));
+		viewer.data().add_points(stroke3DPoints.row(stroke3DPoints.rows() - 1), Eigen::RowVector3d(1, 0, 1));
 		if (stroke3DPoints.rows() > 2) {
-			viewervr.data.add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(1, 0, 1));
+			viewer.data().add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(1, 0, 1));
 		}
 
 		just_came_from_mesh = true;
@@ -259,22 +259,22 @@ void Stroke::addSegmentCut(Eigen::Vector3f& pos) {
 	}
 	else if (stroke2DPoints.rows() > 1 && just_came_from_mesh) { //We need to add the final point of the stroke, even though it is off the mesh (needed in order to wrap around to the backside)
 		pos_after_cut = pos.cast<double>();
-		dir_after_cut = viewervr.get_right_touch_direction().cast<double>();
+		dir_after_cut = viewer.oculusVR.get_right_touch_direction().cast<double>();
 		just_came_from_mesh = false;
 	}
 	else if (stroke2DPoints.rows() == 1) { //Add the first point, which should be outside the mesh. Refresh the "first" point until we get to the last one before we enter the mesh
 		pos_before_cut = pos.cast<double>();
-		dir_before_cut = viewervr.get_right_touch_direction().cast<double>();
+		dir_before_cut = viewer.oculusVR.get_right_touch_direction().cast<double>();
 	}
 
 	if (!current_hit) {
-		hit_pos = (pos + 1000 * viewervr.get_right_touch_direction()).cast<double>();
+		hit_pos = (pos + 1000 * viewer.oculusVR.get_right_touch_direction()).cast<double>();
 	}
 
 	Eigen::MatrixX3d ray_points(2, 3);
 	ray_points.row(0) = pos.cast<double>();
 	ray_points.row(1) = hit_pos;
-	viewervr.data.set_laser_points(ray_points);
+	viewer.data().set_laser_points(ray_points);
 
 	_time1 = std::chrono::high_resolution_clock::now();
 	return;
@@ -295,11 +295,11 @@ void Stroke::addSegmentExtrusionBase(Eigen::Vector3f& pos) {
 	Eigen::Vector3d hit_pos;
 	vector<igl::Hit> hits;
 
-	Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+	Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
 	pos[0] += last_eye_origin[0];
 	pos[2] += last_eye_origin[2];
 
-	if (igl::ray_mesh_intersect(pos, viewervr.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
+	if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 		if (hits.size() < 2) { //User had hand inside or behind mesh while drawing extrusion base stroke
 			return;
 		}
@@ -315,9 +315,9 @@ void Stroke::addSegmentExtrusionBase(Eigen::Vector3f& pos) {
 		}
 
 		has_points_on_mesh = true;
-		Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
+		Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
 		Eigen::Vector3f hit_pos_tmp = hit_pos.cast<float>();
-		Eigen::Vector3d hit_pos2D = igl::project(hit_pos_tmp, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport).cast<double>();
+		Eigen::Vector3d hit_pos2D = igl::project(hit_pos_tmp, modelview, viewer.core.get_proj(), viewer.core.viewport).cast<double>();
 
 		if (stroke2DPoints.rows() == 1 && stroke2DPoints.isZero()) {
 			stroke2DPoints.row(0) << hit_pos2D[0], hit_pos2D[1];
@@ -345,7 +345,7 @@ void Stroke::addSegmentExtrusionBase(Eigen::Vector3f& pos) {
 	}
 
 	if (stroke3DPoints.rows() > 1) {
-		viewervr.data.add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0, 0, 1));
+		viewer.data().add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0, 0, 1));
 	}
 
 	_time1 = std::chrono::high_resolution_clock::now();
@@ -362,13 +362,13 @@ void Stroke::addSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 	}
 
 	Eigen::RowVector3d pt2D;
-	Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
+	Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
 
-	Eigen::Vector3f last_eye_origin = viewervr.get_last_eye_origin();
+	Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
 	pos[0] += last_eye_origin[0];
 	pos[2] += last_eye_origin[2];
 	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
-	igl::project(pos_in, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport, pt2D);
+	igl::project(pos_in, modelview, viewer.core.get_proj(), viewer.core.viewport, pt2D);
 
 
 	if (!stroke2DPoints.isZero() && pt2D[0] == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && pt2D[1] == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) {//Check that the point is new compared to last time
@@ -391,7 +391,7 @@ void Stroke::addSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 	}
 
 	if (stroke3DPoints.rows() > 1) {
-		viewervr.data.add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0.2, 0.6, 1));
+		viewer.data().add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0.2, 0.6, 1));
 	}
 
 	_time1 = std::chrono::high_resolution_clock::now();
@@ -400,9 +400,9 @@ void Stroke::addSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 /** Used for CUT. Adds the first point, which is the last point outside of the mesh before cut start. Doesn't get drawn. **/
 void Stroke::prepend_first_point() {
 	Eigen::Vector3d first_point = pos_before_cut + (stroke3DPoints.row(0).transpose() - pos_before_cut).dot(dir_before_cut.normalized()) * dir_before_cut.normalized(); //The closest point Pr along a line that starts from P1 and does in direction dir to point P2 is as follows: Pr = P1 + (P2 - P1).dot(dir) * dir with dir normalized
-	Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
+	Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
 	Eigen::Vector3f first_point_tmp = first_point.cast<float>();
-	Eigen::Vector3d hit_pos2D = igl::project(first_point_tmp, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport).cast<double>();
+	Eigen::Vector3d hit_pos2D = igl::project(first_point_tmp, modelview, viewer.core.get_proj(), viewer.core.viewport).cast<double>();
 
 	stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
 	Eigen::MatrixXd old = stroke2DPoints.block(0, 0, stroke2DPoints.rows() - 1, 2);
@@ -423,9 +423,9 @@ void Stroke::prepend_first_point() {
 /** Used for CUT. Adds the final point, which is the first point outside of the mesh. Doesn't get drawn. **/
 void Stroke::append_final_point() {
 	Eigen::Vector3d last_point = pos_after_cut + (stroke3DPoints.row(stroke3DPoints.rows() - 1).transpose() - pos_after_cut).dot(dir_after_cut.normalized()) * dir_after_cut.normalized(); //The closest point Pr along a line that starts from P1 and does in direction dir to point P2 is as follows: Pr = P1 + (P2 - P1).dot(dir) * dir with dir normalized
-	Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
+	Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
 	Eigen::Vector3f last_point_tmp = last_point.cast<float>();
-	Eigen::Vector3d hit_pos2D = igl::project(last_point_tmp, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport).cast<double>();
+	Eigen::Vector3d hit_pos2D = igl::project(last_point_tmp, modelview, viewer.core.get_proj(), viewer.core.viewport).cast<double>();
 
 	stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
 	stroke2DPoints.row(stroke2DPoints.rows() - 1) << hit_pos2D[0], hit_pos2D[1];
@@ -498,9 +498,9 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	new_3DPoints.bottomRows(resampled_3DPoints.rows()) = resampled_3DPoints;
 	set3DPoints(new_3DPoints);
 
-	Eigen::Matrix4f modelview = viewervr.get_start_action_view() * viewervr.corevr.get_model();
+	Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
 	Eigen::MatrixX3d projected_points;
-	igl::project(stroke3DPoints, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport, projected_points);
+	igl::project(stroke3DPoints, modelview, viewer.core.get_proj(), viewer.core.viewport, projected_points);
 	dep = projected_points.col(2).topRows(projected_points.rows()-1);
 
 	stroke2DPoints = projected_points.topRows(projected_points.rows()-1);
@@ -589,7 +589,7 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	V2_with_dep.leftCols(2) = V2.leftCols(2);
 	V2_with_dep.col(2) = dep_tmp;
 
-	igl::unproject(V2_with_dep, modelview, viewervr.corevr.get_proj(), viewervr.corevr.viewport, V2_unproj);
+	igl::unproject(V2_with_dep, modelview, viewer.core.get_proj(), viewer.core.viewport, V2_unproj);
 	V2.leftCols(2) = V2_unproj.leftCols(2);
 	V2.block(0, 2, stroke2DPoints.rows(), 1) = V2_unproj.block(0, 2, stroke2DPoints.rows(), 1); //Use actual z-value of drawn stroke 
 
