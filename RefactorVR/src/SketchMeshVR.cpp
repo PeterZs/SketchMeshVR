@@ -234,7 +234,8 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 	if (tool_mode != DRAW && tool_mode != PULL) {
 		Eigen::MatrixX3d LP(2, 3);
 		LP.row(0) = pos_tmp.cast<double>();
-		LP.row(1) = (pos + 1000 * viewer.oculusVR.get_right_touch_direction()).cast<double>();
+		LP.row(1) = (pos_tmp + 1000 * viewer.oculusVR.get_right_touch_direction()).cast<double>();
+		cout << "LP: " << LP.row(0) << endl;
 		viewer.data().set_laser_points(LP);
 		viewer.data().set_hand_point(pos_tmp.cast<double>().transpose(), Eigen::RowVector3d(0.5f, 0.5f, 0.5f));
 	}
