@@ -12,6 +12,9 @@
 #include <igl/ray_mesh_intersect.h>
 #include <iostream>
 #include <igl/opengl/glfw/Viewer.h>
+#include <igl/boundary_loop.h>
+#include <igl/harmonic.h>
+#include <igl/map_vertices_to_circle.h>
 #include <SketchMeshVR.h>
 #include <Stroke.h>
 #include "SurfaceSmoothing.h"
@@ -490,7 +493,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				initial_stroke->update_Positions(V);
 
 				viewer.data().clear();
-				viewer.data().set_face_based(true);
+				//viewer.data().set_face_based(true);
 				viewer.data().set_mesh(V, F);
 
 				//Overlay the drawn stroke
@@ -751,7 +754,20 @@ int main(int argc, char *argv[]) {
 	else {
 		
 		viewer.data().set_mesh(V_floor, F_floor);
-	//	viewer.append_mesh();
+		Eigen::MatrixXd V_uv(V_floor.rows(), 2);
+		V_uv.col(0) = V_floor.col(0);
+		V_uv.col(1) = V_floor.col(2);
+		V_uv.col(0) = V_uv.col(0).array() - V_uv.col(0).minCoeff();
+		V_uv.col(0) = V_uv.col(0).array() / V_uv.col(0).maxCoeff();
+		V_uv.col(1) = V_uv.col(1).array() - V_uv.col(1).minCoeff();
+		V_uv.col(1) = V_uv.col(1).array() / V_uv.col(1).maxCoeff();
+		V_uv = V_uv.array() * 40;
+
+		viewer.data().set_uv(V_uv); 
+		viewer.data().show_texture = false; //TODO: texture turned off for now. Due to problems with anti-aliasing
+		viewer.append_mesh();
+		viewer.data().set_mesh(V, F);
+		//viewer.load_mesh_from_file("../data/cube.off");
 	}
 
 	CurveDeformation::smooth_deform_mode = true;

@@ -114,7 +114,7 @@ bool Stroke::addSegment(Eigen::Vector3f& pos) {
 	}
 	closest_vert_bindings.push_back(stroke3DPoints.rows() - 1); //In the case of DRAW this will match the vertex indices, since we start from 0
 	viewer.data().set_stroke_points(stroke3DPoints); //Will remove all previous points but is okay for draw since it's the only points there are
-	if ((stroke3DPoints.bottomRows(1) - stroke3DPoints.row(0)).squaredNorm() < (stroke3DPoints.row(1)-stroke3DPoints.row(0)).squaredNorm()*8.0 && stroke3DPoints.rows() > 10) { //Show the closing line if the current point is close enough the first point (and we have already at least 10 samples)
+	if (stroke3DPoints.rows() > 10 && (stroke3DPoints.bottomRows(1) - stroke3DPoints.row(0)).squaredNorm() < (stroke3DPoints.row(1)-stroke3DPoints.row(0)).squaredNorm()*8.0) { //Show the closing line if the current point is close enough the first point (and we have already at least 10 samples)
 		viewer.data().add_stroke_points(stroke3DPoints.row(0));
 	}
 	_time1 = std::chrono::high_resolution_clock::now();
@@ -504,7 +504,7 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	dep = projected_points.col(2).topRows(projected_points.rows()-1);
 
 	stroke2DPoints = projected_points.topRows(projected_points.rows()-1);
-	Eigen::MatrixXd original_stroke2DPoints = stroke2DPoints;
+	Eigen::MatrixXd original_stroke2DPoints = stroke2DPoints.leftCols(2);
 	stroke2DPoints = resample_stroke2D(original_stroke2DPoints); //Enabling this might give a discrepancy between what is drawn and the result you get but does give smoother meshes
 
 	counter_clockwise();  //Ensure the stroke is counter-clockwise, handy later
