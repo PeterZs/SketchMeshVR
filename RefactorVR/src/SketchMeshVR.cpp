@@ -235,7 +235,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		Eigen::MatrixX3d LP(2, 3);
 		LP.row(0) = pos_tmp.cast<double>();
 		LP.row(1) = (pos_tmp + 1000 * viewer.oculusVR.get_right_touch_direction()).cast<double>();
-		cout << "LP: " << LP.row(0) << endl;
+
 		viewer.data().set_laser_points(LP);
 		viewer.data().set_hand_point(pos_tmp.cast<double>().transpose(), Eigen::RowVector3d(0.5f, 0.5f, 0.5f));
 	}
@@ -494,7 +494,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				initial_stroke->update_Positions(V);
 
 				viewer.data().clear();
-				//viewer.data().set_face_based(true);
 				viewer.data().set_mesh(V, F);
 
 				//Overlay the drawn stroke
@@ -502,7 +501,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				Eigen::MatrixXd strokePoints = V.block(0, 0, strokeSize, 3);
 				viewer.data().set_points(strokePoints, Eigen::RowVector3d(1, 0, 0)); //Displays dots
 				viewer.data().set_stroke_points(igl::cat(1, strokePoints, (Eigen::MatrixXd) V.row(0)));
-
 
 			}
 		}
