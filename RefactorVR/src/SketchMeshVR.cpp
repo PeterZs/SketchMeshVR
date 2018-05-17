@@ -198,6 +198,9 @@ ToolMode get_chosen_mode(OculusVR::ButtonCombo pressed) {
 	else if (pressed == OculusVR::ButtonCombo::NONE) {
 		return NONE;
 	}
+	else if (pressed == OculusVR::ButtonCombo::THUMB_MOVE) {
+		return NAVIGATE;
+	}
 	else {
 		return DEFAULT;
 	}
@@ -224,6 +227,10 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			return;
 		}
 	}
+	else if (pressed_type == NAVIGATE) {
+		prev_tool_mode = NAVIGATE;
+		return;
+	}
 
 	tool_mode = pressed_type;
 
@@ -231,6 +238,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 	Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
 	pos_tmp[0] += last_eye_origin[0];
 	pos_tmp[2] += last_eye_origin[2];
+	viewer.selected_data_index = 0; //Draw hand and laser as part of the static floor mesh
 	if (tool_mode != DRAW && tool_mode != PULL) {
 		Eigen::MatrixX3d LP(2, 3);
 		LP.row(0) = pos_tmp.cast<double>();
@@ -243,6 +251,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		viewer.data().set_laser_points(Eigen::MatrixXd(0, 0));
 		viewer.data().set_hand_point(pos_tmp.cast<double>().transpose(), Eigen::RowVector3d(0.5f, 0.5f, 0.5f));
 	}
+	viewer.selected_data_index = 1; //Switch back to mesh
 
 	if (tool_mode == DRAW) { //Creating the first curve/mesh
 		if (draw_should_block) { //User has been too close to first sample point (closing the stroke too much), so we're in blocked state till the buttons are released again
@@ -709,6 +718,15 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			viewer.data().set_mesh(V, F);
 			draw_all_strokes();
 		}
+		else if (prev_tool_mode == NAVIGATE) {
+			cout << "get here" << endl;
+			V = viewer.data().V;
+			initial_stroke->update_Positions(V);
+			for (int i = 0; i < stroke_collection.size(); i++) {
+				stroke_collection[i].update_Positions(V);
+			}
+			draw_all_strokes();
+		}
 
 
 		prev_tool_mode = NONE;
@@ -718,7 +736,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 	return;
 }
-
 
 bool callback_load_mesh(Viewer& viewer, string filename, Eigen::MatrixXd& V_floor, Eigen::MatrixXi& F_floor) {
 		igl::readOFF(filename, V, F);
@@ -764,10 +781,9 @@ int main(int argc, char *argv[]) {
 
 		viewer.data().set_uv(V_uv); 
 		viewer.data().show_texture = false; //TODO: texture turned off for now. Due to problems with anti-aliasing
-		viewer.append_mesh();
-		viewer.data().set_mesh(V, F);
-		//viewer.load_mesh_from_file("../data/cube.off");
 	}
+	viewer.append_mesh();
+	viewer.data().set_mesh(V, F);
 
 	CurveDeformation::smooth_deform_mode = true;
 	viewer.init_oculus();
