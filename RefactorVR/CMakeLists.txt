@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.6)
+	cmake_minimum_required(VERSION 3.6)
 project(RefactorVR)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -29,7 +29,7 @@ find_package(LIBIGL REQUIRED QUIET)
 
 
 # Prepare the build environment
-include_directories(${LIBIGL_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/../OculusSDK/LibOVR/Include ${PROJECT_SOURCE_DIR}/../OculusSDK/LibOVR/Src ${PROJECT_SOURCE_DIR}/src)
+include_directories(${LIBIGL_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/../OculusSDK/LibOVR/Include ${PROJECT_SOURCE_DIR}/../OculusSDK/LibOVR/Src ${PROJECT_SOURCE_DIR}/../OVRAvatarSDK/Include ${PROJECT_SOURCE_DIR}/../OVRPlatformSDK/Include ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/../libiglVR/external/triangle)
 #add_definitions(${LIBIGL_DEFINITIONS})
 
 # Add your project files
@@ -39,4 +39,6 @@ set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT $
 target_link_libraries(${PROJECT_NAME}_bin ${LIBIGL_LIBRARIES} ${LIBIGL_EXTRA_LIBRARIES} Winmm.lib ws2_32.lib)
 target_link_libraries(${PROJECT_NAME}_bin debug ${PROJECT_SOURCE_DIR}/../OculusSDK/LibOVR/Lib/Windows/x64/Debug/VS2015/LibOVR.lib)
 target_link_libraries(${PROJECT_NAME}_bin optimized ${PROJECT_SOURCE_DIR}/../OculusSDK/LibOVR/Lib/Windows/x64/Release/VS2015/LibOVR.lib)
-target_link_libraries(${PROJECT_NAME}_bin igl::core igl::opengl_glfw)
+target_link_libraries(${PROJECT_NAME}_bin ${PROJECT_SOURCE_DIR}/../OVRAvatarSDK/Windows/libovravatar.lib)
+target_link_libraries(${PROJECT_NAME}_bin ${PROJECT_SOURCE_DIR}/../OVRPlatformSDK/Windows/libOVRPlatform64_1.lib)
+target_link_libraries(${PROJECT_NAME}_bin igl::core igl::opengl_glfw igl::triangle)

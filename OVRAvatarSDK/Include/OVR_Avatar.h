@@ -569,6 +569,12 @@ typedef enum ovrAvatarRenderPartType_ {
 	ovrAvatarRenderPartType_Count                         ///< Total number of render part types
 } ovrAvatarRenderPartType;
 
+/// Get the materials for the body 
+/// \param Avatar to get values from
+OVRN_EXPORT(const ovrAvatarPBSMaterialState*) ovrAvatar_GetBodyPBSMaterialStates(
+	const ovrAvatarRenderPart* renderPart,
+	uint32_t* count);
+
 /// Get the type of a render part.
 /// \param renderPart an opaque pointer to the render part
 /// \return type of the render part
@@ -825,6 +831,9 @@ OVRN_EXPORT(const ovrAvatarMeshAssetDataV2*) ovrAvatarAsset_GetCombinedMeshData(
 OVRN_EXPORT(const ovrAvatarAssetID*) ovrAvatarAsset_GetCombinedMeshIDs(
 	const ovrAvatarAsset* asset,
 	uint32_t* count);
+
+OVRN_EXPORT(const ovrAvatar*) ovrAvatarAsset_GetAvatar(
+	const ovrAvatarAsset* asset);
 
 /// Get texture asset data.
 /// \param asset opaque pointer to asset
