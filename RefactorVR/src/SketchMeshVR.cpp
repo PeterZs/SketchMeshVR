@@ -21,14 +21,15 @@
 #include "MeshCut.h"
 #include "CurveDeformation.h"
 #include "MeshExtrusion.h"
-#include <igl/opengl/OculusVR.h>
+#include <igl/opengl/oculusVR.h>
 
 
 using namespace std;
 using Viewer = igl::opengl::glfw::Viewer;
 using OculusVR = igl::opengl::OculusVR;
 
-Viewer viewer; 
+OculusVR tmp;
+Viewer viewer(tmp); 
 
 // Vertex array, #V x3
 Eigen::MatrixXd V(0,3);
