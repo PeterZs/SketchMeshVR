@@ -65,7 +65,6 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 
 	Eigen::MatrixXd V2;
 	Eigen::MatrixXi F2, vertex_markers, edge_markers;
-	cout << mean_squared_sample_dist << endl;
 	//The 2D points are multiplied by a factor 1000 because otherwise triangulate runs out of precision. Multiply max. allowed triangle area with a factor because we need to accomodate for largest edge triangles in order to prevent the new surface from becoming concave during smoothing, and the average distance gets pulled down a lot because of edge-crossing sample parts.
 	igl::triangle::triangulate(boundary_vertices_2D.leftCols(2), stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(boundary_vertices_2D.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq25a" + to_string(6*mean_squared_sample_dist), V2, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
 	V2 /= 1000.0;
@@ -164,10 +163,14 @@ void MeshCut::project_points_to_2D(Eigen::VectorXi& boundary_vertices, Mesh& m, 
 //Updates the stroke's 3DPoints and closest_vert_bindings with the new vertices
 void MeshCut::post_cut_update_points(Stroke& stroke, SurfacePath& surface_path) {
 	vector<PathElement> path = surface_path.get_path();
-	Eigen::MatrixX3d new_3DPoints(path.size() + 1, 3); //Increase size by 1 because we want it to become a loop again
-	vector<int> new_closest_vertex_indices(path.size() + 1);
+	int nr_to_remove = 0;
+	if (path[0].get_vertex() == path[path.size() - 1].get_vertex()) {
+		nr_to_remove = 1;
+	}
 
-	for(int i = 0; i < path.size(); i++) {
+	Eigen::MatrixX3d new_3DPoints(path.size() + 1 - nr_to_remove, 3); //Increase size by 1 (if it's not a loop) because we want it to become a loop again
+	vector<int> new_closest_vertex_indices(path.size() + 1 - nr_to_remove);
+	for(int i = 0; i < path.size()-nr_to_remove; i++) {
 		new_3DPoints.row(i) = path[i].get_vertex().transpose();
 		new_closest_vertex_indices[i] = path[i].get_v_idx();
 	}

@@ -114,7 +114,7 @@ bool Stroke::addSegment(Eigen::Vector3f& pos) {
 	}
 	closest_vert_bindings.push_back(stroke3DPoints.rows() - 1); //In the case of DRAW this will match the vertex indices, since we start from 0
 	viewervr.data.set_stroke_points(stroke3DPoints); //Will remove all previous points but is okay for draw since it's the only points there are
-	if ((stroke3DPoints.bottomRows(1) - stroke3DPoints.row(0)).squaredNorm() < (stroke3DPoints.row(1)-stroke3DPoints.row(0)).squaredNorm()*8.0 && stroke3DPoints.rows() > 10) { //Show the closing line if the current point is close enough the first point (and we have already at least 10 samples)
+	if (stroke3DPoints.rows() > 10 && (stroke3DPoints.bottomRows(1) - stroke3DPoints.row(0)).squaredNorm() < (stroke3DPoints.row(1)-stroke3DPoints.row(0)).squaredNorm()*8.0) { //Show the closing line if the current point is close enough the first point (and we have already at least 10 samples)
 		viewervr.data.add_stroke_points(stroke3DPoints.row(0));
 	}
 	_time1 = std::chrono::high_resolution_clock::now();
@@ -637,12 +637,12 @@ Eigen::MatrixXd Stroke::resample_stroke2D(Eigen::MatrixXd & original_stroke2DPoi
 
 void Stroke::move_to_middle(Eigen::MatrixXd &positions, Eigen::MatrixXd &new_positions) {
 	int n = positions.rows();
-	Eigen::Vector2d prev, cur, next;
+	Eigen::RowVector2d prev, cur, next;
 
 	for (int i = 0; i < n; i++) {
-		prev = positions.row(((i - 1) + n) % n);
-		cur = positions.row(i % n);
-		next = positions.row(((i + 1) + n) % n);
+		prev = positions.row(((i - 1) + n) % n).leftCols(2);
+		cur = positions.row(i % n).leftCols(2);
+		next = positions.row(((i + 1) + n) % n).leftCols(2);
 
 		new_positions(i, 0) = (cur[0] * 2 + prev[0] + next[0]) / 4;
 		new_positions(i, 1) = (cur[1] * 2 + prev[1] + next[1]) / 4;

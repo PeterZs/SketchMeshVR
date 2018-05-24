@@ -488,7 +488,7 @@ void button_down(ViewerVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				initial_stroke->update_Positions(V);
 
 				viewervr.data.clear_all();
-				viewervr.data.set_face_based(true);
+				viewervr.data.set_face_based(false);
 				viewervr.data.set_mesh_with_floor(V, F);
 
 				//Overlay the drawn stroke

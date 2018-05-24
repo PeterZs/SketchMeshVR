@@ -720,7 +720,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			draw_all_strokes();
 		}
 		else if (prev_tool_mode == NAVIGATE) {
-			cout << "get here" << endl;
 			V = viewer.data().V;
 			initial_stroke->update_Positions(V);
 			for (int i = 0; i < stroke_collection.size(); i++) {

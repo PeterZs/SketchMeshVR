@@ -595,7 +595,6 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 
 	mesh_V = V2;
 	mesh_F = F2;
-
 	return backside_vertex_map;
 }
 
