@@ -757,6 +757,11 @@ int main(int argc, char *argv[]) {
 	V_floor.row(1) << 100, 0, -100;
 	V_floor.row(2) << 100, 0, 100;
 	V_floor.row(3) << -100, 0, 100;
+	
+	/*V_floor.row(0) << -100, -100, -100;
+	V_floor.row(1) << 100, -100, -100;
+	V_floor.row(2) << 100, -100, 100;
+	V_floor.row(3) << -100, -100, 100;*/
 
 	Eigen::MatrixXi F_floor(2, 3);
 	F_floor.row(0) << 0, 3, 1;
