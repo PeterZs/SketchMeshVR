@@ -711,6 +711,11 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			viewer.update_screen_while_computing = false;
 		}
 		else if (prev_tool_mode == SMOOTH) {
+			if (V.rows() == 0) {
+				prev_tool_mode = NONE;
+				viewer.update_screen_while_computing = false;
+				return;
+			}
 			SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 			for (int i = 0; i < stroke_collection.size(); i++) {
 				stroke_collection[i].update_Positions(V);
