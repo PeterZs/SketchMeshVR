@@ -86,9 +86,9 @@ bool Stroke::addSegment(Eigen::Vector3f& pos) {
 			return false;
 		}
 		else { //If enough time has passed, check if controller moved a large enough distance
-			Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
-			pos[0] += last_eye_origin[0];
-			pos[2] += last_eye_origin[2];
+		//	Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
+		//	pos[0] += last_eye_origin[0];
+		//	pos[2] += last_eye_origin[2];
 			if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < 0.00005625) {
 				return false;
 			}
@@ -100,9 +100,9 @@ bool Stroke::addSegment(Eigen::Vector3f& pos) {
 		}
 	}
 	else {
-		Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
-		pos[0] += last_eye_origin[0];
-		pos[2] += last_eye_origin[2];
+	//	Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
+	//	pos[0] += last_eye_origin[0];
+	//	pos[2] += last_eye_origin[2];
 	}
 
 	if (stroke3DPoints.rows() == 1 && stroke3DPoints.isZero()) {
@@ -137,9 +137,9 @@ bool Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
 	Eigen::Vector3d hit_pos, hit_pos_back;
 	vector<igl::Hit> hits;
 
-	Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
-	pos[0] += last_eye_origin[0];
-	pos[2] += last_eye_origin[2];
+//	Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
+//	pos[0] += last_eye_origin[0];
+//	pos[2] += last_eye_origin[2];
 
 	if (!stroke3DPoints.isZero() && pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
 		return true;
@@ -199,9 +199,9 @@ void Stroke::addSegmentCut(Eigen::Vector3f& pos) {
 	Eigen::Vector3d hit_pos, hit_pos_back;
 	vector<igl::Hit> hits;
 
-	Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
-	pos[0] += last_eye_origin[0];
-	pos[2] += last_eye_origin[2];
+	//Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
+//	pos[0] += last_eye_origin[0];
+//	pos[2] += last_eye_origin[2];
 
 	if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 		if (hits.size() < 2) { //User had hand inside or behind mesh while cutting
@@ -295,9 +295,9 @@ void Stroke::addSegmentExtrusionBase(Eigen::Vector3f& pos) {
 	Eigen::Vector3d hit_pos;
 	vector<igl::Hit> hits;
 
-	Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
-	pos[0] += last_eye_origin[0];
-	pos[2] += last_eye_origin[2];
+//	Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
+//	pos[0] += last_eye_origin[0];
+//	pos[2] += last_eye_origin[2];
 
 	if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 		if (hits.size() < 2) { //User had hand inside or behind mesh while drawing extrusion base stroke
@@ -364,9 +364,9 @@ void Stroke::addSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 	Eigen::RowVector3d pt2D;
 	Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
 
-	Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
-	pos[0] += last_eye_origin[0];
-	pos[2] += last_eye_origin[2];
+	//Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
+	//pos[0] += last_eye_origin[0];
+	//pos[2] += last_eye_origin[2];
 	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
 	igl::project(pos_in, modelview, viewer.core.get_proj(), viewer.core.viewport, pt2D);
 
