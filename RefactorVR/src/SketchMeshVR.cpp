@@ -12,6 +12,9 @@
 #include <igl/ray_mesh_intersect.h>
 #include <iostream>
 #include <igl/opengl/glfw/Viewer.h>
+
+#include <igl/opengl/glfw/imgui/ImGuiMenu.h>
+#include <igl/opengl/glfw/imgui/ImGuiHelpers.h>
 #include <igl/boundary_loop.h>
 #include <igl/harmonic.h>
 #include <igl/map_vertices_to_circle.h>
@@ -799,6 +802,8 @@ int main(int argc, char *argv[]) {
 	}
 	viewer.append_mesh();
 	viewer.data().set_mesh(V, F);
+	igl::opengl::glfw::imgui::ImGuiMenu menu;
+	viewer.plugins.push_back(&menu);
 
 	CurveDeformation::smooth_deform_mode = true;
 	viewer.init_oculus();
