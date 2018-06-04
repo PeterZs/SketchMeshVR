@@ -1,5 +1,7 @@
-#version 450
-out vec4 fragcolor;   
+#version 330
+#extension GL_ARB_explicit_uniform_location : enable
+
+layout(location = 0) out vec4 fragcolor;   
 
 layout(location = 1) uniform sampler2D tex;
 layout(location = 2) uniform vec4 color = vec4(1.0);

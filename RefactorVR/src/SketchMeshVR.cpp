@@ -279,7 +279,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				cut_stroke_already_drawn = false;
 				extrusion_base_already_drawn = false;
 				viewer.data().clear();
-				viewer.oculusVR.request_recenter();
+			//	viewer.oculusVR.request_recenter(); //TODO: this recenter is turned off because it will make the 3D GUI menu "jump around". Reconsider if/how we need this
 				has_recentered = true;
 			}
 		}
