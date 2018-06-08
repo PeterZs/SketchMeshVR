@@ -800,7 +800,7 @@ static void _renderProjector(const ovrAvatarRenderPart_ProjectorRender* projecto
 
 	// Apply the vertex state
 	_setMeshState(_skinnedMeshProgram, mesh->localTransform, data, mesh->skinnedPose, meshWorld, view, proj, viewPos);
-	_
+	
 	// Apply the material state
 	_setMaterialState(_skinnedMeshProgram, &projector->materialState, &projectionInv);
 
