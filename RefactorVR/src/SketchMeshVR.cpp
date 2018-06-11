@@ -33,6 +33,7 @@ using OculusVR = igl::opengl::OculusVR;
 
 OculusVR tmp;
 Viewer viewer(tmp); 
+igl::opengl::glfw::imgui::ImGuiMenu menu;
 
 // Vertex array, #V x3
 Eigen::MatrixXd V(0,3);
@@ -761,6 +762,14 @@ bool callback_load_mesh(Viewer& viewer, string filename, Eigen::MatrixXd& V_floo
 	return true;
 }
 
+void menu_opened() {
+	menu.set_active();
+}
+
+void menu_closed() {
+	menu.set_inactive();
+}
+
 int main(int argc, char *argv[]) {
 	//Init stroke selector
 	initial_stroke = new Stroke(V, F, viewer, 0);
@@ -802,13 +811,16 @@ int main(int argc, char *argv[]) {
 	}
 	viewer.append_mesh();
 	viewer.data().set_mesh(V, F);
-	igl::opengl::glfw::imgui::ImGuiMenu menu;
+	//igl::opengl::glfw::imgui::ImGuiMenu menu;
 	viewer.plugins.push_back(&menu);
 
 	CurveDeformation::smooth_deform_mode = true;
 	viewer.init_oculus();
 	viewer.oculusVR.callback_button_down = button_down;
+	viewer.oculusVR.callback_menu_opened = menu_opened;
+	viewer.oculusVR.callback_menu_closed = menu_closed;
 	viewer.data().point_size = 15;
+	std::cout << " get here" << std::endl;
 	viewer.launch_oculus();
 }
 
