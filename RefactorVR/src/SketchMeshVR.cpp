@@ -65,7 +65,6 @@ int initial_smooth_iter = 30;
 //For selecting vertices
 int handleID = -1;
 
-
 //Variables for pulling a curve (and removing added control curves)
 int turnNr = 0;
 bool dirty_boundary = false;
@@ -159,8 +158,7 @@ ToolMode get_chosen_mode(OculusVR::ButtonCombo pressed) {
 		if (button_thumb_is_set) {
 			return REMOVE;
 		} else {
-		//	return ADD;
-			return SMOOTH;
+			return ADD;
 		}
 	}
 	else if (pressed == OculusVR::ButtonCombo::A) {
@@ -813,6 +811,49 @@ int main(int argc, char *argv[]) {
 	viewer.data().set_mesh(V, F);
 	//igl::opengl::glfw::imgui::ImGuiMenu menu;
 	viewer.plugins.push_back(&menu);
+
+	menu.callback_draw_viewer_window = [&]() {
+		const ImVec2 texsize = ImGui_ImplGlfwGL3_GetTextureSize();
+		//std::cout << "texsize" << texsize.x << "  " << texsize.y << std::endl;
+		//ImGui::SetNextWindowSize(texsize);
+		ImGuiStyle& style = ImGui::GetStyle();
+		style.WindowPadding = ImVec2(0, 0);
+		style.WindowRounding = 0.0f;
+		style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
+		style.ItemInnerSpacing = ImVec2(0, 0);
+
+		ImGui::SetNextWindowSize(ImVec2(512.0f, 512.0f), ImGuiSetCond_FirstUseEver);
+		ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiSetCond_FirstUseEver);
+
+		ImGui::Begin("Selection Menu", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar);
+		int frame_padding = 5;     // -1 = uses default padding
+		ImGuiIO& io = ImGui::GetIO();
+		ImGui::SetWindowFontScale(2.f);
+
+		float my_tex_w = (float)io.Fonts->TexWidth;
+		float my_tex_h = (float)io.Fonts->TexHeight;
+		ImGui::PushID(0);
+		if (ImGui::ImageButton(io.Fonts->TexID, ImVec2(128, 128), ImVec2(0, 0), ImVec2(128 / my_tex_w, 128 / my_tex_h), frame_padding, ImColor(0, 0, 0, 255))) {
+			std::cout << "pressed " << std::endl;
+			tool_mode = DRAW;
+		}
+		ImGui::PopID();
+		//ImGui::SameLine();
+		ImGui::PushID(1);
+		ImGui::SetCursorPos(ImVec2(379, 379));
+		if (ImGui::ImageButton(io.Fonts->TexID, ImVec2(128, 128), ImVec2(0, 0), ImVec2(128 / my_tex_w, 128 / my_tex_h), frame_padding, ImColor(0, 0, 0, 255))) {
+			std::cout << "pressed " << std::endl;
+			tool_mode = PULL;
+		}
+		ImGui::PopID();
+		/*	ImGui::PushID(2);
+		ImGui::SetCursorPos(ImVec2(300, 350));
+		if (ImGui::ImageButton(io.Fonts->TexID, ImVec2(32, 32), ImVec2(0, 0), ImVec2(32.0f / my_tex_w, 32 / my_tex_h), frame_padding, ImColor(0, 0, 0, 255))) {
+		std::cout << "pressed " << std::endl;
+		}
+		ImGui::PopID();*/
+		ImGui::End();
+	};
 
 	CurveDeformation::smooth_deform_mode = true;
 	viewer.init_oculus();
