@@ -6,6 +6,11 @@
 #include <curses.h>
 #endif
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "imgui/stb_image.h""
+//#include <GLFW/glfw3.h>
+//#include "igl/opengl/gl.h"
+
 #include <igl/readOFF.h>
 #include <igl/edge_topology.h>
 #include <igl/cat.h>
@@ -52,7 +57,8 @@ Eigen::VectorXi new_mapped_indices;
 //General
 enum ToolMode { DRAW, ADD, CUT, EXTRUDE, PULL, REMOVE, CHANGE, SMOOTH, NAVIGATE, TOGGLE, NONE, DEFAULT, FAIL }; //NONE is used to indicate that a button was released, whereas DEFAULT indicates that one of the toggle buttons was pressed within its cooldown period, FAIL is used to indicate that something went wrong (e.g. user clicked too far away for PULL)
 
-ToolMode tool_mode = NAVIGATE;
+ToolMode tool_mode = DRAW;
+ToolMode selected_tool_mode = DRAW;
 ToolMode prev_tool_mode = NONE;
 Stroke* initial_stroke;
 Stroke* added_stroke;
@@ -210,9 +216,9 @@ ToolMode get_chosen_mode(OculusVR::ButtonCombo pressed) {
 }
 
 void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
-	ToolMode pressed_type = get_chosen_mode(pressed);
+	//ToolMode pressed_type = get_chosen_mode(pressed);
 
-	if (pressed_type == DEFAULT) { //Default means that one of the toggle buttons was pressed again within the cooldown period. Do nothing
+	/*if (pressed_type == DEFAULT) { //Default means that one of the toggle buttons was pressed again within the cooldown period. Do nothing
 		return;
 	}
 	else if (pressed_type == TOGGLE) { //User was just switching between e.g. cut/extrude, don't do anything 
@@ -229,18 +235,22 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		if (stroke_collection.size() == 0) {
 			return;
 		}
+	}*/
+	if (pressed == OculusVR::ButtonCombo::TRIG) {
+		tool_mode = selected_tool_mode;
 	}
-	else if (pressed_type == NAVIGATE) {
+	if (pressed == OculusVR::ButtonCombo::THUMB_MOVE) {
 		prev_tool_mode = NAVIGATE;
 		return;
 	}
+	else if (pressed == OculusVR::ButtonCombo::NONE) {
+		tool_mode = NONE;
+	}
+	//else pressed == TRIG and we just use tool_mode as it was previously set in the GUI menu
 
-	tool_mode = pressed_type;
+	//tool_mode = pressed_type;
 
 	Eigen::Vector3f pos_tmp = pos;
-	//Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
-	//pos_tmp[0] += last_eye_origin[0];
-//	pos_tmp[2] += last_eye_origin[2];
 	viewer.selected_data_index = 0; //Draw hand and laser as part of the static floor mesh
 	if (tool_mode != DRAW && tool_mode != PULL) {
 		Eigen::MatrixX3d LP(2, 3);
@@ -249,15 +259,10 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 		viewer.data().set_laser_points(LP);		
 		viewer.data().set_hand_point(pos_tmp.cast<double>().transpose(), Eigen::RowVector3d(0.5f, 0.5f, 0.5f));
-
-
 	}
 	else {
 		viewer.data().set_laser_points(Eigen::MatrixXd());
 		viewer.data().set_hand_point(pos_tmp.cast<double>().transpose(), Eigen::RowVector3d(0.5f, 0.5f, 0.5f));
-	//	pos_tmp[0] += last_eye_origin[0];
-	//	pos_tmp[2] += last_eye_origin[2];
-	//	viewer.data().add_hand_point(pos_tmp.cast<double>().transpose(), Eigen::RowVector3d(0.2f, 0.5f, 0.2f));
 	}
 	viewer.selected_data_index = 1; //Switch back to mesh
 
@@ -309,9 +314,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			Eigen::Vector3f hit_pos;
 			vector<igl::Hit> hits;
 			Eigen::Vector3f pos_tmp = pos;
-		//	Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
-		//	pos_tmp[0] += last_eye_origin[0];
-		//	pos_tmp[2] += last_eye_origin[2];
 
 			if (igl::ray_mesh_intersect(pos_tmp, viewer.oculusVR.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 				hit_pos = (V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v).cast<float>();
@@ -375,9 +377,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 	}
 	else if (tool_mode == PULL) { //Dragging an existing curve
 		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) { //Also allow to go to pull after ADD because sometimes the buttons are hard to differentiate
-		//	Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
-		//	pos[0] += last_eye_origin[0];
-		//	pos[2] += last_eye_origin[2];
 			select_dragging_handle(pos);
 
 			if (handleID == -1) {//User clicked too far from any of the stroke vertices
@@ -393,9 +392,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			prev_tool_mode = PULL;
 		}
 		else if (prev_tool_mode == PULL) {
-		//	Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
-        //    pos[0] += last_eye_origin[0];
-        //    pos[2] += last_eye_origin[2];
 			if (turnNr == 0) { 
 				CurveDeformation::pullCurve(pos.transpose().cast<double>(), V, part_of_original_stroke);
 				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
@@ -809,8 +805,28 @@ int main(int argc, char *argv[]) {
 	}
 	viewer.append_mesh();
 	viewer.data().set_mesh(V, F);
-	//igl::opengl::glfw::imgui::ImGuiMenu menu;
 	viewer.plugins.push_back(&menu);
+
+	
+	CurveDeformation::smooth_deform_mode = true;
+	viewer.init_oculus();
+
+
+	GLuint img_texture = 0;
+	int img_width, img_height, nrChannels;
+	std::string filename = "C:\\Users\\Floor Verhoeven\\Desktop\\thesis\\RefactorVR\\data\\test.png";
+	unsigned char *img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
+	if (!img_data) {
+		std::cout << "Stop" << std::endl;
+	}
+
+	glGenTextures(1, &img_texture);
+	GLenum err = glGetError();
+	glBindTexture(GL_TEXTURE_2D, img_texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
+	void* im_texID = (void *)(intptr_t)img_texture;
 
 	menu.callback_draw_viewer_window = [&]() {
 		const ImVec2 texsize = ImGui_ImplGlfwGL3_GetTextureSize();
@@ -833,17 +849,17 @@ int main(int argc, char *argv[]) {
 		float my_tex_w = (float)io.Fonts->TexWidth;
 		float my_tex_h = (float)io.Fonts->TexHeight;
 		ImGui::PushID(0);
-		if (ImGui::ImageButton(io.Fonts->TexID, ImVec2(128, 128), ImVec2(0, 0), ImVec2(128 / my_tex_w, 128 / my_tex_h), frame_padding, ImColor(0, 0, 0, 255))) {
-			std::cout << "pressed " << std::endl;
-			tool_mode = DRAW;
+		if (ImGui::ImageButton(im_texID, ImVec2(256, 256), ImVec2(0, 0), ImVec2(1,1), frame_padding, ImColor(0, 0, 0, 255))) {
+			std::cout << "pressed draw " << std::endl;
+			selected_tool_mode = DRAW;
 		}
 		ImGui::PopID();
 		//ImGui::SameLine();
 		ImGui::PushID(1);
 		ImGui::SetCursorPos(ImVec2(379, 379));
-		if (ImGui::ImageButton(io.Fonts->TexID, ImVec2(128, 128), ImVec2(0, 0), ImVec2(128 / my_tex_w, 128 / my_tex_h), frame_padding, ImColor(0, 0, 0, 255))) {
-			std::cout << "pressed " << std::endl;
-			tool_mode = PULL;
+		if (ImGui::ImageButton(im_texID, ImVec2(128, 128), ImVec2(0, 0), ImVec2(1,1), frame_padding, ImColor(0, 0, 0, 255))) {
+			std::cout << "pressed pull" << std::endl;
+			selected_tool_mode = PULL;
 		}
 		ImGui::PopID();
 		/*	ImGui::PushID(2);
@@ -855,13 +871,11 @@ int main(int argc, char *argv[]) {
 		ImGui::End();
 	};
 
-	CurveDeformation::smooth_deform_mode = true;
-	viewer.init_oculus();
+
 	viewer.oculusVR.callback_button_down = button_down;
 	viewer.oculusVR.callback_menu_opened = menu_opened;
 	viewer.oculusVR.callback_menu_closed = menu_closed;
 	viewer.data().point_size = 15;
-	std::cout << " get here" << std::endl;
 	viewer.launch_oculus();
 }
 
