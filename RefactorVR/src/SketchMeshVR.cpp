@@ -7,7 +7,7 @@
 #endif
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "imgui/stb_image.h""
+#include "igl/opengl/glfw/imgui/stb_image.h""
 //#include <GLFW/glfw3.h>
 //#include "igl/opengl/gl.h"
 
@@ -283,7 +283,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				cut_stroke_already_drawn = false;
 				extrusion_base_already_drawn = false;
 				viewer.data().clear();
-			//	viewer.oculusVR.request_recenter(); //TODO: this recenter is turned off because it will make the 3D GUI menu "jump around". Reconsider if/how we need this
+				viewer.oculusVR.request_recenter();
 				has_recentered = true;
 			}
 		}
@@ -758,10 +758,12 @@ bool callback_load_mesh(Viewer& viewer, string filename, Eigen::MatrixXd& V_floo
 
 void menu_opened() {
 	menu.set_active();
+	viewer.oculusVR.menu_active = true;
 }
 
 void menu_closed() {
 	menu.set_inactive();
+	viewer.oculusVR.menu_active = false;
 }
 
 int main(int argc, char *argv[]) {
@@ -814,10 +816,10 @@ int main(int argc, char *argv[]) {
 
 	GLuint img_texture = 0;
 	int img_width, img_height, nrChannels;
-	std::string filename = "C:\\Users\\Floor Verhoeven\\Desktop\\thesis\\RefactorVR\\data\\test.png";
+	std::string filename = "C:\\Users\\Floor Verhoeven\\Desktop\\thesis\\RefactorVR\\data\\fish.png"; //TODO: change this to be user-independent
 	unsigned char *img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
 	if (!img_data) {
-		std::cout << "Stop" << std::endl;
+		std::cerr << "Could not load image." << std::endl;
 	}
 
 	glGenTextures(1, &img_texture);
@@ -837,8 +839,9 @@ int main(int argc, char *argv[]) {
 		style.WindowRounding = 0.0f;
 		style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
 		style.ItemInnerSpacing = ImVec2(0, 0);
+		style.Colors[ImGuiCol_WindowBg] = ImVec4(0.00f, 0.00f, 0.00f, 1.0f);
 
-		ImGui::SetNextWindowSize(ImVec2(512.0f, 512.0f), ImGuiSetCond_FirstUseEver);
+		ImGui::SetNextWindowSize(ImVec2(1024.0f, 700.0f), ImGuiSetCond_FirstUseEver);
 		ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiSetCond_FirstUseEver);
 
 		ImGui::Begin("Selection Menu", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar);
@@ -849,17 +852,54 @@ int main(int argc, char *argv[]) {
 		float my_tex_w = (float)io.Fonts->TexWidth;
 		float my_tex_h = (float)io.Fonts->TexHeight;
 		ImGui::PushID(0);
-		if (ImGui::ImageButton(im_texID, ImVec2(256, 256), ImVec2(0, 0), ImVec2(1,1), frame_padding, ImColor(0, 0, 0, 255))) {
+		
+		if (ImGui::ImageButton(im_texID, ImVec2(320, 320), ImVec2(0, 0), ImVec2(1,1), frame_padding, ImColor(0, 0, 0, 255))) {
 			std::cout << "pressed draw " << std::endl;
 			selected_tool_mode = DRAW;
+			menu_closed();
 		}
 		ImGui::PopID();
-		//ImGui::SameLine();
+		ImGui::SameLine();
 		ImGui::PushID(1);
-		ImGui::SetCursorPos(ImVec2(379, 379));
-		if (ImGui::ImageButton(im_texID, ImVec2(128, 128), ImVec2(0, 0), ImVec2(1,1), frame_padding, ImColor(0, 0, 0, 255))) {
+		//ImGui::SetCursorPos(ImVec2(0, 345));
+		if (ImGui::ImageButton(im_texID, ImVec2(320,320), ImVec2(0, 0), ImVec2(1,1), frame_padding, ImColor(0, 0, 0, 255))) {
 			std::cout << "pressed pull" << std::endl;
 			selected_tool_mode = PULL;
+			menu_closed();
+		}
+		ImGui::PopID();
+		ImGui::SameLine();
+		ImGui::PushID(2);
+		//ImGui::SetCursorPos(ImVec2(379, 379));
+		if (ImGui::ImageButton(im_texID, ImVec2(320,320), ImVec2(0, 0), ImVec2(1, 1), frame_padding, ImColor(0, 0, 0, 255))) {
+			std::cout << "pressed pull" << std::endl;
+			selected_tool_mode = PULL;
+			menu_closed();
+		}
+		ImGui::PopID();
+
+		/*ImGui::PushID(3);
+		if (ImGui::ImageButton(im_texID, ImVec2(340, 340), ImVec2(0, 0), ImVec2(1, 1), frame_padding, ImColor(0, 0, 0, 255))) {
+			std::cout << "pressed draw " << std::endl;
+			selected_tool_mode = DRAW;
+			menu_closed();
+		}
+		ImGui::PopID();
+		ImGui::SameLine();
+		ImGui::PushID(4);
+		//ImGui::SetCursorPos(ImVec2(0, 345));
+		if (ImGui::ImageButton(im_texID, ImVec2(340, 340), ImVec2(0, 0), ImVec2(1, 1), frame_padding, ImColor(0, 0, 0, 255))) {
+			std::cout << "pressed pull" << std::endl;
+			selected_tool_mode = PULL;
+			menu_closed();
+		}
+		ImGui::PopID();
+		ImGui::PushID(5);
+		//ImGui::SetCursorPos(ImVec2(379, 379));
+		if (ImGui::ImageButton(im_texID, ImVec2(340, 340), ImVec2(0, 0), ImVec2(1, 1), frame_padding, ImColor(0, 0, 0, 255))) {
+			std::cout << "pressed pull" << std::endl;
+			selected_tool_mode = PULL;
+			menu_closed();
 		}
 		ImGui::PopID();
 		/*	ImGui::PushID(2);
