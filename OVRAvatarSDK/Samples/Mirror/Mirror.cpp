@@ -1200,7 +1200,7 @@ int main(int argc, char** argv)
 	bool recording = false;
 	bool controllersVisible = false;
 	bool customBasePosition = false;
-	bool renderJoints = false;
+	bool renderJoints = true;
 	bool freezePose = false;
 	int capabilities = ovrAvatarCapability_All;
 	bool running = true;

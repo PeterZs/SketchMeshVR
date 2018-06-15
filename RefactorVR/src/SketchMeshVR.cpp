@@ -240,6 +240,12 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		tool_mode = selected_tool_mode;
 	}
 	if (pressed == OculusVR::ButtonCombo::THUMB_MOVE) {
+		V = viewer.data().V;
+		initial_stroke->update_Positions(V);
+		for (int i = 0; i < stroke_collection.size(); i++) {
+			stroke_collection[i].update_Positions(V);
+		}
+		draw_all_strokes();
 		prev_tool_mode = NAVIGATE;
 		return;
 	}
@@ -771,15 +777,15 @@ int main(int argc, char *argv[]) {
 	initial_stroke = new Stroke(V, F, viewer, 0);
 
 	Eigen::MatrixXd V_floor(4, 3);
-	V_floor.row(0) << -100, 0, -100;
+	/*V_floor.row(0) << -100, 0, -100;
 	V_floor.row(1) << 100, 0, -100;
 	V_floor.row(2) << 100, 0, 100;
-	V_floor.row(3) << -100, 0, 100;
-	
-	/*V_floor.row(0) << -100, -100, -100;
-	V_floor.row(1) << 100, -100, -100;
-	V_floor.row(2) << 100, -100, 100;
-	V_floor.row(3) << -100, -100, 100;*/
+	V_floor.row(3) << -100, 0, 100;*/
+
+	V_floor.row(0) << -10, 0, -10;
+	V_floor.row(1) << 10, 0, -10;
+	V_floor.row(2) << 10, 0, 10;
+	V_floor.row(3) << -10, 0, 10;
 
 	Eigen::MatrixXi F_floor(2, 3);
 	F_floor.row(0) << 0, 3, 1;
@@ -800,10 +806,34 @@ int main(int argc, char *argv[]) {
 		V_uv.col(0) = V_uv.col(0).array() / V_uv.col(0).maxCoeff();
 		V_uv.col(1) = V_uv.col(1).array() - V_uv.col(1).minCoeff();
 		V_uv.col(1) = V_uv.col(1).array() / V_uv.col(1).maxCoeff();
-		V_uv = V_uv.array() * 40;
+		V_uv = V_uv.array() *2;
+
+		Eigen::Matrix<unsigned char, Dynamic, Dynamic> texR, texG, texB;
+		std::string texture_file = "C:\\Users\\Floor Verhoeven\\Desktop\\thesis\\RefactorVR\\data\\free\\floor.png";
+		int width, height, n;
+		unsigned char *data = stbi_load(texture_file.c_str(), &width, &height, &n, 4);
+		if (data == NULL) {
+			return false;
+		}
+		texR.resize(height, width);
+		texG.resize(height, width);
+		texB.resize(height, width);
+
+		for (unsigned j = 0; j<height; ++j) {
+			for (unsigned i = 0; i<width; ++i) {
+				// used to flip with libPNG, but I'm not sure if
+				// simply j*width + i wouldn't be better
+				// stb_image uses horizontal scanline an starts top-left corner
+				texR(i, j) = data[4 * ((width - 1 - i) + width * (height - 1 - j))];
+				texG(i, j) = data[4 * ((width - 1 - i) + width * (height - 1 - j)) + 1];
+				texB(i, j) = data[4 * ((width - 1 - i) + width * (height - 1 - j)) + 2];
+			}
+		}
+		stbi_image_free(data);
 
 		viewer.data().set_uv(V_uv); 
-		viewer.data().show_texture = false; //TODO: texture turned off for now. Due to problems with anti-aliasing
+		viewer.data().show_texture = true; //TODO: texture turned off for now. Due to problems with anti-aliasing
+		viewer.data().set_texture(texR, texG, texB);
 	}
 	viewer.append_mesh();
 	viewer.data().set_mesh(V, F);
@@ -813,13 +843,16 @@ int main(int argc, char *argv[]) {
 	CurveDeformation::smooth_deform_mode = true;
 	viewer.init_oculus();
 
+	char cur_dir[256];
+	GetCurrentDirectoryA(256, cur_dir);
 
-	GLuint img_texture = 0;
+
+	GLuint img_texture = 0, img_texture1 = 0, img_texture2 = 0, img_texture3 = 0, img_texture4 = 0, img_texture5 = 0, img_texture6 = 0;
 	int img_width, img_height, nrChannels;
-	std::string filename = "C:\\Users\\Floor Verhoeven\\Desktop\\thesis\\RefactorVR\\data\\fish.png"; //TODO: change this to be user-independent
+	std::string filename = std::string(cur_dir) + "\\..\\data\\free\\draw.png"; //TODO: change this to be user-independent
 	unsigned char *img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
 	if (!img_data) {
-		std::cerr << "Could not load image." << std::endl;
+		std::cerr << "Could not load image 1." << std::endl;
 	}
 
 	glGenTextures(1, &img_texture);
@@ -828,7 +861,77 @@ int main(int argc, char *argv[]) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
-	void* im_texID = (void *)(intptr_t)img_texture;
+	void* im_texID_draw = (void *)(intptr_t)img_texture;
+
+	filename = std::string(cur_dir) + "\\..\\data\\free\\pull.png"; //TODO: change this to be user-independent
+	img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
+	if (!img_data) {
+		std::cerr << "Could not load image 2." << std::endl;
+	}
+
+	glGenTextures(1, &img_texture2);
+	glBindTexture(GL_TEXTURE_2D, img_texture2);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
+	void* im_texID_pull = (void *)(intptr_t)img_texture2;
+
+	filename = std::string(cur_dir) + "\\..\\data\\free\\plus.png"; //TODO: change this to be user-independent
+	img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
+	if (!img_data) {
+		std::cerr << "Could not load image 3." << std::endl;
+	}
+
+	glGenTextures(1, &img_texture3);
+	glBindTexture(GL_TEXTURE_2D, img_texture3);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
+	void* im_texID_add = (void *)(intptr_t)img_texture3;
+
+	filename = std::string(cur_dir) + "\\..\\data\\free\\scissor.png"; //TODO: change this to be user-independent
+	img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
+	if (!img_data) {
+		std::cerr << "Could not load image 4." << std::endl;
+	}
+
+	glGenTextures(1, &img_texture4);
+	glBindTexture(GL_TEXTURE_2D, img_texture4);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
+	void* im_texID_cut = (void *)(intptr_t)img_texture4;
+
+	filename = std::string(cur_dir) + "\\..\\data\\free\\bump.png"; //TODO: change this to be user-independent
+	img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
+	if (!img_data) {
+		std::cerr << "Could not load image 5." << std::endl;
+	}
+
+	glGenTextures(1, &img_texture5);
+	glBindTexture(GL_TEXTURE_2D, img_texture5);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
+	void* im_texID_extrude = (void *)(intptr_t)img_texture5;
+
+	filename = std::string(cur_dir) + "\\..\\data\\free\\minus.png"; //TODO: change this to be user-independent
+	std::cout << filename << std::endl;
+	img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
+	if (!img_data) {
+		std::cerr << "Could not load image 6." << std::endl;
+	}
+
+	glGenTextures(1, &img_texture6);
+	glBindTexture(GL_TEXTURE_2D, img_texture6);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
+	void* im_texID_remove = (void *)(intptr_t)img_texture6;
+
+
+
+
 
 	menu.callback_draw_viewer_window = [&]() {
 		const ImVec2 texsize = ImGui_ImplGlfwGL3_GetTextureSize();
@@ -849,12 +952,8 @@ int main(int argc, char *argv[]) {
 		ImGuiIO& io = ImGui::GetIO();
 		ImGui::SetWindowFontScale(2.f);
 
-		float my_tex_w = (float)io.Fonts->TexWidth;
-		float my_tex_h = (float)io.Fonts->TexHeight;
 		ImGui::PushID(0);
-		
-		if (ImGui::ImageButton(im_texID, ImVec2(320, 320), ImVec2(0, 0), ImVec2(1,1), frame_padding, ImColor(0, 0, 0, 255))) {
-			std::cout << "pressed draw " << std::endl;
+		if (ImGui::ImageButton(im_texID_draw, ImVec2(320, 320), ImVec2(0, 0), ImVec2(1,1), frame_padding, ImColor(0, 0, 0, 255))) {
 			selected_tool_mode = DRAW;
 			menu_closed();
 		}
@@ -862,8 +961,7 @@ int main(int argc, char *argv[]) {
 		ImGui::SameLine();
 		ImGui::PushID(1);
 		//ImGui::SetCursorPos(ImVec2(0, 345));
-		if (ImGui::ImageButton(im_texID, ImVec2(320,320), ImVec2(0, 0), ImVec2(1,1), frame_padding, ImColor(0, 0, 0, 255))) {
-			std::cout << "pressed pull" << std::endl;
+		if (ImGui::ImageButton(im_texID_pull, ImVec2(320,320), ImVec2(0, 0), ImVec2(1,1), frame_padding, ImColor(0, 0, 0, 255))) {
 			selected_tool_mode = PULL;
 			menu_closed();
 		}
@@ -871,43 +969,34 @@ int main(int argc, char *argv[]) {
 		ImGui::SameLine();
 		ImGui::PushID(2);
 		//ImGui::SetCursorPos(ImVec2(379, 379));
-		if (ImGui::ImageButton(im_texID, ImVec2(320,320), ImVec2(0, 0), ImVec2(1, 1), frame_padding, ImColor(0, 0, 0, 255))) {
-			std::cout << "pressed pull" << std::endl;
-			selected_tool_mode = PULL;
+		if (ImGui::ImageButton(im_texID_add, ImVec2(320,320), ImVec2(0, 0), ImVec2(1, 1), frame_padding, ImColor(0, 0, 0, 255))) {
+			selected_tool_mode = ADD;
 			menu_closed();
 		}
 		ImGui::PopID();
 
-		/*ImGui::PushID(3);
-		if (ImGui::ImageButton(im_texID, ImVec2(340, 340), ImVec2(0, 0), ImVec2(1, 1), frame_padding, ImColor(0, 0, 0, 255))) {
-			std::cout << "pressed draw " << std::endl;
-			selected_tool_mode = DRAW;
+		ImGui::PushID(3);
+		if (ImGui::ImageButton(im_texID_cut, ImVec2(320, 320), ImVec2(0, 0), ImVec2(1, 1), frame_padding, ImColor(0, 0, 0, 255))) {
+			selected_tool_mode = CUT;
 			menu_closed();
 		}
 		ImGui::PopID();
 		ImGui::SameLine();
 		ImGui::PushID(4);
 		//ImGui::SetCursorPos(ImVec2(0, 345));
-		if (ImGui::ImageButton(im_texID, ImVec2(340, 340), ImVec2(0, 0), ImVec2(1, 1), frame_padding, ImColor(0, 0, 0, 255))) {
-			std::cout << "pressed pull" << std::endl;
-			selected_tool_mode = PULL;
+		if (ImGui::ImageButton(im_texID_extrude, ImVec2(320, 320), ImVec2(0, 0), ImVec2(1, 1), frame_padding, ImColor(0, 0, 0, 255))) {
+			selected_tool_mode = EXTRUDE;
 			menu_closed();
 		}
 		ImGui::PopID();
+		ImGui::SameLine();
 		ImGui::PushID(5);
 		//ImGui::SetCursorPos(ImVec2(379, 379));
-		if (ImGui::ImageButton(im_texID, ImVec2(340, 340), ImVec2(0, 0), ImVec2(1, 1), frame_padding, ImColor(0, 0, 0, 255))) {
-			std::cout << "pressed pull" << std::endl;
-			selected_tool_mode = PULL;
+		if (ImGui::ImageButton(im_texID_remove, ImVec2(320, 320), ImVec2(0, 0), ImVec2(1, 1), frame_padding, ImColor(0, 0, 0, 255))) {
+			selected_tool_mode = REMOVE;
 			menu_closed();
 		}
 		ImGui::PopID();
-		/*	ImGui::PushID(2);
-		ImGui::SetCursorPos(ImVec2(300, 350));
-		if (ImGui::ImageButton(io.Fonts->TexID, ImVec2(32, 32), ImVec2(0, 0), ImVec2(32.0f / my_tex_w, 32 / my_tex_h), frame_padding, ImColor(0, 0, 0, 255))) {
-		std::cout << "pressed " << std::endl;
-		}
-		ImGui::PopID();*/
 		ImGui::End();
 	};
 
