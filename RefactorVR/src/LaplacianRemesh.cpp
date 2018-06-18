@@ -12,21 +12,21 @@ using namespace std;
 using namespace igl;
 
 bool LaplacianRemesh::is_front_loop = true; //Determines extrusion or cut
-bool LaplacianRemesh::remove_inside_faces = true;
+//bool LaplacianRemesh::remove_inside_faces = true;
 
 Eigen::MatrixXi LaplacianRemesh::EV, LaplacianRemesh::FE, LaplacianRemesh::EF;
 vector<vector<int>> LaplacianRemesh::VV;
 
 Eigen::VectorXi LaplacianRemesh::remesh_cut_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success) {
 	is_front_loop = false;
-	remove_inside_faces = true;
+	//remove_inside_faces = true;
 	adjacency_list(m.F, VV);
 	return remesh(m, surface_path, model, view, proj, viewport, remesh_success);
 }
 
 Eigen::VectorXi LaplacianRemesh::remesh_extrusion_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success) {
 	is_front_loop = true;
-	remove_inside_faces = true;
+	//remove_inside_faces = true;
 	adjacency_list(m.F, VV);
 	return remesh(m, surface_path, model, view, proj, viewport, remesh_success);
 }
@@ -104,7 +104,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		}
 	}
 
-	if(remove_inside_faces) {
+	//if(remove_inside_faces) {
 		for(int i = 0; i < m.V.rows(); i++) {
 			if(dirty_vertices[i] < 0) {
 				for(int j = 0; j < VF[i].size(); j++) {
@@ -114,7 +114,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 				}
 			}
 		}
-	}
+	//}
 
 	//Remove dirty faces
 	vector<int> clean_faces;

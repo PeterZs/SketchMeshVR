@@ -389,7 +389,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 			prev_tool_mode = NONE;
 			draw_should_block = false; 
-			//viewer.data().set_laser_points(Eigen::MatrixXd(), Eigen::MatrixXd()); //NOTE: LASER TURN BACK ON
 			Eigen::MatrixXd SP = igl::cat(1, (Eigen::MatrixXd) initial_stroke->get3DPoints(), (Eigen::MatrixXd) initial_stroke->get3DPoints().row(0));
 			viewer.data().set_stroke_points(SP);
 			if (initial_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
@@ -534,10 +533,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			}
 			else { //We're finished drawing the cut stroke, prepare for when user draws the final stroke to remove the part
 				cut_stroke_already_drawn = true;
-				viewer.selected_data_index = 2;
-				viewer.data().clear();
-				//viewer.data().set_laser_points(Eigen::MatrixXd(), Eigen::MatrixXd()); NOTE: LASER TURN THIS BACK ON
-				viewer.selected_data_index = 1;
 			}
 		}
 		else if (prev_tool_mode == EXTRUDE) {
