@@ -8,8 +8,6 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "igl/opengl/glfw/imgui/stb_image.h""
-//#include <GLFW/glfw3.h>
-//#include "igl/opengl/gl.h"
 
 #include <igl/readOFF.h>
 #include <igl/edge_topology.h>
@@ -145,97 +143,20 @@ void select_dragging_handle(Eigen::Vector3f& pos) {
 	}
 }
 
-ToolMode get_chosen_mode(OculusVR::ButtonCombo pressed) {
-	if (pressed == OculusVR::ButtonCombo::GRIPTRIG) {
-		if (button_B_is_set) {
-			return PULL;
-		} else {
-			return DRAW;
-		}
-	}
-	else if (pressed == OculusVR::ButtonCombo::GRIP) {
-		if (button_A_is_set) {
-			return EXTRUDE;
-		} else {
-			return CUT;
-		}
-	}
-	else if (pressed == OculusVR::ButtonCombo::TRIG) {
-		if (button_thumb_is_set) {
-			return REMOVE;
-		} else {
-			return ADD;
-		}
-	}
-	else if (pressed == OculusVR::ButtonCombo::A) {
-		_start_time = _end_time; //Set timer 1 to be the previous time of when we came here
-		_end_time = std::chrono::high_resolution_clock::now();
-		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_end_time - _start_time).count();
-		if (timePast > 100000000) {
-			button_A_is_set = !button_A_is_set;
-			extrusion_base_already_drawn = false;
-			return TOGGLE;
-		}
-		else {
-			return DEFAULT;
-		}
-	}
-	else if (pressed == OculusVR::ButtonCombo::B) {
-		_start_time = _end_time; //Set timer 1 to be the previous time of when we came here
-		_end_time = std::chrono::high_resolution_clock::now();
-		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_end_time - _start_time).count();
-		if (timePast > 100000000) {
-			button_B_is_set = !button_B_is_set;
-			return TOGGLE;
-		}
-		else {
-			return DEFAULT;
-		}
-	}
-	else if (pressed == OculusVR::ButtonCombo::THUMB) {
-		_start_time = _end_time; //Set timer 1 to be the previous time of when we came here
-		_end_time = std::chrono::high_resolution_clock::now();
-		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_end_time - _start_time).count();
-		if (timePast > 100000000) {
-			button_thumb_is_set = !button_thumb_is_set;
-			return TOGGLE;
-		}
-		else {
-			return DEFAULT;
-		}
-	}
-	else if (pressed == OculusVR::ButtonCombo::NONE) {
-		return NONE;
-	}
-	else if (pressed == OculusVR::ButtonCombo::THUMB_MOVE) {
-		return NAVIGATE;
-	}
-	else {
-		return DEFAULT;
-	}
-}
-
 void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
-	//ToolMode pressed_type = get_chosen_mode(pressed);
 
-	/*if (pressed_type == DEFAULT) { //Default means that one of the toggle buttons was pressed again within the cooldown period. Do nothing
-		return;
-	}
-	else if (pressed_type == TOGGLE) { //User was just switching between e.g. cut/extrude, don't do anything 
-		prev_tool_mode = TOGGLE; //Needed for handling multithreading in VR_Viewer
-		return;
-	}
-	else if (pressed_type == PULL || pressed_type == ADD || pressed_type == REMOVE || pressed_type == CUT || pressed_type == EXTRUDE) {
+	if (pressed == OculusVR::ButtonCombo::TRIG && (selected_tool_mode == ADD || selected_tool_mode == REMOVE || selected_tool_mode == CUT || selected_tool_mode == EXTRUDE)) {
 		if (initial_stroke->empty2D()) { //Don't go into these modes when there is no mesh yet
 			prev_tool_mode = FAIL;
 			return;
 		}
 	}
-	else if (pressed_type == REMOVE) {
+	else if (pressed == OculusVR::ButtonCombo::TRIG && pressed == REMOVE) {
 		if (stroke_collection.size() == 0) {
 			return;
 		}
-	}*/
+	}
+
 	if (pressed == OculusVR::ButtonCombo::TRIG) {
 		tool_mode = selected_tool_mode;
 	}
@@ -252,12 +173,9 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 	else if (pressed == OculusVR::ButtonCombo::NONE) {
 		tool_mode = NONE;
 	}
-	//else pressed == TRIG and we just use tool_mode as it was previously set in the GUI menu
-
-	//tool_mode = pressed_type;
 
 	Eigen::Vector3f pos_tmp = pos;
-	viewer.selected_data_index = 0; //Draw hand and laser as part of the static floor mesh
+	viewer.selected_data_index = 2; //Draw hand and laser as their own mesh
 	if (tool_mode != DRAW && tool_mode != PULL) {
 		Eigen::MatrixX3d LP(2, 3);
 		LP.row(0) = pos_tmp.cast<double>();
@@ -298,11 +216,11 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			draw_should_block = initial_stroke->addSegment(pos);
 			return;
 		}
-		else if (prev_tool_mode == CUT || prev_tool_mode == EXTRUDE || prev_tool_mode == ADD || prev_tool_mode == REMOVE) {
+		/*else if (prev_tool_mode == CUT || prev_tool_mode == EXTRUDE || prev_tool_mode == ADD || prev_tool_mode == REMOVE) {
 			// One of the modes was called while the user had only partially pressed the DRAW button combo. Stop drawing in Viewer and wait a round
 			prev_tool_mode = NONE;
 			viewer.update_screen_while_computing = false;
-		}
+		} */ //This should not be needed anymore
 	}
 	else if (tool_mode == ADD) {
 		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) { //Adding a new control curve onto an existing mesh
@@ -382,6 +300,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		}
 	}
 	else if (tool_mode == PULL) { //Dragging an existing curve
+//TODO: FAIL below here might not be needed anymore
 		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) { //Also allow to go to pull after ADD because sometimes the buttons are hard to differentiate
 			select_dragging_handle(pos);
 
@@ -389,12 +308,13 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				prev_tool_mode = FAIL;
 				return;
 			}
-			if (closest_stroke_ID == -1) {
+			/*if (closest_stroke_ID == -1) {
 				CurveDeformation::startPullCurve(*initial_stroke, handleID);
 			}
 			else {
 				CurveDeformation::startPullCurve(stroke_collection[closest_stroke_ID], handleID);
-			}
+			}*/
+			CurveDeformation::startPullCurve(closest_stroke_ID >= 0 ? stroke_collection[closest_stroke_ID] : *initial_stroke, handleID);
 			prev_tool_mode = PULL;
 		}
 		else if (prev_tool_mode == PULL) {
@@ -419,6 +339,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				}
 			}
 		}
+//TODO: below should not be needed anymore
 		else if (prev_tool_mode == CUT || prev_tool_mode == EXTRUDE || prev_tool_mode == ADD || prev_tool_mode == REMOVE) {
 			// One of the modes was called while the user had only partially pressed the PULL button combo. Stop drawing in Viewer and wait a round
 			prev_tool_mode = NONE;
@@ -837,6 +758,8 @@ int main(int argc, char *argv[]) {
 	}
 	viewer.append_mesh();
 	viewer.data().set_mesh(V, F);
+	viewer.append_mesh(); //For laser ray/point
+	viewer.selected_data_index = 1;
 	viewer.plugins.push_back(&menu);
 
 	
