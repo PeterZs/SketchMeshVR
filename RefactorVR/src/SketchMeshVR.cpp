@@ -53,7 +53,7 @@ Eigen::VectorXi sharp_edge;
 Eigen::VectorXi new_mapped_indices;
 
 //General
-enum ToolMode { DRAW, ADD, CUT, EXTRUDE, PULL, REMOVE, CHANGE, SMOOTH, NAVIGATE, TOGGLE, NONE, DEFAULT, FAIL }; //NONE is used to indicate that a button was released, whereas DEFAULT indicates that one of the toggle buttons was pressed within its cooldown period, FAIL is used to indicate that something went wrong (e.g. user clicked too far away for PULL)
+enum ToolMode { DRAW, ADD, CUT, EXTRUDE, PULL, REMOVE, CHANGE, SMOOTH, NAVIGATE, NONE, DEFAULT, FAIL }; //NONE is used to indicate that a button was released, whereas DEFAULT indicates that one of the toggle buttons was pressed within its cooldown period, FAIL is used to indicate that something went wrong (e.g. user clicked too far away for PULL)
 
 ToolMode tool_mode = DRAW;
 ToolMode selected_tool_mode = DRAW;
@@ -76,7 +76,6 @@ int closest_stroke_ID, prev_closest_stroke_ID;
 
 //Keeps track of the stroke IDs
 int next_added_stroke_ID = 2; //Start at 2 because marker 1 belongs to the original boundary
-
 
 //Variables for removing a control curve
 bool stroke_was_removed = false;
@@ -150,8 +149,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			prev_tool_mode = FAIL;
 			return;
 		}
-	}
-	else if (pressed == OculusVR::ButtonCombo::TRIG && pressed == REMOVE) {
+	}else if (pressed == OculusVR::ButtonCombo::TRIG && selected_tool_mode == REMOVE) {
 		if (stroke_collection.size() == 0) {
 			return;
 		}
@@ -159,8 +157,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 	if (pressed == OculusVR::ButtonCombo::TRIG) {
 		tool_mode = selected_tool_mode;
-	}
-	if (pressed == OculusVR::ButtonCombo::THUMB_MOVE) {
+	}else if (pressed == OculusVR::ButtonCombo::THUMB_MOVE) {
 		V = viewer.data().V;
 		initial_stroke->update_Positions(V);
 		for (int i = 0; i < stroke_collection.size(); i++) {
@@ -169,32 +166,20 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		draw_all_strokes();
 		prev_tool_mode = NAVIGATE;
 		return;
-	}
-	else if (pressed == OculusVR::ButtonCombo::NONE) {
+	}else if (pressed == OculusVR::ButtonCombo::NONE) {
 		tool_mode = NONE;
 	}
 
-	Eigen::Vector3f pos_tmp = pos;
-	viewer.selected_data_index = 2; //Draw hand and laser as their own mesh
-	if (tool_mode != DRAW && tool_mode != PULL) {
-		Eigen::MatrixX3d LP(2, 3);
-		LP.row(0) = pos_tmp.cast<double>();
-		LP.row(1) = (pos_tmp + 1000 * viewer.oculusVR.get_right_touch_direction()).cast<double>();
-
-		viewer.data().set_laser_points(LP);		
-		viewer.data().set_hand_point(pos_tmp.cast<double>().transpose(), Eigen::RowVector3d(0.5f, 0.5f, 0.5f));
-	}
-	else {
-		viewer.data().set_laser_points(Eigen::MatrixXd());
-		viewer.data().set_hand_point(pos_tmp.cast<double>().transpose(), Eigen::RowVector3d(0.5f, 0.5f, 0.5f));
-	}
-	viewer.selected_data_index = 1; //Switch back to mesh
-
+	
 	if (tool_mode == DRAW) { //Creating the first curve/mesh
 		if (draw_should_block) { //User has been too close to first sample point (closing the stroke too much), so we're in blocked state till the buttons are released again
 			return;
 		}
 		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) {
+			viewer.selected_data_index = 2;
+			viewer.data().show_laser = false;
+			viewer.selected_data_index = 1;
+
 			if (has_recentered) {
 				viewer.oculusVR.set_start_action_view(viewer.core.get_view());
 				stroke_collection.clear();
@@ -237,9 +222,8 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) {
 			Eigen::Vector3f hit_pos;
 			vector<igl::Hit> hits;
-			Eigen::Vector3f pos_tmp = pos;
 
-			if (igl::ray_mesh_intersect(pos_tmp, viewer.oculusVR.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
+			if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 				hit_pos = (V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v).cast<float>();
 			}
 			else { //Hand ray did not intersect mesh
@@ -302,18 +286,21 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 	else if (tool_mode == PULL) { //Dragging an existing curve
 //TODO: FAIL below here might not be needed anymore
 		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) { //Also allow to go to pull after ADD because sometimes the buttons are hard to differentiate
+			viewer.selected_data_index = 2;
+			viewer.data().show_laser = false;
+			viewer.selected_data_index = 1;
+
 			select_dragging_handle(pos);
 
 			if (handleID == -1) {//User clicked too far from any of the stroke vertices
 				prev_tool_mode = FAIL;
+				viewer.selected_data_index = 2;
+				viewer.data().show_laser = true;
+				viewer.selected_data_index = 1;
+
 				return;
 			}
-			/*if (closest_stroke_ID == -1) {
-				CurveDeformation::startPullCurve(*initial_stroke, handleID);
-			}
-			else {
-				CurveDeformation::startPullCurve(stroke_collection[closest_stroke_ID], handleID);
-			}*/
+
 			CurveDeformation::startPullCurve(closest_stroke_ID >= 0 ? stroke_collection[closest_stroke_ID] : *initial_stroke, handleID);
 			prev_tool_mode = PULL;
 		}
@@ -396,9 +383,15 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			return;
 		}
 		else if (prev_tool_mode == DRAW) {
+			viewer.selected_data_index = 2;
+			viewer.data().show_laser = true;
+			viewer.selected_data_index = 1; //Switch back to mesh
+
 			prev_tool_mode = NONE;
 			draw_should_block = false; 
-
+			//viewer.data().set_laser_points(Eigen::MatrixXd(), Eigen::MatrixXd()); //NOTE: LASER TURN BACK ON
+			Eigen::MatrixXd SP = igl::cat(1, (Eigen::MatrixXd) initial_stroke->get3DPoints(), (Eigen::MatrixXd) initial_stroke->get3DPoints().row(0));
+			viewer.data().set_stroke_points(SP);
 			if (initial_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
 
 				initial_stroke->generate3DMeshFromStroke(vertex_boundary_markers, part_of_original_stroke, V, F);
@@ -441,8 +434,9 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				Eigen::MatrixXd strokePoints = V.block(0, 0, strokeSize, 3);
 				viewer.data().set_points(strokePoints, Eigen::RowVector3d(1, 0, 0)); //Displays dots
 				viewer.data().set_stroke_points(igl::cat(1, strokePoints, (Eigen::MatrixXd) V.row(0)));
-
+				
 			}
+			
 		}
 		else if (prev_tool_mode == ADD) {
 			dirty_boundary = true;
@@ -461,6 +455,9 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			draw_all_strokes();
 		}
 		else if (prev_tool_mode == PULL && handleID != -1) {
+			viewer.selected_data_index = 2;
+			viewer.data().show_laser = true;
+			viewer.selected_data_index = 1; //Switch back to mesh
 			for (int i = 0; i < 6; i++) {
 				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 			}
@@ -471,6 +468,8 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			viewer.data().clear();
 			viewer.data().set_mesh(V, F);
 			draw_all_strokes();
+		
+
 		}
 		else if (prev_tool_mode == CUT) {
 			if (!added_stroke->has_points_on_mesh) {
@@ -535,6 +534,10 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			}
 			else { //We're finished drawing the cut stroke, prepare for when user draws the final stroke to remove the part
 				cut_stroke_already_drawn = true;
+				viewer.selected_data_index = 2;
+				viewer.data().clear();
+				//viewer.data().set_laser_points(Eigen::MatrixXd(), Eigen::MatrixXd()); NOTE: LASER TURN THIS BACK ON
+				viewer.selected_data_index = 1;
 			}
 		}
 		else if (prev_tool_mode == EXTRUDE) {
@@ -637,7 +640,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 			}
 		}
-		else if (prev_tool_mode == TOGGLE || prev_tool_mode == FAIL) {
+		else if (prev_tool_mode == FAIL) {
 			viewer.update_screen_while_computing = false;
 		}
 		else if (prev_tool_mode == SMOOTH) {
@@ -786,7 +789,7 @@ int main(int argc, char *argv[]) {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
 	void* im_texID_draw = (void *)(intptr_t)img_texture;
 
-	filename = std::string(cur_dir) + "\\..\\data\\free\\pull.png"; //TODO: change this to be user-independent
+	filename = std::string(cur_dir) + "\\..\\data\\free\\pull.png"; 
 	img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
 	if (!img_data) {
 		std::cerr << "Could not load image 2." << std::endl;
@@ -799,7 +802,7 @@ int main(int argc, char *argv[]) {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
 	void* im_texID_pull = (void *)(intptr_t)img_texture2;
 
-	filename = std::string(cur_dir) + "\\..\\data\\free\\plus.png"; //TODO: change this to be user-independent
+	filename = std::string(cur_dir) + "\\..\\data\\free\\plus.png"; 
 	img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
 	if (!img_data) {
 		std::cerr << "Could not load image 3." << std::endl;
@@ -812,7 +815,7 @@ int main(int argc, char *argv[]) {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
 	void* im_texID_add = (void *)(intptr_t)img_texture3;
 
-	filename = std::string(cur_dir) + "\\..\\data\\free\\scissor.png"; //TODO: change this to be user-independent
+	filename = std::string(cur_dir) + "\\..\\data\\free\\scissor.png";
 	img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
 	if (!img_data) {
 		std::cerr << "Could not load image 4." << std::endl;
@@ -825,7 +828,7 @@ int main(int argc, char *argv[]) {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
 	void* im_texID_cut = (void *)(intptr_t)img_texture4;
 
-	filename = std::string(cur_dir) + "\\..\\data\\free\\bump.png"; //TODO: change this to be user-independent
+	filename = std::string(cur_dir) + "\\..\\data\\free\\bump.png";
 	img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
 	if (!img_data) {
 		std::cerr << "Could not load image 5." << std::endl;
@@ -838,8 +841,7 @@ int main(int argc, char *argv[]) {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
 	void* im_texID_extrude = (void *)(intptr_t)img_texture5;
 
-	filename = std::string(cur_dir) + "\\..\\data\\free\\minus.png"; //TODO: change this to be user-independent
-	std::cout << filename << std::endl;
+	filename = std::string(cur_dir) + "\\..\\data\\free\\minus.png";
 	img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
 	if (!img_data) {
 		std::cerr << "Could not load image 6." << std::endl;
@@ -851,10 +853,6 @@ int main(int argc, char *argv[]) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
 	void* im_texID_remove = (void *)(intptr_t)img_texture6;
-
-
-
-
 
 	menu.callback_draw_viewer_window = [&]() {
 		const ImVec2 texsize = ImGui_ImplGlfwGL3_GetTextureSize();
@@ -871,7 +869,7 @@ int main(int argc, char *argv[]) {
 		ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiSetCond_FirstUseEver);
 
 		ImGui::Begin("Selection Menu", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar);
-		int frame_padding = 5;     // -1 = uses default padding
+		int frame_padding = 5;
 		ImGuiIO& io = ImGui::GetIO();
 		ImGui::SetWindowFontScale(2.f);
 

@@ -274,7 +274,10 @@ void Stroke::addSegmentCut(Eigen::Vector3f& pos) {
 	Eigen::MatrixX3d ray_points(2, 3);
 	ray_points.row(0) = pos.cast<double>();
 	ray_points.row(1) = hit_pos;
-	viewer.data().set_laser_points(ray_points);
+
+	viewer.selected_data_index = 2;
+	//viewer.data().set_laser_points(ray_points);
+	viewer.selected_data_index = 1;
 
 	_time1 = std::chrono::high_resolution_clock::now();
 	return;
