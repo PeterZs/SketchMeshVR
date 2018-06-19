@@ -219,7 +219,6 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	Eigen::MatrixXd resampled_path = CleanStroke3D::resample_by_length_with_fixes(path, unit_length);
 	Eigen::Matrix4f modelview = view * model;
 	if (!is_counter_clockwise_boundaries(resampled_path, modelview, proj, viewport, mean_viewpoint, true)) {
-		std::cout << " reversing surfacepath" << std::endl;
 		resampled_path = resampled_path.colwise().reverse().eval();
 	}
 
@@ -260,16 +259,8 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	row_idx2 = Eigen::VectorXi::Map(outer_boundary_vertices.data(), outer_boundary_vertices.size());
 	col_idx2.col(0) << 0, 1, 2;
 	igl::slice(m.V, row_idx2, col_idx2, tmp_V); //Keep only the clean "boundary" vertices in the mesh
-	std::cout << "mean viewpoint: " << mean_viewpoint << std::endl;
-	for (int i = 0; i < outer_boundary_vertices.size(); i++) {
-		std::cout << m.V.row(outer_boundary_vertices[i]) << std::endl;
-	}
-	std::cout << std::endl << " surfacePath" << std::endl;
-	for (int i = 0; i < path_vertices.size(); i++) {
-		std::cout << m.V.row(path_vertices[i]) << std::endl;
-	}
+
 	if (!is_counter_clockwise_boundaries(tmp_V, modelview, proj, viewport, mean_viewpoint, !is_front_loop)) {
-		std::cout << " reversing" << std::endl;
 		reverse(outer_boundary_vertices.begin(), outer_boundary_vertices.end());
 	}
 	
