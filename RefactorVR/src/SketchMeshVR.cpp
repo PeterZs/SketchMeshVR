@@ -28,7 +28,7 @@
 #include "CurveDeformation.h"
 #include "MeshExtrusion.h"
 #include <igl/opengl/oculusVR.h>
-
+#include "Mesh.h"
 
 using namespace std;
 using Viewer = igl::opengl::glfw::Viewer;
@@ -42,6 +42,8 @@ igl::opengl::glfw::imgui::ImGuiMenu menu;
 Eigen::MatrixXd V(0,3);
 // Face array, #F x3
 Eigen::MatrixXi F(0,3);
+
+Mesh* base_mesh;
 
 //Per vertex indicator of whether vertex is on boundary (on boundary if == 1)
 Eigen::VectorXi vertex_boundary_markers;
@@ -307,7 +309,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		else if (prev_tool_mode == PULL) {
 			if (turnNr == 0) { 
 				CurveDeformation::pullCurve(pos.transpose().cast<double>(), V, part_of_original_stroke);
-				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
+				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);// V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 
 				turnNr++;
 
@@ -700,6 +702,7 @@ void menu_closed() {
 int main(int argc, char *argv[]) {
 	//Init stroke selector
 	initial_stroke = new Stroke(V, F, viewer, 0);
+	base_mesh = new Mesh(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, 0);
 
 	Eigen::MatrixXd V_floor(4, 3);
 	/*V_floor.row(0) << -100, 0, -100;
