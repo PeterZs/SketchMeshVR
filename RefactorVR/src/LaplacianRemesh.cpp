@@ -17,11 +17,11 @@ bool LaplacianRemesh::is_front_loop = true; //Determines extrusion or cut
 Eigen::MatrixXi LaplacianRemesh::EV, LaplacianRemesh::FE, LaplacianRemesh::EF;
 vector<vector<int>> LaplacianRemesh::VV;
 
-Eigen::VectorXi LaplacianRemesh::remesh_cut_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success) {
+Eigen::VectorXi LaplacianRemesh::remesh_cut_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success, int cut_clicked_face) {
 	is_front_loop = false;
 	//remove_inside_faces = true;
 	adjacency_list(m.F, VV);
-	return remesh(m, surface_path, model, view, proj, viewport, remesh_success);
+	return remesh(m, surface_path, model, view, proj, viewport, remesh_success, cut_clicked_face);
 }
 
 Eigen::VectorXi LaplacianRemesh::remesh_extrusion_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success) {
@@ -31,9 +31,11 @@ Eigen::VectorXi LaplacianRemesh::remesh_extrusion_remove_inside(Mesh & m, Surfac
 	return remesh(m, surface_path, model, view, proj, viewport, remesh_success);
 }
 
-Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success) {
+Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success, int cut_clicked_face) {
 	vector<bool> dirty_face(m.F.rows());
-	vector<int> dirty_vertices(m.V.rows());
+	//vector<int> dirty_vertices(m.V.rows());
+	Eigen::VectorXi dirty_vertices(m.V.rows());
+	dirty_vertices.setZero();
 	m.new_mapped_indices.resize(m.V.rows()); //Resize the map from old to new (clean) vertex indices to allow it to contain the number of vertices that are in the mesh at the start
 
 	//TODO: START
@@ -91,7 +93,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		}
 	}
 
-	if (outer_boundary_vertices.size() == 0) { //There are no vertices left behind (cut that removes everthing or extrude that doesn't include at least 1 vertex)
+	if (outer_boundary_vertices.size() == 0 || inner_boundary_vertices.size()==0) { //There are no vertices left behind (cut that removes everthing or extrude that doesn't include at least 1 vertex) or none are removed
 		remesh_success = false;
 		return Eigen::VectorXi::Zero(1);
 	}
@@ -104,7 +106,6 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		}
 	}
 
-	//if(remove_inside_faces) {
 		for(int i = 0; i < m.V.rows(); i++) {
 			if(dirty_vertices[i] < 0) {
 				for(int j = 0; j < VF[i].size(); j++) {
@@ -114,7 +115,26 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 				}
 			}
 		}
-	//}
+
+
+	//Revert dirty/clean faces and vertices in case the user clicked on the "clean" part when cutting
+	if (cut_clicked_face >=0 && !dirty_face[cut_clicked_face]) {
+		for (int i = 0; i < dirty_face.size(); i++) {
+			dirty_face[i] = !dirty_face[i];
+		}
+
+		dirty_vertices *= -1;
+
+		inner_boundary_vertices.swap(outer_boundary_vertices);
+
+		//Collect faces along the path
+		for (int i = 0; i < path.size(); i++) {
+			if (path[i].get_type() == PathElement::EDGE) {
+				dirty_face[EF(path[i].get_ID(), 0)] = true;
+				dirty_face[EF(path[i].get_ID(), 1)] = true;
+			}
+		}
+	}
 
 	//Remove dirty faces
 	vector<int> clean_faces;
@@ -123,6 +143,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 			clean_faces.push_back(i);
 		}
 	}
+
 
 	if (clean_faces.size() == 0) { //There are no faces left behind (cut that removes everything or extrude that doesn't include at least 1 vertex)
 		remesh_success = false;
@@ -196,6 +217,13 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	}
 
 	Eigen::MatrixXd resampled_path = CleanStroke3D::resample_by_length_with_fixes(path, unit_length);
+	Eigen::Matrix4f modelview = view * model;
+	if (!is_counter_clockwise_boundaries(resampled_path, modelview, proj, viewport, mean_viewpoint, true)) {
+		std::cout << " reversing surfacepath" << std::endl;
+		resampled_path = resampled_path.colwise().reverse().eval();
+	}
+
+
 	vector<int> path_vertices;
 	int original_V_size = m.V.rows();
 	for (int i = 0; i < resampled_path.rows() - 1; i++) { //Do not use the last path vertex, as it is a copy of the first and creates unwanted behaviour
@@ -228,12 +256,20 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 
 	//TODO: maybe move this up to right after V slicing?
 	//Make the outer_boundary_vertices CCW
-	Eigen::Matrix4f modelview = view * model;
 	Eigen::VectorXi row_idx2, col_idx2(3);
 	row_idx2 = Eigen::VectorXi::Map(outer_boundary_vertices.data(), outer_boundary_vertices.size());
 	col_idx2.col(0) << 0, 1, 2;
 	igl::slice(m.V, row_idx2, col_idx2, tmp_V); //Keep only the clean "boundary" vertices in the mesh
+	std::cout << "mean viewpoint: " << mean_viewpoint << std::endl;
+	for (int i = 0; i < outer_boundary_vertices.size(); i++) {
+		std::cout << m.V.row(outer_boundary_vertices[i]) << std::endl;
+	}
+	std::cout << std::endl << " surfacePath" << std::endl;
+	for (int i = 0; i < path_vertices.size(); i++) {
+		std::cout << m.V.row(path_vertices[i]) << std::endl;
+	}
 	if (!is_counter_clockwise_boundaries(tmp_V, modelview, proj, viewport, mean_viewpoint, !is_front_loop)) {
+		std::cout << " reversing" << std::endl;
 		reverse(outer_boundary_vertices.begin(), outer_boundary_vertices.end());
 	}
 	

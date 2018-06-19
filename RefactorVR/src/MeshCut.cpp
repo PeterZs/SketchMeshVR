@@ -8,7 +8,7 @@ using namespace std;
 using namespace igl;
 
 
-bool MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::VectorXi &new_mapped_indices, Eigen::VectorXi &sharp_edge, Stroke& stroke) {
+bool MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::VectorXi &new_mapped_indices, Eigen::VectorXi &sharp_edge, Stroke& stroke, int clicked_face) {
 
 	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, -1); //Give ID -1 since we're not using it here anyway
 	SurfacePath surface_path;
@@ -16,7 +16,7 @@ bool MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &verte
 	if (!success) {
 		return false;
 	}
-	success = cut_main(m, surface_path, stroke);
+	success = cut_main(m, surface_path, stroke, clicked_face);
 	if (!success) {
 		return false;
 	}
@@ -26,9 +26,9 @@ bool MeshCut::cut(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &verte
 	return true;
 }
 
-bool MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke) {
+bool MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke, int clicked_face) {
 	bool remesh_success = true;
-	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_cut_remove_inside(m, surface_path, stroke.viewer.core.get_model(), stroke.viewer.oculusVR.get_start_action_view(), stroke.viewer.core.get_proj(), stroke.viewer.core.viewport, remesh_success);
+	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_cut_remove_inside(m, surface_path, stroke.viewer.core.get_model(), stroke.viewer.oculusVR.get_start_action_view(), stroke.viewer.core.get_proj(), stroke.viewer.core.viewport, remesh_success, clicked_face);
 	if (!remesh_success) {
 		return false;
 	}

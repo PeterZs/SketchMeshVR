@@ -475,14 +475,20 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				viewer.update_screen_while_computing = false;
 				return;
 			}
-			if (cut_stroke_already_drawn) { //User had already drawn the cut stroke and has now clicked/drawn the final stroke for removing the part
+			if (cut_stroke_already_drawn) { //User had already drawn the cut stroke and has now clicked/drawn the final stroke for removing the part. User should click on the part that should be removed
 				dirty_boundary = true;
+				vector<igl::Hit> hits;
+				if (!igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
+					viewer.update_screen_while_computing = false;
+					return;
+				}
+				int clicked_face = hits[0].id;
 
 				added_stroke->prepend_first_point();
 				added_stroke->append_final_point();
 				added_stroke->toLoop();
-				
-				bool cut_success = MeshCut::cut(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, *added_stroke);
+			
+				bool cut_success = MeshCut::cut(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, *added_stroke, clicked_face);
 				if (!cut_success) { //Catches the cases that the cut removes all mesh vertices/faces and when the first/last cut point aren't correct (face -1 in SurfacePath)
 					cut_stroke_already_drawn = false;
 					next_added_stroke_ID--; //Undo ID increment since stroke didn't actually get pushed back
