@@ -8,8 +8,9 @@ class Patch;
 class Mesh {
 
 public:
-
+	Mesh();
     Mesh(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::VectorXi &new_mapped_indices, Eigen::VectorXi & sharp_edge, int ID);
+	Mesh& operator=(Mesh other);
 	~Mesh();
 	Eigen::MatrixXd &V;
 	Eigen::MatrixXi &F;
@@ -18,7 +19,10 @@ public:
 	Eigen::VectorXi &new_mapped_indices;
 	Eigen::VectorXi &sharp_edge;
 	std::vector<Patch*> patches;
-	const int ID;
+
+	std::vector<Patch*> face_patch_map;
+	//const int ID;
+	int ID;
 };
 
 #endif

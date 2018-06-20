@@ -422,7 +422,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 				dirty_boundary = true;
 				for (int i = 0; i < initial_smooth_iter; i++) {
-					SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
+					SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);// V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 				}
 
 				initial_stroke->update_Positions(V);
@@ -460,7 +460,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			viewer.data().show_laser = true;
 			viewer.selected_data_index = 1; //Switch back to mesh
 			for (int i = 0; i < 6; i++) {
-				SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
+				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);// V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 			}
 
 			for (int i = 0; i < stroke_collection.size(); i++) {
@@ -524,7 +524,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				}
 
 				for (int i = 0; i < 10; i++) {
-					SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
+					SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);// V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 				}
 
 				//Update the stroke positions after smoothing, in case their positions have changed (although they really shouldn't)
@@ -587,7 +587,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 
 				for (int i = 0; i < 10; i++) {
-					SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
+					SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);// V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 				}
 
 				//Update the stroke positions after smoothing, in case their positions have changed (although they really shouldn't)
@@ -652,7 +652,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				viewer.update_screen_while_computing = false;
 				return;
 			}
-			SurfaceSmoothing::smooth(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
+			SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);// V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, dirty_boundary);
 			for (int i = 0; i < stroke_collection.size(); i++) {
 				stroke_collection[i].update_Positions(V);
 			}
@@ -719,6 +719,9 @@ int main(int argc, char *argv[]) {
 	F_floor.row(0) << 0, 3, 1;
 	F_floor.row(1) << 3, 2, 1;
 
+	char cur_dir[256];
+	GetCurrentDirectoryA(256, cur_dir);
+
 	if (argc == 2) {
 		// Read mesh
 		igl::readOFF(argv[1], V, F);
@@ -735,13 +738,14 @@ int main(int argc, char *argv[]) {
 		V_uv.col(1) = V_uv.col(1).array() - V_uv.col(1).minCoeff();
 		V_uv.col(1) = V_uv.col(1).array() / V_uv.col(1).maxCoeff();
 		V_uv = V_uv.array() *2;
-
+		
 		Eigen::Matrix<unsigned char, Dynamic, Dynamic> texR, texG, texB;
-		std::string texture_file = "C:\\Users\\Floor Verhoeven\\Desktop\\thesis\\RefactorVR\\data\\free\\floor.png";
+		std::string texture_file = std::string(cur_dir) + "\\..\\data\\free\\floor.png";
 		int width, height, n;
 		unsigned char *data = stbi_load(texture_file.c_str(), &width, &height, &n, 4);
-		if (data == NULL) {
-			return false;
+
+		if (!data) {
+			std::cerr << "Could not load floor texture." << std::endl;
 		}
 		texR.resize(height, width);
 		texG.resize(height, width);
@@ -773,9 +777,7 @@ int main(int argc, char *argv[]) {
 	CurveDeformation::smooth_deform_mode = true;
 	viewer.init_oculus();
 
-	char cur_dir[256];
-	GetCurrentDirectoryA(256, cur_dir);
-
+	
 
 	GLuint img_texture = 0, img_texture1 = 0, img_texture2 = 0, img_texture3 = 0, img_texture4 = 0, img_texture5 = 0, img_texture6 = 0;
 	int img_width, img_height, nrChannels;

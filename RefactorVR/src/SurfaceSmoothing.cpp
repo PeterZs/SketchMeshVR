@@ -53,10 +53,10 @@ void SurfaceSmoothing::smooth(Mesh& base_mesh, bool& BOUNDARY_IS_DIRTY){// Eigen
 		base_mesh.patches = Patch::init_patches(base_mesh);
 	}
 
-//	Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, ID);
 	for (int i = 0; i < base_mesh.patches.size(); i++) {
-		Patch patch = *(base_mesh.patches[i]);
-		smooth_main(patch.mesh, BOUNDARY_IS_DIRTY);
+		Patch* patch = (base_mesh.patches[i]);
+		smooth_main((*patch).mesh, BOUNDARY_IS_DIRTY);
+		(*patch).update_parent_vertex_positions();
 	}
 
 	BOUNDARY_IS_DIRTY = false;
