@@ -13,10 +13,12 @@ public:
 	static std::vector<Patch*> init_patches(Mesh& h);
 	static void propagate_patch(Patch& patch, int face, Eigen::VectorXi& faces);
 
-	Mesh mesh;
+	Mesh* mesh;
 
 private:
 
+	Eigen::MatrixXi EV, FE, EF;
+	Eigen::VectorXi parent_vertices(0);
 
 };
 #endif
