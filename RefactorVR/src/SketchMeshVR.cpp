@@ -29,6 +29,7 @@
 #include "MeshExtrusion.h"
 #include <igl/opengl/oculusVR.h>
 #include "Mesh.h"
+#include "Patch.h"
 
 using namespace std;
 using Viewer = igl::opengl::glfw::Viewer;
@@ -200,6 +201,15 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			else {
 				cut_stroke_already_drawn = false;
 				extrusion_base_already_drawn = false;
+				(*base_mesh).V.resize(0, 3);
+				(*base_mesh).F.resize(0, 3);
+				(*base_mesh).vertex_boundary_markers.resize(0);
+				(*base_mesh).part_of_original_stroke.resize(0);
+				(*base_mesh).new_mapped_indices.resize(0);
+				(*base_mesh).sharp_edge.resize(0);
+				(*base_mesh).mesh_to_patch_indices.resize(0);
+				(*base_mesh).patches.clear(); //Request new patches
+				(*base_mesh).face_patch_map.clear();
 				viewer.data().clear();
 				viewer.oculusVR.request_recenter();
 				has_recentered = true;
@@ -315,7 +325,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		}
 		else if (prev_tool_mode == PULL) {
 			if (turnNr == 0) { 
-				CurveDeformation::pullCurve(pos.transpose().cast<double>(), V, part_of_original_stroke);
+				CurveDeformation::pullCurve(pos.transpose().cast<double>(), (*base_mesh).V, (*base_mesh).part_of_original_stroke);
 				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
 
 				turnNr++;
@@ -403,7 +413,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			if (initial_stroke->toLoop()) {//Returns false if the stroke only consists of 1 point (user just clicked)
 
 				initial_stroke->generate3DMeshFromStroke(vertex_boundary_markers, part_of_original_stroke, V, F);
-				
+		
 				if (!igl::is_edge_manifold(F)) { //Check if the drawn stroke results in an edge-manifold mesh, otherwise sound a beep and revert
 #ifdef _WIN32
 					Beep(500, 200);
@@ -427,13 +437,14 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				sharp_edge.resize(EV.rows());
 				sharp_edge.setZero(); //Set all edges to smooth after initial draw
 
+				(*base_mesh).patches = Patch::init_patches(*base_mesh);
+
 				dirty_boundary = true;
 				for (int i = 0; i < initial_smooth_iter; i++) {
 					SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
 				}
 
 				initial_stroke->update_Positions(V);
-
 				viewer.data().clear();
 				viewer.data().set_mesh(V, F);
 
@@ -473,6 +484,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			for (int i = 0; i < stroke_collection.size(); i++) {
 				stroke_collection[i].update_Positions(V);
 			}
+			std::cout << "Test: " << std::endl << (*base_mesh).V - V << std::endl;
 			viewer.data().clear();
 			viewer.data().set_mesh(V, F);
 			draw_all_strokes();
@@ -515,6 +527,10 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 					viewer.update_screen_while_computing = false;
 					return;
 				}
+				(*base_mesh).patches.clear();
+				(*base_mesh).face_patch_map.clear();
+				(*base_mesh).patches = Patch::init_patches(*base_mesh);
+
 				stroke_collection.push_back(*added_stroke);
 
 				initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers); //Don't test if the initial one dies

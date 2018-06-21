@@ -12,7 +12,8 @@ Mesh::Mesh() :
 	sharp_edge(Eigen::VectorXi()),
 	ID(-1),
 	patches(),
-	face_patch_map()
+	face_patch_map(),
+	mesh_to_patch_indices()
 	{
 	/*V = (Eigen::MatrixXd(0, 3));
 	F = (Eigen::MatrixXi(0, 3));
@@ -40,6 +41,7 @@ Mesh & Mesh::operator=(Mesh other){
 	ID = other.ID;
 	patches = other.patches;
 	face_patch_map = other.face_patch_map;
+	mesh_to_patch_indices = other.mesh_to_patch_indices;
 	return *this;
 }
 

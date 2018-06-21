@@ -16,9 +16,12 @@ using namespace igl;
 typedef Eigen::Triplet<double> T;
 
 int SurfaceSmoothing::prev_vertex_count = -1;
+static int prev_mesh_ID = -1;
 Eigen::MatrixX3d SurfaceSmoothing::vertex_normals(0, 3);
-Eigen::SparseLU<Eigen::SparseMatrix<double>> solver1;
-Eigen::SparseLU<Eigen::SparseMatrix<double>> solver2;
+//Eigen::SparseLU<Eigen::SparseMatrix<double>> solver1;
+//Eigen::SparseLU<Eigen::SparseMatrix<double>> solver2;
+std::vector<Eigen::SparseLU<Eigen::SparseMatrix<double>>*> solver1_array;
+std::vector<Eigen::SparseLU<Eigen::SparseMatrix<double>>*> solver2_array;
 
 Eigen::VectorXd initial_curvature;
 Eigen::VectorXd SurfaceSmoothing::curvatures(ptrdiff_t(0));
@@ -39,26 +42,36 @@ std::unordered_map<int, Eigen::SparseMatrix<double>> SurfaceSmoothing::AT_for_po
 std::unordered_map<int, Eigen::VectorXi> SurfaceSmoothing::precomputed_laplacian_weights;
 
 void SurfaceSmoothing::smooth(Mesh& base_mesh, bool& BOUNDARY_IS_DIRTY){
+	if (base_mesh.patches.empty()) {
+		base_mesh.patches = Patch::init_patches(base_mesh);
+	}
+
 	if(prev_vertex_count != base_mesh.V.rows()) { //The mesh topology has changed, so we need to reset the precomputed matrices. If only boundary constraints got added, we can reuse part of the matrices so don't clear it all out but instead overwrite certain parts
         ID++;
 		clear_precomputed_matrices();
 		prev_vertex_count = base_mesh.V.rows();
 		iteration = 0;
+		for (int i = 0; i < base_mesh.patches.size(); i++) {
+			solver1_array.push_back(new Eigen::SparseLU<Eigen::SparseMatrix<double>>);
+			solver2_array.push_back(new Eigen::SparseLU<Eigen::SparseMatrix<double>>);
+		}
 	}
 	if(BOUNDARY_IS_DIRTY) {
 		iteration = 0;
 	}
 
-	if (base_mesh.patches.empty()) {
-		base_mesh.patches = Patch::init_patches(base_mesh);
-	}
+
 
 	std::cout << "Check that we odn't have duplicate mesh IDs" << std::endl;
 	for (int i = 0; i < base_mesh.patches.size(); i++) {
 		Patch* patch = (base_mesh.patches[i]);
 		std::cout << (*patch).mesh.ID << std::endl;
+
 		smooth_main((*patch).mesh, BOUNDARY_IS_DIRTY);
-		(*patch).update_parent_vertex_positions(base_mesh.V);
+		//if (base_mesh.patches.size() == 1) {
+			(*patch).update_parent_vertex_positions(base_mesh.V);
+	//	}
+		prev_mesh_ID = (*patch).mesh.ID;
 	}
 
 	BOUNDARY_IS_DIRTY = false;
@@ -84,10 +97,13 @@ void SurfaceSmoothing::smooth_main(Mesh &m, bool BOUNDARY_IS_DIRTY) {
 	if(L.rows()==0 && L.cols()==0) { //Stuff that gets computed once, when we get a new mesh topology
 		L = compute_laplacian_matrix(m);
 		set_precomputed_L(m, L);
-        adjacency_list(m.F, neighbors);
+		adjacency_list(m.F, neighbors);
+	}
+	else if (m.ID != prev_mesh_ID){
+		adjacency_list(m.F, neighbors);
 	}
 
-	if(BOUNDARY_IS_DIRTY) {
+	if(BOUNDARY_IS_DIRTY || m.ID != prev_mesh_ID) {
 		no_boundary_vertices = (m.vertex_boundary_markers.array() > 0).count();
 		no_boundary_adjacent_vertices = 0;
 		for(int i = 0; i < m.V.rows(); i++) {
@@ -129,7 +145,16 @@ Eigen::VectorXd SurfaceSmoothing::compute_initial_curvature(Mesh &m) {
 
 	for(int i = 0; i < m.V.rows(); i++) {
 		if((m.part_of_original_stroke[i]) && (m.vertex_boundary_markers[i] > 0)) { //Boundary vertex on original stroke
-			initial_curvatures[i] = (m.V.row(i) - 0.5 * (m.V.row((i - 1 + original_stroke_no_vertices) % original_stroke_no_vertices) + m.V.row((i + 1 + original_stroke_no_vertices) % original_stroke_no_vertices))).norm(); //Take modulo of the number of original stroke vertices to avoid wrapping the first and last of the original stroke to the interior of the mesh
+			Eigen::RowVector3d vec(0, 0, 0);
+			int count = 0;
+			for (int j = 0; j < neighbors[i].size(); j++) {
+				if (m.vertex_boundary_markers[neighbors[i][j]] == m.vertex_boundary_markers[i]) {//the neighbor is a boundary vertex on the same stroke
+					vec += m.V.row(neighbors[i][j]);
+					count++;
+				}
+			}
+			initial_curvatures[i] = (m.V.row(i) - (1.0 / count)*vec).norm();
+			//initial_curvatures[i] = (m.V.row(i) - 0.5 * (m.V.row((i - 1 + original_stroke_no_vertices) % original_stroke_no_vertices) + m.V.row((i + 1 + original_stroke_no_vertices) % original_stroke_no_vertices))).norm(); //Take modulo of the number of original stroke vertices to avoid wrapping the first and last of the original stroke to the interior of the mesh
 		} else if(m.vertex_boundary_markers[i] > 0) { //Boundary vertex on an added stroke
 			Eigen::RowVector3d vec(0,0,0);
 			int count = 0;
@@ -165,7 +190,8 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 		A.setFromTriplets(tripletList.begin(), tripletList.end());
 		A.prune(0.0);
 		AT = A.transpose();
-		solver1.compute(AT*A);
+		(*solver1_array[m.ID - 1]).compute(AT*A); //Take ID-1 because ID 0 is reserved for the basemesh and patches start from 1
+		//solver1.compute(AT*A);
 		set_precompute_matrix_for_LM_and_edges(m, A);
         set_AT_for_LM_and_edges(m, AT);
 	}
@@ -180,7 +206,8 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 		}
 
 		AT = A.transpose();
-		solver1.compute(AT*A);
+		(*solver1_array[m.ID - 1]).compute(AT*A); //Take ID-1 because ID 0 is reserved for the basemesh and patches start from 1
+		//solver1.compute(AT*A);
 		set_precompute_matrix_for_LM_and_edges(m, A);
 		set_AT_for_LM_and_edges(m, AT);
 	}
@@ -198,7 +225,8 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 		A.setFromTriplets(tripletList.begin(), tripletList.end());
 		A.prune(0.0);
 		AT = A.transpose();
-		solver1.compute(AT*A);
+		(*solver1_array[m.ID - 1]).compute(AT*A); //Take ID-1 because ID 0 is reserved for the basemesh and patches start from 1
+		//solver1.compute(AT*A);
 		set_precompute_matrix_for_LM_and_edges(m, A);
         set_AT_for_LM_and_edges(m, AT);
 	}
@@ -222,7 +250,8 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 	}
 
 	AT = get_AT_for_LM_and_edges(m);
-	Eigen::VectorXd target_LM = solver1.solve(AT*b);
+	Eigen::VectorXd target_LM = (*solver1_array[m.ID - 1]).solve(AT*b);
+	//Eigen::VectorXd target_LM = solver1.solve(AT*b);
 
 	return target_LM;
 }
@@ -257,7 +286,8 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_edge_lengths(Mesh &m, Eigen::Ma
 		}
 	}
 
-	Eigen::VectorXd target_edge_lengths = solver1.solve(AT*b);
+	Eigen::VectorXd target_edge_lengths = (*solver1_array[m.ID - 1]).solve(AT*b);
+	//Eigen::VectorXd target_edge_lengths = solver1.solve(AT*b);
 	return target_edge_lengths;
 }
 
@@ -301,7 +331,8 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 		A.setFromTriplets(tripletList.begin(), tripletList.end());
 		A.prune(0.0);
 		AT = A.transpose();
-		solver2.compute(AT*A);
+		(*solver2_array[m.ID - 1]).compute(AT*A);
+		//solver2.compute(AT*A);
 		set_precompute_matrix_for_positions(m, A);
         set_AT_for_positions(m, AT);
 	}
@@ -340,9 +371,12 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 		}
 	}
 
-	Eigen::VectorXd Vnewx = solver2.solve(AT*bx);
+	/*Eigen::VectorXd Vnewx = solver2.solve(AT*bx);
 	Eigen::VectorXd Vnewy = solver2.solve(AT*by);
-	Eigen::VectorXd Vnewz = solver2.solve(AT*bz);
+	Eigen::VectorXd Vnewz = solver2.solve(AT*bz);*/
+	Eigen::VectorXd Vnewx = (*solver2_array[m.ID-1]).solve(AT*bx);
+	Eigen::VectorXd Vnewy = (*solver2_array[m.ID - 1]).solve(AT*by);
+	Eigen::VectorXd Vnewz = (*solver2_array[m.ID - 1]).solve(AT*bz);
 
 	for(int i = 0; i < m.V.rows(); i++) {
 		if(m.vertex_boundary_markers[i]==0){ //Only update non-fixed points (curve points are fixed)

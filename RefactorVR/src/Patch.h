@@ -19,6 +19,7 @@ public:
 		new_sharp_edge = Eigen::VectorXi();
 		patch_vertices = Eigen::MatrixXd();
 		patch_faces = Eigen::MatrixXi();
+		mesh_to_patch_indices = Eigen::VectorXi();
 	;
 	};
 //	~Patch();
@@ -33,8 +34,9 @@ public:
 
 private:
 	void create_mesh_structure(Mesh& m, Eigen::VectorXi& faces);
-	void get_patch_edge(int edge, Eigen::VectorXi & patch_edge_is_init, Eigen::VectorXi & patch_vertex_is_init, int face, Eigen::MatrixXd & patch_vertices, Eigen::VectorXi & sharp_edge, Eigen::VectorXi & new_sharp_edge, Eigen::MatrixXd & V_orig, Eigen::VectorXi & boundary_markers_orig, Eigen::VectorXi & part_of_original_orig, Eigen::VectorXi & new_mapped_indices_orig);
-	void get_patch_vertex(int v_idx, int face, Eigen::MatrixXd & patch_vertices, Eigen::VectorXi & patch_vertex_is_init, Eigen::MatrixXd & V_orig, Eigen::VectorXi & boundary_markers_orig, Eigen::VectorXi & part_of_original_orig, Eigen::VectorXi & new_mapped_indices_orig);
+	void get_patch_edge(int edge, Eigen::VectorXi & patch_edge_is_init, Eigen::VectorXi & patch_vertex_is_init, int face, Eigen::MatrixXd & patch_vertices, Eigen::VectorXi & sharp_edge, Eigen::VectorXi & new_sharp_edge, Eigen::MatrixXd & V_orig, Eigen::VectorXi & boundary_markers_orig, Eigen::VectorXi & part_of_original_orig, Eigen::VectorXi & new_mapped_indices_orig, Eigen::VectorXi & mesh_to_patch_indices);
+//	void get_patch_edge(int edge, Eigen::VectorXi & patch_edge_is_init, Eigen::VectorXi & patch_vertex_is_init, int face, Eigen::MatrixXd & patch_vertices, Eigen::VectorXi & sharp_edge, Eigen::VectorXi & new_sharp_edge, Eigen::MatrixXd & V_orig, Eigen::VectorXi & boundary_markers_orig, Eigen::VectorXi & part_of_original_orig, Eigen::VectorXi & new_mapped_indices_orig);
+	void get_patch_vertex(int v_idx, int face, Eigen::MatrixXd & patch_vertices, Eigen::VectorXi & patch_vertex_is_init, Eigen::MatrixXd & V_orig, Eigen::VectorXi & boundary_markers_orig, Eigen::VectorXi & part_of_original_orig, Eigen::VectorXi & new_mapped_indices_orig, Eigen::VectorXi & mesh_to_patch_indices);
 
 	Eigen::VectorXi parent_vertices, parent_faces, new_vertex_boundary_markers, new_part_of_original_stroke, new_mapped_indices;
 
@@ -44,5 +46,6 @@ private:
 	Eigen::VectorXi patch_edge_indices;
 	Eigen::VectorXi patch_edge_is_init;
 	Eigen::VectorXi new_sharp_edge;
+	Eigen::VectorXi mesh_to_patch_indices;
 };
 #endif
