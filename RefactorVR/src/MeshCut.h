@@ -7,7 +7,7 @@
 class MeshCut {
 
 public:
-	static bool cut(Eigen::MatrixXd & V, Eigen::MatrixXi & F, Eigen::VectorXi & vertex_boundary_markers, Eigen::VectorXi & part_of_original_stroke, Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi & sharp_edge, Stroke & stroke, int clicked_face);
+	static bool cut(Mesh & m, Stroke & stroke, int clicked_face);
 
 
 private:	

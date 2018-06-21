@@ -27,6 +27,7 @@ public:
 
 	static std::vector<Patch*> init_patches(Mesh& h);
 	static void propagate_patch(Patch* patch, int face, Eigen::VectorXi& faces, std::vector<Patch*> &face_patch_map, Eigen::VectorXi& sharp_edge);
+	void update_parent_vertex_positions(Eigen::MatrixXd& base_V);
 	Mesh get_mesh() { return mesh; };
 	Mesh mesh;
 

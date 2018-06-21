@@ -111,9 +111,9 @@ void Patch::get_patch_vertex(int v_idx, int face, Eigen::MatrixXd& patch_vertice
 	patch_vertex_is_init[v_idx] = 1;
 }
 
-void Patch::update_parent_vertex_positions() {
+void Patch::update_parent_vertex_positions(Eigen::MatrixXd& base_V) {
 	for (int i = 0; i < mesh.V.rows(); i++) {
-		V[parent_vertices[i]] = mesh.V.row(i);
+		base_V.row(parent_vertices[i]) = mesh.V.row(i);
 	}
 }
 

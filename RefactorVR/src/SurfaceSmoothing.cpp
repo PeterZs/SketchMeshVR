@@ -38,7 +38,7 @@ std::unordered_map<int, Eigen::SparseMatrix<double>> SurfaceSmoothing::precomput
 std::unordered_map<int, Eigen::SparseMatrix<double>> SurfaceSmoothing::AT_for_positions;
 std::unordered_map<int, Eigen::VectorXi> SurfaceSmoothing::precomputed_laplacian_weights;
 
-void SurfaceSmoothing::smooth(Mesh& base_mesh, bool& BOUNDARY_IS_DIRTY){// Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::VectorXi &new_mapped_indices, Eigen::VectorXi &sharp_edge, bool& BOUNDARY_IS_DIRTY) {
+void SurfaceSmoothing::smooth(Mesh& base_mesh, bool& BOUNDARY_IS_DIRTY){
 	if(prev_vertex_count != base_mesh.V.rows()) { //The mesh topology has changed, so we need to reset the precomputed matrices. If only boundary constraints got added, we can reuse part of the matrices so don't clear it all out but instead overwrite certain parts
         ID++;
 		clear_precomputed_matrices();
@@ -53,10 +53,12 @@ void SurfaceSmoothing::smooth(Mesh& base_mesh, bool& BOUNDARY_IS_DIRTY){// Eigen
 		base_mesh.patches = Patch::init_patches(base_mesh);
 	}
 
+	std::cout << "Check that we odn't have duplicate mesh IDs" << std::endl;
 	for (int i = 0; i < base_mesh.patches.size(); i++) {
 		Patch* patch = (base_mesh.patches[i]);
+		std::cout << (*patch).mesh.ID << std::endl;
 		smooth_main((*patch).mesh, BOUNDARY_IS_DIRTY);
-		(*patch).update_parent_vertex_positions();
+		(*patch).update_parent_vertex_positions(base_mesh.V);
 	}
 
 	BOUNDARY_IS_DIRTY = false;
