@@ -103,7 +103,7 @@ Eigen::RowVector3d black(0, 0, 0);
 void draw_all_strokes(){
 	Eigen::MatrixXd added_points = initial_stroke->get3DPoints();
 	int nr_edges = added_points.rows()-1;
-	viewer.data().set_points(added_points.topRows(nr_edges), red); //Display the original stroke points and clear all the rest. Don't take the last point
+	//viewer.data().set_points(added_points.topRows(nr_edges), red); //Display the original stroke points and clear all the rest. Don't take the last point
 	viewer.data().set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), red); //Clear the non-original stroke edges
 
 	if (initial_stroke->is_loop) {
@@ -123,7 +123,7 @@ void draw_all_strokes(){
 	for (int i = 0; i < stroke_collection.size(); i++) {
 		added_points = stroke_collection[i].get3DPoints();
 		points_to_hold_back = 1 + !stroke_collection[i].is_loop;
-		viewer.data().add_points(added_points, stroke_collection[i].stroke_color);
+		//viewer.data().add_points(added_points, stroke_collection[i].stroke_color);
 		viewer.data().add_edges(added_points.topRows(added_points.rows() - points_to_hold_back), added_points.middleRows(1,added_points.rows() - points_to_hold_back), stroke_collection[i].stroke_color);
 	}
 }
@@ -132,7 +132,7 @@ void draw_extrusion_base(){
 	int points_to_hold_back;
 	Eigen::MatrixXd added_points = extrusion_base->get3DPoints();
 	points_to_hold_back = 1 + extrusion_base->is_loop;
-	viewer.data().add_points(added_points, extrusion_base->stroke_color);
+	//viewer.data().add_points(added_points, extrusion_base->stroke_color);
 	viewer.data().add_edges(added_points.topRows(added_points.rows() - points_to_hold_back), added_points.middleRows(1, added_points.rows() - points_to_hold_back), extrusion_base->stroke_color);
 }
 
@@ -325,9 +325,20 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		}
 		else if (prev_tool_mode == PULL) {
 			if (turnNr == 0) { 
+				//TODO: PULL test what happens when we turn off the intermediate smooth steps and only smooth & update afterwards?
+				Eigen::MatrixXd V_before_pull = (*base_mesh).V;
+				Eigen::MatrixXd patch_V_before_pull = (*base_mesh).patches[0]->mesh.V;
 				CurveDeformation::pullCurve(pos.transpose().cast<double>(), (*base_mesh).V, (*base_mesh).part_of_original_stroke);
-				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
+				Eigen::MatrixXd V_after_pull = (*base_mesh).V;
+				Eigen::MatrixXd patch_V_after_pull = (*base_mesh).patches[0]->mesh.V;
 
+				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
+				std::cout << "test dif: " << std::endl << (*base_mesh).V - V_after_pull << std::endl;
+				std::cout << "test dif2: " << std::endl << (*base_mesh).V - V_before_pull << std::endl;
+				std::cout << "test dif3: " << std::endl << (*base_mesh).V - patch_V_after_pull << std::endl;
+				std::cout << "test dif4: " << std::endl << (*base_mesh).V - patch_V_before_pull << std::endl;
+				std::cout << "test dif5: " << std::endl << patch_V_before_pull - V_before_pull << std::endl;
+				std::cout << "test dif6: " << std::endl << patch_V_after_pull - V_after_pull << std::endl;
 				turnNr++;
 
 				initial_stroke->update_Positions(V);
@@ -451,7 +462,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				//Overlay the drawn stroke
 				int strokeSize = (vertex_boundary_markers.array() > 0).count();
 				Eigen::MatrixXd strokePoints = V.block(0, 0, strokeSize, 3);
-				viewer.data().set_points(strokePoints, Eigen::RowVector3d(1, 0, 0)); //Displays dots
+			//	viewer.data().set_points(strokePoints, Eigen::RowVector3d(1, 0, 0)); //Displays dots
 				viewer.data().set_stroke_points(igl::cat(1, strokePoints, (Eigen::MatrixXd) V.row(0)));
 				
 			}
@@ -795,6 +806,7 @@ int main(int argc, char *argv[]) {
 	viewer.append_mesh();
 	viewer.data().set_mesh(V, F);
 	viewer.append_mesh(); //For laser ray/point
+	viewer.data().show_laser = false;
 	viewer.selected_data_index = 1;
 	viewer.plugins.push_back(&menu);
 

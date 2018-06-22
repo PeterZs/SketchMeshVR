@@ -153,7 +153,7 @@ Eigen::VectorXd SurfaceSmoothing::compute_initial_curvature(Mesh &m) {
 					count++;
 				}
 			}
-			initial_curvatures[i] = (m.V.row(i) - (1.0 / count)*vec).norm();
+			initial_curvatures[i] = (m.V.row(i) - (1.0 / count)*vec).norm(); //TEST: SMOOTH AFTER PULL. maybe revert this change?
 			//initial_curvatures[i] = (m.V.row(i) - 0.5 * (m.V.row((i - 1 + original_stroke_no_vertices) % original_stroke_no_vertices) + m.V.row((i + 1 + original_stroke_no_vertices) % original_stroke_no_vertices))).norm(); //Take modulo of the number of original stroke vertices to avoid wrapping the first and last of the original stroke to the interior of the mesh
 		} else if(m.vertex_boundary_markers[i] > 0) { //Boundary vertex on an added stroke
 			Eigen::RowVector3d vec(0,0,0);
@@ -374,13 +374,16 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 	/*Eigen::VectorXd Vnewx = solver2.solve(AT*bx);
 	Eigen::VectorXd Vnewy = solver2.solve(AT*by);
 	Eigen::VectorXd Vnewz = solver2.solve(AT*bz);*/
-	Eigen::VectorXd Vnewx = (*solver2_array[m.ID-1]).solve(AT*bx);
+	Eigen::VectorXd Vnewx = (*solver2_array[m.ID - 1]).solve(AT*bx);
 	Eigen::VectorXd Vnewy = (*solver2_array[m.ID - 1]).solve(AT*by);
 	Eigen::VectorXd Vnewz = (*solver2_array[m.ID - 1]).solve(AT*bz);
 
 	for(int i = 0; i < m.V.rows(); i++) {
 		if(m.vertex_boundary_markers[i]==0){ //Only update non-fixed points (curve points are fixed)
 			m.V.row(i) << Vnewx[i], Vnewy[i], Vnewz[i];
+		}
+		else {
+			std::cout << "Vert " << i << " is fixed" << std::endl;
 		}
 	}
 }
