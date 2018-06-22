@@ -20,8 +20,8 @@ std::vector<Patch*> Patch::init_patches(Mesh& h) {
 
 	std::vector<Patch*> patches;
 	h.face_patch_map.resize(h.F.rows(), nullptr);
-	h.mesh_to_patch_indices.resize(h.V.rows());
-	h.mesh_to_patch_indices.setConstant(-1);
+	//h.mesh_to_patch_indices.resize(h.V.rows());
+	//h.mesh_to_patch_indices.setConstant(-1);
 	
 	for (int i = 0; i < h.F.rows(); i++) {
 		Patch* face_patch = h.face_patch_map[i];
@@ -120,9 +120,21 @@ void Patch::get_patch_vertex(int v_idx, int face, Eigen::MatrixXd& patch_vertice
 }
 
 void Patch::update_parent_vertex_positions(Eigen::MatrixXd& base_V) {
-	std::cout << " Base size: " << base_V.rows() << std::endl;
-	std::cout << "other size: " << mesh.V.rows() << std::endl;
 	for (int i = 0; i < mesh.V.rows(); i++) {
 		base_V.row(parent_vertices[i]) = mesh.V.row(i);
+	}
+}
+
+void Patch::update_patch_vertex_positions(Eigen::MatrixXd& base_V) {
+	for (int i = 0; i < base_V.rows(); i++) {
+		if (mesh_to_patch_indices[i] != -1) {
+			mesh.V.row(mesh_to_patch_indices[i]) = base_V.row(i);
+		}
+	}
+}
+
+void Patch::update_patch_boundary_markers(Eigen::VectorXi& base_boundary_markers) {
+	for (int i = 0; i < base_boundary_markers.rows(); i++) {
+		mesh.vertex_boundary_markers(mesh_to_patch_indices[i]) = base_boundary_markers(i);
 	}
 }

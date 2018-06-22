@@ -382,9 +382,6 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 		if(m.vertex_boundary_markers[i]==0){ //Only update non-fixed points (curve points are fixed)
 			m.V.row(i) << Vnewx[i], Vnewy[i], Vnewz[i];
 		}
-		else {
-			std::cout << "Vert " << i << " is fixed" << std::endl;
-		}
 	}
 }
 

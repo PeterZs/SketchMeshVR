@@ -22,11 +22,7 @@ public:
 
 	std::vector<Patch*> face_patch_map;
 	Eigen::VectorXi mesh_to_patch_indices;
-	//const int ID;
 	int ID;
-
-	//Eigen::SparseLU<Eigen::SparseMatrix<double>> solver1;
-	//Eigen::SparseLU<Eigen::SparseMatrix<double>> solver2;
 };
 
 #endif
