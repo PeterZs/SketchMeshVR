@@ -286,7 +286,6 @@ void Stroke::addSegmentCut(Eigen::Vector3f& pos) {
 /** Used for EXTRUDE. Extrusion base strokes need to be drawn entirely on the mesh (points outside of it will be ignored) and needs to surround at least one vertex. 
 Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its projection as a 2D point. After adding the new point it will restart the timer. Will also store the indices of the faces that are hit. The closest vertex bindings are handled in SurfacePath. **/
 void Stroke::addSegmentExtrusionBase(Eigen::Vector3f& pos) {
-	
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
@@ -297,10 +296,6 @@ void Stroke::addSegmentExtrusionBase(Eigen::Vector3f& pos) {
 
 	Eigen::Vector3d hit_pos;
 	vector<igl::Hit> hits;
-
-//	Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
-//	pos[0] += last_eye_origin[0];
-//	pos[2] += last_eye_origin[2];
 
 	if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 		if (hits.size() < 2) { //User had hand inside or behind mesh while drawing extrusion base stroke
@@ -359,7 +354,7 @@ void Stroke::addSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if (timePast < 300000) {
+		if (timePast < 3000) {
 			return;
 		}
 	}
@@ -367,9 +362,6 @@ void Stroke::addSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 	Eigen::RowVector3d pt2D;
 	Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
 
-	//Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
-	//pos[0] += last_eye_origin[0];
-	//pos[2] += last_eye_origin[2];
 	Eigen::RowVector3d pos_in = pos.cast<double>().transpose();
 	igl::project(pos_in, modelview, viewer.core.get_proj(), viewer.core.viewport, pt2D);
 
@@ -377,7 +369,7 @@ void Stroke::addSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 	if (!stroke2DPoints.isZero() && pt2D[0] == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && pt2D[1] == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) {//Check that the point is new compared to last time
 		return;
 	}
-	else if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < 0.00005625) {
+	else if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < 0.0000005625) {
 		return;
 	}
 

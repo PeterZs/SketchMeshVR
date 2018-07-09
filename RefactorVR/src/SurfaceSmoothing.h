@@ -19,7 +19,7 @@ public:
     static std::unordered_map<int, Eigen::SparseMatrix<double>> AT_for_LM_and_edges;
 	static std::unordered_map<int, Eigen::SparseMatrix<double>> precompute_matrix_for_positions;
     static std::unordered_map<int, Eigen::SparseMatrix<double>> AT_for_positions;
-	static std::unordered_map<int, Eigen::VectorXi> precomputed_laplacian_weights;
+	static std::unordered_map<int, Eigen::VectorXd> precomputed_laplacian_weights;
 
 	static void smooth(Mesh & base_mesh, bool& BOUNDARY_IS_DIRTY);
     //static void smooth(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::VectorXi &new_mapped_indices, Eigen::VectorXi &sharp_edge, bool& BOUNDARY_IS_DIRTY);
@@ -43,13 +43,13 @@ private:
     static Eigen::SparseMatrix<double> get_AT_for_LM_and_edges(Mesh & m);
     static Eigen::SparseMatrix<double> get_precompute_matrix_for_positions(Mesh & m);
     static Eigen::SparseMatrix<double> get_AT_for_positions(Mesh & m);
-	static Eigen::VectorXi get_precomputed_laplacian_weights(Mesh &m);
+	static Eigen::VectorXd get_precomputed_laplacian_weights(Mesh &m);
     static void set_precomputed_L(Mesh & m, Eigen::MatrixXd & L);
     static void set_precompute_matrix_for_LM_and_edges(Mesh & m, Eigen::SparseMatrix<double> curv);
     static void set_AT_for_LM_and_edges(Mesh & m, Eigen::SparseMatrix<double> AT);
     static void set_precompute_matrix_for_positions(Mesh & m, Eigen::SparseMatrix<double> pos);
     static void set_AT_for_positions(Mesh & m, Eigen::SparseMatrix<double> AT);
-	static void set_precomputed_laplacian_weights(Mesh & m, Eigen::VectorXi & L);
+	static void set_precomputed_laplacian_weights(Mesh & m, Eigen::VectorXd & L);
 
 };
 

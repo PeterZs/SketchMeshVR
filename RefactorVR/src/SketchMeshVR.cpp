@@ -177,6 +177,9 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 	}else if (pressed == OculusVR::ButtonCombo::NONE) {
 		tool_mode = NONE;
 	}
+	else if (pressed == OculusVR::ButtonCombo::B) {
+		tool_mode = SMOOTH;
+	}
 
 	
 	if (tool_mode == DRAW) {
@@ -326,6 +329,9 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				}
 
 				viewer.data().set_mesh(V, F);
+				Eigen::MatrixXd N_corners;
+				igl::per_corner_normals(V, F, 50, N_corners);
+				viewer.data().set_normals(N_corners); //TODO: NORMALS
 				draw_all_strokes();
 			}
 			else {
@@ -465,6 +471,9 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 			viewer.data().clear();
 			viewer.data().set_mesh(V, F);
+			Eigen::MatrixXd N_corners;
+			igl::per_corner_normals(V, F, 50, N_corners);
+			viewer.data().set_normals(N_corners); //TODO: NORMALS
 			draw_all_strokes();
 		}
 		else if (prev_tool_mode == CUT) {
@@ -534,6 +543,9 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 				viewer.data().clear();
 				viewer.data().set_mesh(V, F);
+				Eigen::MatrixXd N_corners;
+				igl::per_corner_normals(V, F, 50, N_corners);
+				viewer.data().set_normals(N_corners); //TODO: NORMALS
 
 				cut_stroke_already_drawn = false; //Reset
 				draw_all_strokes();
@@ -588,7 +600,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				}
 
 				for (int i = 0; i < 10; i++) {
-					SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
+				//	SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
 				}
 
 				//Update the stroke positions after smoothing, in case their positions have changed (although they really shouldn't)
@@ -599,6 +611,10 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 				viewer.data().clear();
 				viewer.data().set_mesh(V, F);
+				Eigen::MatrixXd N_corners;
+				igl::per_corner_normals(V, F, 50, N_corners);
+				viewer.data().set_normals(N_corners); //TODO: NORMALS
+
 				draw_all_strokes();
 				extrusion_base_already_drawn = false;
 			}
@@ -659,6 +675,10 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			}
 			viewer.data().clear();
 			viewer.data().set_mesh(V, F);
+			Eigen::MatrixXd N_corners;
+			igl::per_corner_normals(V, F, 50, N_corners);
+			viewer.data().set_normals(N_corners); //TODO: NORMALS
+
 			draw_all_strokes();
 		}
 		else if (prev_tool_mode == NAVIGATE) {
@@ -684,6 +704,9 @@ bool callback_load_mesh(Viewer& viewer, string filename, Eigen::MatrixXd& V_floo
 		viewer.data().set_mesh(V_floor, F_floor);
 		viewer.append_mesh();
 		viewer.data().set_mesh(V, F);
+		Eigen::MatrixXd N_corners;
+		igl::per_corner_normals(V, F, 50, N_corners);
+		viewer.data().set_normals(N_corners); //TODO: NORMALS
 
 		std::cout << filename.substr(filename.find_last_of("/") + 1) << endl;
 	return true;
@@ -765,11 +788,14 @@ int main(int argc, char *argv[]) {
 		stbi_image_free(data);
 
 		viewer.data().set_uv(V_uv); 
-		viewer.data().show_texture = true; //TODO: texture turned off for now. Due to problems with anti-aliasing
+		viewer.data().show_texture = true;
 		viewer.data().set_texture(texR, texG, texB);
 	}
 	viewer.append_mesh();
 	viewer.data().set_mesh(V, F);
+	Eigen::MatrixXd N_corners;
+	igl::per_corner_normals(V, F, 50, N_corners);
+	viewer.data().set_normals(N_corners); 
 	viewer.append_mesh(); //For laser ray/point
 	viewer.data().show_laser = false;
 	viewer.selected_data_index = 1;
@@ -781,7 +807,7 @@ int main(int argc, char *argv[]) {
 
 	GLuint img_texture = 0, img_texture1 = 0, img_texture2 = 0, img_texture3 = 0, img_texture4 = 0, img_texture5 = 0, img_texture6 = 0;
 	int img_width, img_height, nrChannels;
-	std::string filename = std::string(cur_dir) + "\\..\\data\\free\\draw.png"; //TODO: change this to be user-independent
+	std::string filename = std::string(cur_dir) + "\\..\\data\\free\\draw.png"; 
 	unsigned char *img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
 	if (!img_data) {
 		std::cerr << "Could not load image 1." << std::endl;
@@ -960,7 +986,7 @@ int main(int argc, char *argv[]) {
 	viewer.oculusVR.callback_menu_opened = menu_opened;
 	viewer.oculusVR.callback_menu_closed = menu_closed;
 	viewer.data().point_size = 15;
-	viewer.data().show_lines = false;
+	viewer.data().show_lines = true; //TODO change
 	viewer.launch_oculus();
 }
 
