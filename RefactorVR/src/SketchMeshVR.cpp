@@ -52,7 +52,8 @@ Eigen::VectorXi new_mapped_indices;
 
 Mesh* base_mesh;
 
-
+std::function<void()> current_tool_HUD;
+std::function<void(void)> menu_HUD;
 //General
 enum ToolMode { DRAW, ADD, CUT, EXTRUDE, PULL, REMOVE, CHANGE, SMOOTH, NAVIGATE, NONE, DEFAULT, FAIL }; //NONE is used to indicate that a button was released, whereas DEFAULT indicates that one of the toggle buttons was pressed within its cooldown period, FAIL is used to indicate that something went wrong (e.g. user clicked too far away for PULL)
 
@@ -99,6 +100,7 @@ bool draw_should_block = false;
 Eigen::RowVector3d red(1, 0, 0);
 Eigen::RowVector3d black(0, 0, 0);
 
+Eigen::RowVector3d laser_end_point;
 bool prev_laser_show;
 void draw_all_strokes(){
 	Eigen::MatrixXd added_points = initial_stroke->get3DPoints();
@@ -151,7 +153,33 @@ void select_dragging_handle(Eigen::Vector3f& pos) {
 	}
 }
 
+void set_laser_points(Eigen::Vector3f& pos) {
+	vector<igl::Hit> hits;
+	if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
+		laser_end_point = (V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v);
+	}
+	else { //First check for intersections with the mesh, then with the floor and finally just set the end point at a far distance
+		viewer.selected_data_index = 0;
+		if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), viewer.data().V, viewer.data().F, hits)) {
+			laser_end_point = (viewer.data().V.row(viewer.data().F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + viewer.data().V.row(viewer.data().F(hits[0].id, 1))*hits[0].u + viewer.data().V.row(viewer.data().F(hits[0].id, 2))*hits[0].v);
+		}
+		else {
+			laser_end_point = (pos + 10 * viewer.oculusVR.get_right_touch_direction()).cast<double>();
+		}
+		viewer.selected_data_index = 1;
+	}
+	viewer.selected_data_index = 2;
+	Eigen::MatrixX3d LP(2, 3);
+	LP.row(0) = pos.cast<double>();
+	LP.row(1) = laser_end_point;
+	Eigen::MatrixXd laser_color(2, 3);
+	laser_color.setZero();
+	viewer.data().set_laser_points(LP, laser_color);
+	viewer.selected_data_index = 1;
+}
+
 void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
+	set_laser_points(pos);
 	if (pressed == OculusVR::ButtonCombo::TRIG && (selected_tool_mode == ADD || selected_tool_mode == REMOVE || selected_tool_mode == CUT || selected_tool_mode == EXTRUDE)) {
 		if (initial_stroke->empty2D()) { //Don't go into these modes when there is no mesh yet
 			prev_tool_mode = FAIL;
@@ -714,6 +742,7 @@ bool callback_load_mesh(Viewer& viewer, string filename, Eigen::MatrixXd& V_floo
 
 void menu_opened() {
 	menu.set_active();
+	menu.callback_draw_viewer_window = menu_HUD;
 	viewer.selected_data_index = 2;
 	prev_laser_show = viewer.data().show_laser;
 	viewer.data().show_laser = true;
@@ -723,6 +752,7 @@ void menu_opened() {
 
 void menu_closed() {
 	menu.set_inactive();
+	menu.callback_draw_viewer_window = current_tool_HUD;
 	viewer.selected_data_index = 2;
 	viewer.data().show_laser = prev_laser_show;
 	viewer.selected_data_index = 1;
@@ -791,6 +821,7 @@ int main(int argc, char *argv[]) {
 		viewer.data().show_texture = true;
 		viewer.data().set_texture(texR, texG, texB);
 	}
+
 	viewer.append_mesh();
 	viewer.data().set_mesh(V, F);
 	Eigen::MatrixXd N_corners;
@@ -804,10 +835,9 @@ int main(int argc, char *argv[]) {
 	CurveDeformation::smooth_deform_mode = true;
 	viewer.init_oculus();
 
-
 	GLuint img_texture = 0, img_texture1 = 0, img_texture2 = 0, img_texture3 = 0, img_texture4 = 0, img_texture5 = 0, img_texture6 = 0;
 	int img_width, img_height, nrChannels;
-	std::string filename = std::string(cur_dir) + "\\..\\data\\free\\draw.png"; 
+	std::string filename = std::string(cur_dir) + "\\..\\data\\free\\draw.png";
 	unsigned char *img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
 	if (!img_data) {
 		std::cerr << "Could not load image 1." << std::endl;
@@ -821,7 +851,7 @@ int main(int argc, char *argv[]) {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
 	void* im_texID_draw = (void *)(intptr_t)img_texture;
 
-	filename = std::string(cur_dir) + "\\..\\data\\free\\pull.png"; 
+	filename = std::string(cur_dir) + "\\..\\data\\free\\pull.png";
 	img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
 	if (!img_data) {
 		std::cerr << "Could not load image 2." << std::endl;
@@ -834,7 +864,7 @@ int main(int argc, char *argv[]) {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
 	void* im_texID_pull = (void *)(intptr_t)img_texture2;
 
-	filename = std::string(cur_dir) + "\\..\\data\\free\\plus.png"; 
+	filename = std::string(cur_dir) + "\\..\\data\\free\\plus.png";
 	img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
 	if (!img_data) {
 		std::cerr << "Could not load image 3." << std::endl;
@@ -886,7 +916,127 @@ int main(int argc, char *argv[]) {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
 	void* im_texID_remove = (void *)(intptr_t)img_texture6;
 
-	menu.callback_draw_viewer_window = [&]() {
+	void* im_texID_cur = im_texID_draw;
+
+	current_tool_HUD = [&]() {
+		ImGui::SetNextWindowSize(ImVec2(200.0f, 200.0f), ImGuiSetCond_FirstUseEver);
+		ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiSetCond_FirstUseEver);
+		ImGuiStyle& style = ImGui::GetStyle();
+		style.WindowPadding = ImVec2(0, 0);
+		style.WindowRounding = 0.0f;
+		style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
+		style.ItemInnerSpacing = ImVec2(0, 0);
+		style.Colors[ImGuiCol_WindowBg] = ImVec4(0.00f, 0.00f, 0.00f, 1.0f);
+		ImGui::Begin("Current Tool", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar);
+		ImGui::SameLine(0.5*(200-178)); //Take distance around image and offset by half of it
+		ImGui::Image(im_texID_cur, ImVec2(178.0f, 178.0f), ImVec2(0,0), ImVec2(1,1), ImColor(255, 255, 255, 255), ImColor(0,0,0,0));
+		ImGui::End();
+	};
+
+	menu_HUD = [=, &im_texID_cur]() {
+		const ImVec2 texsize = ImGui_ImplGlfwGL3_GetTextureSize();
+		ImColor icon_background_color(0, 0, 0, 255);
+		ImVec2 uv_start(0, 0);
+		ImVec2 uv_end(1, 1);
+		ImVec2 icon_size(320, 320);
+		//std::cout << "texsize" << texsize.x << "  " << texsize.y << std::endl;
+		//ImGui::SetNextWindowSize(texsize);
+		ImGuiStyle& style = ImGui::GetStyle();
+		style.WindowPadding = ImVec2(0, 0);
+		style.WindowRounding = 0.0f;
+		style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
+		style.ItemInnerSpacing = ImVec2(0, 0);
+		style.Colors[ImGuiCol_WindowBg] = ImVec4(0.00f, 0.00f, 0.00f, 1.0f);
+
+		ImGui::SetNextWindowSize(ImVec2(1024.0f, 700.0f), ImGuiSetCond_FirstUseEver);
+		ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiSetCond_FirstUseEver);
+
+		ImGui::Begin("Selection Menu", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar);
+		int frame_padding = 5;
+		ImGuiIO& io = ImGui::GetIO();
+		ImGui::SetWindowFontScale(2.f);
+
+		ImGui::PushID(0);
+		if (ImGui::ImageButton(im_texID_draw, icon_size, uv_start, uv_end, frame_padding, icon_background_color)) {
+			selected_tool_mode = DRAW;
+			im_texID_cur = im_texID_draw;
+			viewer.selected_data_index = 2;
+			viewer.data().show_laser = false;
+			prev_laser_show = viewer.data().show_laser;
+			viewer.selected_data_index = 1;
+			menu_closed();
+		}
+		ImGui::PopID();
+		ImGui::SameLine();
+		ImGui::PushID(1);
+		//ImGui::SetCursorPos(ImVec2(0, 345));
+		if (ImGui::ImageButton(im_texID_pull, icon_size, uv_start, uv_end, frame_padding, icon_background_color)) {
+			selected_tool_mode = PULL;
+			im_texID_cur = im_texID_pull;
+			viewer.selected_data_index = 2;
+			viewer.data().show_laser = false;
+			prev_laser_show = viewer.data().show_laser;
+			viewer.selected_data_index = 1;
+			menu_closed();
+		}
+		ImGui::PopID();
+		ImGui::SameLine();
+		ImGui::PushID(2);
+		//ImGui::SetCursorPos(ImVec2(379, 379));
+		if (ImGui::ImageButton(im_texID_add, icon_size, uv_start, uv_end, frame_padding, icon_background_color)) {
+			selected_tool_mode = ADD;
+			im_texID_cur = im_texID_add;
+			viewer.selected_data_index = 2;
+			viewer.data().show_laser = true;
+			prev_laser_show = viewer.data().show_laser;
+			viewer.selected_data_index = 1;
+			menu_closed();
+		}
+		ImGui::PopID();
+
+		ImGui::PushID(3);
+		if (ImGui::ImageButton(im_texID_cut, icon_size, uv_start, uv_end, frame_padding, icon_background_color)) {
+			selected_tool_mode = CUT;
+			im_texID_cur = im_texID_cut;
+			viewer.selected_data_index = 2;
+			viewer.data().show_laser = true;
+			prev_laser_show = viewer.data().show_laser;
+			viewer.selected_data_index = 1;
+			menu_closed();
+		}
+		ImGui::PopID();
+		ImGui::SameLine();
+		ImGui::PushID(4);
+		//ImGui::SetCursorPos(ImVec2(0, 345));
+		if (ImGui::ImageButton(im_texID_extrude, icon_size, uv_start, uv_end, frame_padding, icon_background_color)) {
+			selected_tool_mode = EXTRUDE;
+			im_texID_cur = im_texID_extrude;
+			viewer.selected_data_index = 2;
+			viewer.data().show_laser = true;
+			prev_laser_show = viewer.data().show_laser;
+			viewer.selected_data_index = 1;
+			menu_closed();
+		}
+		ImGui::PopID();
+		ImGui::SameLine();
+		ImGui::PushID(5);
+		//ImGui::SetCursorPos(ImVec2(379, 379));
+		if (ImGui::ImageButton(im_texID_remove, icon_size, uv_start, uv_end, frame_padding, icon_background_color)) {
+			selected_tool_mode = REMOVE;
+			im_texID_cur = im_texID_remove;
+			viewer.selected_data_index = 2;
+			viewer.data().show_laser = true;
+			prev_laser_show = viewer.data().show_laser;
+			viewer.selected_data_index = 1;
+			menu_closed();
+		}
+		ImGui::PopID();
+		ImGui::End();
+	};
+
+	
+
+	/*menu.callback_draw_viewer_window = [&]() {
 		const ImVec2 texsize = ImGui_ImplGlfwGL3_GetTextureSize();
 		ImColor icon_background_color(0, 0, 0, 255);
 		ImVec2 uv_start(0, 0);
@@ -979,9 +1129,9 @@ int main(int argc, char *argv[]) {
 		}
 		ImGui::PopID();
 		ImGui::End();
-	};
+	};*/
 
-
+	menu.callback_draw_viewer_window = current_tool_HUD;
 	viewer.oculusVR.callback_button_down = button_down;
 	viewer.oculusVR.callback_menu_opened = menu_opened;
 	viewer.oculusVR.callback_menu_closed = menu_closed;

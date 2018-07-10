@@ -400,7 +400,6 @@ Eigen::VectorXd SurfaceSmoothing::get_curvatures(Mesh &m) {
     int sign;
 	for (int i = 0; i < m.V.rows(); i++) {
 		sign = (laplacians.row(i).dot(vertex_normals.row(i).transpose()) > 0) ? 1 : -1;
-		std::cout << sign << std::endl;
 		curvatures[i] = laplacians.row(i).norm()*sign;
 	}
 	return curvatures;

@@ -199,10 +199,6 @@ void Stroke::addSegmentCut(Eigen::Vector3f& pos) {
 	Eigen::Vector3d hit_pos, hit_pos_back;
 	vector<igl::Hit> hits;
 
-	//Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
-//	pos[0] += last_eye_origin[0];
-//	pos[2] += last_eye_origin[2];
-
 	if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 		if (hits.size() < 2) { //User had hand inside or behind mesh while cutting
 			return;
@@ -266,18 +262,6 @@ void Stroke::addSegmentCut(Eigen::Vector3f& pos) {
 		pos_before_cut = pos.cast<double>();
 		dir_before_cut = viewer.oculusVR.get_right_touch_direction().cast<double>();
 	}
-
-	if (!current_hit) {
-		hit_pos = (pos + 1000 * viewer.oculusVR.get_right_touch_direction()).cast<double>();
-	}
-
-	Eigen::MatrixX3d ray_points(2, 3);
-	ray_points.row(0) = pos.cast<double>();
-	ray_points.row(1) = hit_pos;
-
-	viewer.selected_data_index = 2;
-	//viewer.data().set_laser_points(ray_points);
-	viewer.selected_data_index = 1;
 
 	_time1 = std::chrono::high_resolution_clock::now();
 	return;
