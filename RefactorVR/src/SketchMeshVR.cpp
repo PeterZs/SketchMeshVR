@@ -479,6 +479,23 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				viewer.update_screen_while_computing = false;
 				return;
 			}
+
+				/*
+			//TODO: Work in progress
+			//TODO: remove all references to stroke.closest_vertex
+			if(stroke on mesh){
+			LaplacianRemesh::remesh_open_path(m, added_stroke);
+			}else{//Stroke like a cut stroke (starts and ends off mesh to wrap around) but with click outside of the mesh to confirm
+				//Need to remesh like it's a cut but without removing the inside faces (we get 2 loops of boundary vertices that both need to be stitched, so can't use remesh_open_path)
+			}
+			//update the added_stroke's stroke3DPoints (maybe already do in remesh_open_path)
+			stroke_collection.push_back(*added_stroke);
+			(*base_mesh).patches.clear();
+			(*base_mesh).face_patch_map.clear();
+			(*base_mesh).patches = Patch::init_patches(*base_mesh);
+			draw_all_strokes;
+			*/
+
 			added_stroke->snap_to_vertices(vertex_boundary_markers);
 			stroke_collection.push_back(*added_stroke);
 

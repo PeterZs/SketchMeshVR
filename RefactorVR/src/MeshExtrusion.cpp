@@ -13,7 +13,7 @@ using namespace igl;
 bool MeshExtrusion::extrude_prepare(Stroke& base, SurfacePath& surface_path) {
 	base.counter_clockwise();
 	
-	bool success = surface_path.create_from_stroke_extrude(base);
+	bool success = surface_path.create_from_stroke_extrude(base, true);
 
 	if (!success) {
 		return false;

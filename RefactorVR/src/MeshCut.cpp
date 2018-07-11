@@ -31,8 +31,6 @@ bool MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke, int c
 		return false;
 	}
 	return mesh_open_hole(boundary_vertices, m);
-
-//	return true;
 }
 
 bool MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
