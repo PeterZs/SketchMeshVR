@@ -86,9 +86,7 @@ bool Stroke::addSegment(Eigen::Vector3f& pos) {
 			return false;
 		}
 		else { //If enough time has passed, check if controller moved a large enough distance
-		//	Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
-		//	pos[0] += last_eye_origin[0];
-		//	pos[2] += last_eye_origin[2];
+		
 			if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < 0.00005625) {
 				return false;
 			}
@@ -98,11 +96,6 @@ bool Stroke::addSegment(Eigen::Vector3f& pos) {
 				}
 			}
 		}
-	}
-	else {
-	//	Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
-	//	pos[0] += last_eye_origin[0];
-	//	pos[2] += last_eye_origin[2];
 	}
 
 	if (stroke3DPoints.rows() == 1 && stroke3DPoints.isZero()) {
@@ -133,21 +126,15 @@ bool Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
 		}
 	}
 
-	bool current_hit = false;
 	Eigen::Vector3d hit_pos, hit_pos_back;
 	vector<igl::Hit> hits;
 
-//	Eigen::Vector3f last_eye_origin = viewer.oculusVR.get_last_eye_origin();
-//	pos[0] += last_eye_origin[0];
-//	pos[2] += last_eye_origin[2];
-
-	if (!stroke3DPoints.isZero() && pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
-		return true;
-	}
-
-
 	if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 		hit_pos = V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v;
+
+		if (!stroke3DPoints.isZero() && hit_pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && hit_pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && hit_pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
+			return true;
+		}
 
 		double cur_dist, min_dist = INFINITY;
 		int closest_vert_idx;
@@ -186,7 +173,6 @@ bool Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
 /** Used for CUT. Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its projection as a 2D point. The indices of the front and backside faces that are hit will also be stored.
 If the ray doesn't intersect the mesh, we will store its origin and direction and later possible use it to compute the start or end point. After adding the new point it will restart the timer. **/
 void Stroke::addSegmentCut(Eigen::Vector3f& pos) {
-	
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
@@ -195,23 +181,21 @@ void Stroke::addSegmentCut(Eigen::Vector3f& pos) {
 		}
 	}
 
-	bool current_hit = false;
-	Eigen::Vector3d hit_pos, hit_pos_back;
 	vector<igl::Hit> hits;
 
 	if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 		if (hits.size() < 2) { //User had hand inside or behind mesh while cutting
 			return;
 		}
-		current_hit = true;
-		hit_pos = V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v;
-		hit_pos_back = V.row(F(hits[1].id, 0))*(1.0 - hits[1].u - hits[1].v) + V.row(F(hits[1].id, 1))*hits[1].u + V.row(F(hits[1].id, 2))*hits[1].v;
+
+		Eigen::Vector3d hit_pos = V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v;
+		Eigen::Vector3d hit_pos_back = V.row(F(hits[1].id, 0))*(1.0 - hits[1].u - hits[1].v) + V.row(F(hits[1].id, 1))*hits[1].u + V.row(F(hits[1].id, 2))*hits[1].v;
 
 		//Early return (no point added)
 		if (!stroke3DPoints.isZero() && hit_pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && hit_pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && hit_pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
 			return;
 		}
-		if (stroke2DPoints.rows() == 1 && dir_before_cut.isZero()) {
+		if (stroke2DPoints.rows() == 1 && dir_before_cut.isZero()) { //There is a intersecting stroke point before the vars for the 0th (off-mesh) have been set
 			cout << "This shouldn't happen. Draw the first point outside of the mesh" << endl;
 			return;
 		}
@@ -250,13 +234,12 @@ void Stroke::addSegmentCut(Eigen::Vector3f& pos) {
 			viewer.data().add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(1, 0, 1));
 		}
 
-		just_came_from_mesh = true;
-
+		prev_point_was_on_mesh = true;
 	}
-	else if (stroke2DPoints.rows() > 1 && just_came_from_mesh) { //We need to add the final point of the stroke, even though it is off the mesh (needed in order to wrap around to the backside)
+	else if (stroke2DPoints.rows() > 1 && prev_point_was_on_mesh) { //We need to add the final point of the stroke, even though it is off the mesh (needed in order to wrap around to the backside)
 		pos_after_cut = pos.cast<double>();
 		dir_after_cut = viewer.oculusVR.get_right_touch_direction().cast<double>();
-		just_came_from_mesh = false;
+		prev_point_was_on_mesh = false;
 	}
 	else if (stroke2DPoints.rows() == 1) { //Add the first point, which should be outside the mesh. Refresh the "first" point until we get to the last one before we enter the mesh
 		pos_before_cut = pos.cast<double>();
