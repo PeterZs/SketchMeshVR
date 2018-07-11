@@ -121,6 +121,7 @@ bool SurfacePath::create_from_stroke_cut(const Stroke & stroke) {
 	int prev_p = 1; //Start at point 1, because point 0 is defined to be the last point at the beginning of the stroke to lie outside of the mesh
 	int start_p = prev_p, next_p;
 	int faceID = origin_stroke->get_hit_faces()(prev_p, 0), prev_faceID;
+	int iter = 0;
 
 	looped_3DPoints = create_loop_from_front_and_back(origin_stroke->get3DPoints(), origin_stroke->get3DPointsBack());
 	int nr_looped_3DPoints = looped_3DPoints.rows();
@@ -149,7 +150,8 @@ bool SurfacePath::create_from_stroke_cut(const Stroke & stroke) {
 		}
 
 		faceID = extend_path_cut(prev_p, next_p, faceID, on_front_side, edge, first_iter);
-		if (faceID == -1) {
+		if (faceID == -1 || iter == 5000) { //Either the cut stroke goes exactly over a vertex or we cannot find a closed path that starts and ends on the same face
+			std::cerr << "Surface path could not be created for this cut stroke. Please try again. " << std::endl;
 			return false;
 		}
 
@@ -159,6 +161,7 @@ bool SurfacePath::create_from_stroke_cut(const Stroke & stroke) {
 
 		n = (next_p + 1) % nr_looped_3DPoints;
 		prev_p = next_p;
+		iter++;
 	}
 
 	return true; //MeshCut will make the stroke3DPoints looped again, don't need to do it here (unlike for extrusion)
@@ -245,7 +248,7 @@ int SurfacePath::find_next_edge_cut(pair<int, int> strokeEdge, int prev_edge, in
 			seg_vec.normalize();
 			Eigen::RowVector3d its_vec = cut_point - start_pos;
 			its_vec.normalize();
-			if ((t_val<=0.99999 && t_val>=0.00001) && (!first_iter || (first_iter && its_vec.dot(seg_vec)>=0))) { //Else we cross the "line" outside of its range or the first extension goes into the wrong direction
+			if ((t_val<=0.9999999 && t_val>=0.0000001) && (!first_iter || (first_iter && its_vec.dot(seg_vec)>=0))) { //Else we cross the "line" outside of its range or the first extension goes into the wrong direction
 				edge_cut_point = cut_point;
 				return edge;
 			}

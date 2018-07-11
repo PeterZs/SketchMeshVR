@@ -91,6 +91,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	}
 
 	if (outer_boundary_vertices.size() == 0 || inner_boundary_vertices.size()==0) { //There are no vertices left behind (cut that removes everthing or extrude that doesn't include at least 1 vertex) or none are removed
+		std::cerr << "This action either removes all or no vertices, which is not possible. Please try again. " << std::endl;
 		remesh_success = false;
 		return Eigen::VectorXi::Zero(1);
 	}
@@ -143,6 +144,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 
 
 	if (clean_faces.size() == 0) { //There are no faces left behind (cut that removes everything or extrude that doesn't include at least 1 vertex)
+		std::cerr << "For cuts: this removes all vertices, for extrusions: the base does not include at least 1 vertex.  Please try again. " << std::endl;
 		remesh_success = false;
 		return Eigen::VectorXi::Zero(1);
 	}
@@ -165,6 +167,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		}
 	}
 
+	Eigen::MatrixXi prev_F = m.F;
 	Eigen::MatrixXi tmp_F;
 	Eigen::VectorXi row_idx, col_idx(3);
 	row_idx = Eigen::VectorXi::Map(clean_faces.data(), clean_faces.size());
@@ -173,7 +176,23 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	m.F = tmp_F;
 
 	//NOTE: Output from sort_boundary_vertices is not necessarily counter-clockwise
-	outer_boundary_vertices = sort_boundary_vertices(path[0].get_vertex(), outer_boundary_vertices, m);
+	try {
+		outer_boundary_vertices = sort_boundary_vertices(path[0].get_vertex(), outer_boundary_vertices, m);
+	}
+	catch (int ex) {
+		if (ex == -1) {
+			std::cerr << "Could not process cut stroke or extrusion base. Please try again. " << std::endl;
+			m.F = prev_F;
+			remesh_success = false;
+			return Eigen::VectorXi::Zero(1);
+		}
+		else {
+			std::cout << "Something weird happened. Check what's going on." << std::endl;
+			m.F = prev_F;
+			remesh_success = false;
+			return Eigen::VectorXi::Zero(1);
+		}
+	}
 
 	Eigen::RowVector3d mean_viewpoint = compute_mean_viewpoint(m, inner_boundary_vertices);
 	
@@ -342,7 +361,8 @@ void LaplacianRemesh::propagate_dirty_faces(int face, vector<bool>& dirty_face) 
 	}
 }
 
-//TODO: in FiberMesh, this will deal with the fully updated mesh (faces, edges and vertices removed that are dirty). here we're working with some half-half version?
+//TODO: possible way to improve this: iterate over the surface_path, and extract the edges that it crosses (which are in order). For each edge look at it's adjacent vertices and keep the one that is on the "staying" side. These vertices should now also be in order.
+//Then rotate this ordered sequence around so it starts with the vertex closest to start_vertex.
 /** Sorts the boundary vertices such that they make up a continuous path that starts with the vertex that's closest to start_vertex. 
 	Takes care of backtracking over original stroke boundary vertices that is sometimes necessary. **/
 vector<int> LaplacianRemesh::sort_boundary_vertices(Eigen::Vector3d start_vertex, vector<int> boundary_vertices, Mesh& m) {
@@ -352,11 +372,17 @@ vector<int> LaplacianRemesh::sort_boundary_vertices(Eigen::Vector3d start_vertex
 	int start_v = find_closest(boundary_vertices, start_vertex, m);
 	int v = start_v;
 	int prev = start_v;
+	int iter = 0;
 
 	Eigen::VectorXi tmp1, tmp2;
 	int min_idx, max_idx, equal_pos, v_pos, max_val, only_option_idx;
 	bool have_one_option = false;
 	while(true) {
+		iter++;
+		if (iter == 10 * boundary_vertices.size()) { //We're not finding a solution
+			throw - 1;
+		}
+
 		sorted_boundary_vertices.push_back(v);
 		for(int i = 0; i < VV[v].size(); i++) {
 			if(std::find(boundary_vertices.begin(), boundary_vertices.end(), VV[v][i]) != boundary_vertices.end()) { //Only continue if the adjacent vertex is also a boundary vertex

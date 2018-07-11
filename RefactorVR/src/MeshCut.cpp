@@ -30,15 +30,20 @@ bool MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke, int c
 	if (!remesh_success) {
 		return false;
 	}
-	mesh_open_hole(boundary_vertices, m);
+	return mesh_open_hole(boundary_vertices, m);
 
-	return true;
+//	return true;
 }
 
-void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
+bool MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
+	Eigen::MatrixXi start_F = m.F;
+	Eigen::MatrixXd start_V = m.V;
+	Eigen::VectorXi start_part_of_original_stroke = m.part_of_original_stroke;
+	Eigen::VectorXi start_vertex_boundary_markers = m.vertex_boundary_markers;
+
 	vector<int> sharp_edge_indices;
-	for(int i = 0; i < m.sharp_edge.rows(); i++) {
-		if(m.sharp_edge[i]) {
+	for (int i = 0; i < m.sharp_edge.rows(); i++) {
+		if (m.sharp_edge[i]) {
 			sharp_edge_indices.push_back(i);
 		}
 	}
@@ -51,7 +56,7 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 	Eigen::VectorXi sharpEV_row_idx, sharpEV_col_idx(2);
 	sharpEV_row_idx = Eigen::VectorXi::Map(sharp_edge_indices.data(), sharp_edge_indices.size());
 	sharpEV_col_idx.col(0) << 0, 1;
-	igl::slice(EV, sharpEV_row_idx, sharpEV_col_idx, sharpEV); 
+	igl::slice(EV, sharpEV_row_idx, sharpEV_col_idx, sharpEV);
 
 	//project points to 2D
 	Eigen::MatrixXd boundary_vertices_2D(boundary_vertices.rows(), 2);
@@ -63,11 +68,12 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 
 	Eigen::MatrixXd V2;
 	Eigen::MatrixXi F2, vertex_markers, edge_markers;
+	//TODO: Have a look at the factor below. Right now the new cut-plane triangles are rather large. Can we go lower without concave surfaces?
 	//The 2D points are multiplied by a factor 1000 because otherwise triangulate runs out of precision. Multiply max. allowed triangle area with a factor because we need to accomodate for largest edge triangles in order to prevent the new surface from becoming concave during smoothing, and the average distance gets pulled down a lot because of edge-crossing sample parts.
-	igl::triangle::triangulate(boundary_vertices_2D.leftCols(2), stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(boundary_vertices_2D.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq25a" + to_string(6*mean_squared_sample_dist), V2, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
+	igl::triangle::triangulate(boundary_vertices_2D.leftCols(2), stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(boundary_vertices_2D.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq25a" + to_string(6 * mean_squared_sample_dist), V2, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
 	V2 /= 1000.0;
 
-	int original_v_size = m.V.rows() - boundary_vertices.rows();		
+	int original_v_size = m.V.rows() - boundary_vertices.rows();
 	m.V.conservativeResize(original_v_size + V2.rows(), Eigen::NoChange);
 	m.part_of_original_stroke.conservativeResize(original_v_size + V2.rows());
 	m.vertex_boundary_markers.conservativeResize(original_v_size + V2.rows());
@@ -78,14 +84,27 @@ void MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 			Eigen::Vector3d v_tmp = center.transpose();
 			v_tmp += x_vec*V2(i, 0);
 			v_tmp += y_vec*V2(i, 1);
-			m.V.row(original_v_size + i) << v_tmp.transpose(); 
+			m.V.row(original_v_size + i) << v_tmp.transpose();
 			m.part_of_original_stroke[original_v_size + i] = 0;
 			m.vertex_boundary_markers[original_v_size + i] = 0;
 		}
 	}
 
 	update_face_indices(m, F2, boundary_vertices, original_v_size);
-	update_sharp_edges(m, sharpEV);
+	try {
+		update_sharp_edges(m, sharpEV); //TODO: when this fails we need to revert m.F, m.V, m.part_of_original_stroke, m.vertex_boundary_markers 
+	}
+	catch (int ex) {
+		if (ex == -1) {
+			std::cerr << "Cut resulted in a non edge-manifold mesh, which is not allowed. Please try again. " << std::endl;
+			m.F = start_F;
+			m.V = start_V;
+			m.part_of_original_stroke = start_part_of_original_stroke;
+			m.vertex_boundary_markers = start_vertex_boundary_markers;
+			return false;
+		}
+	}
+	return true;
 }
 
 void MeshCut::update_sharp_edges(Mesh& m, Eigen::MatrixXi& sharpEV) {

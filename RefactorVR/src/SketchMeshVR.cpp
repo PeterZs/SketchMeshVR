@@ -195,6 +195,7 @@ void sound_error_beep() {
 	beep();
 #endif		
 }
+
 void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 	set_laser_points(pos);
 	if (pressed == OculusVR::ButtonCombo::TRIG && (selected_tool_mode == ADD || selected_tool_mode == REMOVE || selected_tool_mode == CUT || selected_tool_mode == EXTRUDE)) {
@@ -202,7 +203,8 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			prev_tool_mode = FAIL;
 			return;
 		}
-	}else if (pressed == OculusVR::ButtonCombo::TRIG && selected_tool_mode == REMOVE) {
+	}
+	else if (pressed == OculusVR::ButtonCombo::TRIG && selected_tool_mode == REMOVE) {
 		if (stroke_collection.size() == 0) {
 			return;
 		}
@@ -379,6 +381,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				return;
 			}
 
+			draw_all_strokes(); //Will remove a possible old black (wrong) stroke
 			added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID);
 			viewer.oculusVR.set_start_action_view(viewer.core.get_view());
 			next_added_stroke_ID++;
@@ -523,13 +526,14 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				added_stroke->append_final_point();
 				added_stroke->toLoop();
 			
-				bool cut_success = MeshCut::cut(*base_mesh, *added_stroke, clicked_face);// MeshCut::cut(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, *added_stroke, clicked_face);
-				if (!cut_success) { //Catches the cases that the cut removes all mesh vertices/faces and when the first/last cut point aren't correct (face -1 in SurfacePath)
+				bool cut_success = MeshCut::cut(*base_mesh, *added_stroke, clicked_face);
+				if (!cut_success) { //Catches the following cases: when the cut removes all mesh vertices/faces, when the first/last cut point aren't correct (face -1 in SurfacePath) or when sorting takes "infinite" time
 					cut_stroke_already_drawn = false;
 					next_added_stroke_ID--; //Undo ID increment since stroke didn't actually get pushed back
 					prev_tool_mode = NONE;
 					sound_error_beep();
-					draw_all_strokes(); //Will remove the pink cut stroke
+					viewer.data().set_points(Eigen::MatrixXd(), black); //Will remove the pink cut stroke
+					draw_all_strokes(); 
 					Eigen::MatrixXd drawn_points = added_stroke->get3DPoints();
 					int nr_edges = drawn_points.rows() - 1;
 					viewer.data().add_edges(drawn_points.topRows(nr_edges), drawn_points.middleRows(1, nr_edges), black); //Display the stroke in black to show that it went wrong
@@ -575,6 +579,19 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				draw_all_strokes();
 			}
 			else { //We're finished drawing the cut stroke, prepare for when user draws the final stroke to remove the part
+				if (added_stroke->has_self_intersection()) {
+					std::cerr << "Cut stroke contains a loop which is illegal. Please try again. " << std::endl;
+					next_added_stroke_ID--; //Undo ID increment since stroke didn't actually get pushed back
+					prev_tool_mode = NONE;
+					sound_error_beep();
+					viewer.data().set_points(Eigen::MatrixXd(), black); //Will remove the pink cut stroke
+					draw_all_strokes();
+					Eigen::MatrixXd drawn_points = added_stroke->get3DPoints();
+					int nr_edges = drawn_points.rows() - 1;
+					viewer.data().add_edges(drawn_points.topRows(nr_edges), drawn_points.middleRows(1, nr_edges), black); //Display the stroke in black to show that it went wrong
+					viewer.update_screen_while_computing = false;
+					return;
+				}
 				cut_stroke_already_drawn = true;
 			}
 		}

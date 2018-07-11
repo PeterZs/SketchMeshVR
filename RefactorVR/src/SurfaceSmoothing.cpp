@@ -60,7 +60,7 @@ void SurfaceSmoothing::smooth(Mesh& base_mesh, bool& BOUNDARY_IS_DIRTY){
 
 
 
-	std::cout << "Check that we odn't have duplicate mesh IDs" << std::endl;
+//	std::cout << "Check that we odn't have duplicate mesh IDs" << std::endl;
 	for (int i = 0; i < base_mesh.patches.size(); i++) {
 		Patch* patch = (base_mesh.patches[i]);
 		//std::cout << (*patch).mesh.ID << std::endl;

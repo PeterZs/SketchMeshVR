@@ -29,6 +29,8 @@ public:
     bool update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi & vertex_boundary_markers);
     bool empty2D() const { return stroke2DPoints.isZero(); }
 	bool toLoop();
+	bool has_self_intersection();
+	bool line_segments_intersect(Eigen::RowVector2d& p1, Eigen::RowVector2d& p2, Eigen::RowVector2d& p3, Eigen::RowVector2d& p4);
 	std::unordered_map<int, int> generate3DMeshFromStroke(Eigen::VectorXi & vertex_boundary_markers, Eigen::VectorXi & part_of_original_stroke, Eigen::MatrixXd & mesh_V, Eigen::MatrixXi & mesh_F);
 	int selectClosestVertex(Eigen::Vector3f pos, double & closest_distance);
 	double compute_stroke_diag();
@@ -72,7 +74,7 @@ private:
 	Eigen::Vector3d dir_before_cut;
 	Eigen::Vector3d pos_after_cut;
 	Eigen::Vector3d dir_after_cut;
-	bool just_came_from_mesh; //Used for cutting strokes only. Indicates whether this is the first point outside of the mesh after we've been drawing on the mesh
+	bool prev_point_was_on_mesh; //Used for cutting strokes only. Indicates whether this is the first point outside of the mesh after we've been drawing on the mesh
 	Eigen::VectorXd dep;
 
 	std::vector<int> closest_vert_bindings;

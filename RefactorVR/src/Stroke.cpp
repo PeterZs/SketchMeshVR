@@ -748,6 +748,41 @@ void Stroke::undo_stroke_add(Eigen::VectorXi& vertex_boundary_markers) {
 	}
 }
 
+//Only works for strokes that have valid stroke2DPoints (e.g. cut, extrusion base and extrusion silhouette strokes). Naive implementation in O(n^2)
+bool Stroke::has_self_intersection() {
+	Eigen::RowVector2d p1, p2, p3, p4;
+	for (int i = 0; i < stroke2DPoints.rows() - 1; i++) {
+		p1 = stroke2DPoints.row(i);
+		p2 = stroke2DPoints.row(i + 1);
+		for (int j = i + 1; j < stroke2DPoints.rows() - 1; j++) {
+			p3 = stroke2DPoints.row(j);
+			p4 = stroke2DPoints.row(j + 1);
+			if (line_segments_intersect(p1, p2, p3, p4)) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+bool Stroke::line_segments_intersect(Eigen::RowVector2d& p1, Eigen::RowVector2d& p2, Eigen::RowVector2d& p3, Eigen::RowVector2d& p4) {
+	double a0, b0, c0, a1, b1, c1;
+	a0 = p1[1] - p2[1];
+	b0 = p2[0] - p1[0];
+	c0 = p2[1] * p1[0] - p2[0] * p1[1];
+	a1 = p3[1] - p4[1];
+	b1 = p4[0] - p3[0];
+	c1 = p4[1] * p3[0] - p4[0] * p3[1];
+
+	if (((a0*p3[0] + b0*p3[1] + c0)*(a0*p4[0] + b0*p4[1] + c0) < 0) &&
+		((a1*p1[0] + b1*p1[1] + c1)*(a1*p2[0] + b1*p2[1] + c1) < 0)) {
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
 int Stroke::get_ID() {
 	return stroke_ID;
 }
