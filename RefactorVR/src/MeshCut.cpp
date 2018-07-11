@@ -9,8 +9,6 @@ using namespace igl;
 
 
 bool MeshCut::cut(Mesh& m, Stroke& stroke, int clicked_face) {
-
-	//Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, -1); //Give ID -1 since we're not using it here anyway
 	SurfacePath surface_path;
 	bool success = surface_path.create_from_stroke_cut(stroke); //Prepares the drawn stroke (inserts extra points at the edges that it crosses)
 	if (!success) {

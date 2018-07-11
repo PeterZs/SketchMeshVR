@@ -4,24 +4,12 @@
 static Eigen::MatrixXi EV, FE, EF;
 static int next_mesh_ID;
 
-/*Patch& Patch::operator=(Patch other) {
-	mesh = other.mesh;
-	parent_vertices = other.parent_vertices;
-	parent_faces = other.parent_faces;
-	new_vertex_boundary_markers = other.new_vertex_boundary_markers;
-	new_part_of_original_stroke = other.new_part_of_original_stroke;
-	//new_mapped_indices = other.new_mapped_indices;
-	return *this;
-}*/
-
 std::vector<Patch*> Patch::init_patches(Mesh& h) {
 	next_mesh_ID = h.ID + 1;
 	igl::edge_topology(h.V, h.F, EV, FE, EF);
 
 	std::vector<Patch*> patches;
 	h.face_patch_map.resize(h.F.rows(), nullptr);
-	//h.mesh_to_patch_indices.resize(h.V.rows());
-	//h.mesh_to_patch_indices.setConstant(-1);
 	
 	for (int i = 0; i < h.F.rows(); i++) {
 		Patch* face_patch = h.face_patch_map[i];

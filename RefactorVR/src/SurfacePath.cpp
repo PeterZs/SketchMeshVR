@@ -1,5 +1,4 @@
 #include <igl/edge_topology.h>
-//#include <igl/unproject_ray.h>
 #include "SurfacePath.h"
 
 Eigen::MatrixXi EV, FE, EF;
@@ -278,11 +277,3 @@ int SurfacePath::get_origin_stroke_ID() {
 PathElement & SurfacePath::get_path_element(int i) {
 	return path[i];
 }
-
-/*PathElement PathElement::interpolate_path_elements(PathElement el1, PathElement el2, double t)
-{
-	Eigen::Vector3d new_pos = el1.get_vertex()*(1 - t) + el2.get_vertex()*t;
-	cout << "FIX: Currently interpolated PathElements are set to a default ID of -1 and a default type of FACE" << endl;
-	PathElement newPathElement(-1, ElementType::FACE, new_pos);
-	return newPathElement;
-}*/

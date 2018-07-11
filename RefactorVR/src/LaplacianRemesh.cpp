@@ -33,12 +33,10 @@ Eigen::VectorXi LaplacianRemesh::remesh_extrusion_remove_inside(Mesh & m, Surfac
 
 Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success, int cut_clicked_face) {
 	vector<bool> dirty_face(m.F.rows());
-	//vector<int> dirty_vertices(m.V.rows());
 	Eigen::VectorXi dirty_vertices(m.V.rows());
 	dirty_vertices.setZero();
 	m.new_mapped_indices.resize(m.V.rows()); //Resize the map from old to new (clean) vertex indices to allow it to contain the number of vertices that are in the mesh at the start
 
-	//TODO: START
 	vector<int> sharp_edge_indices;
 	for(int i = 0; i < m.sharp_edge.rows(); i++) {
 		if(m.sharp_edge[i]) {
@@ -63,7 +61,6 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	if(!is_front_loop) { //Append first element at the end in case of cutting, to make it a loop and compatible with extrusion's loop
 		path.push_back(path[0]);
 	}
-	//TODO: END
 
 	//Find outside and inside vertices. +1 means that the vertex will stay, -1 means it will be destroyed
 	for(int i = 0; i < path.size(); i++) {
@@ -264,17 +261,12 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		reverse(outer_boundary_vertices.begin(), outer_boundary_vertices.end());
 	}
 	
-	//TODO END
 
 	stitch(path_vertices, outer_boundary_vertices, m); //TODO: need to fix that stitching sometimes fails
 
 
-	//TODO START: is adding/updating sharp edges to the mesh. Not sure how it's done in FiberMesh. Maybe see line 708-728
 	Eigen::MatrixXi sharpEVcat = igl::cat(1, sharpEV, added_sharpEV);
 	update_sharp_edges(m, sharpEVcat);
-	//TODO END
-
-	//TODO: request new patches
 
 	return Eigen::VectorXi::Map(path_vertices.data(), path_vertices.size());
 }

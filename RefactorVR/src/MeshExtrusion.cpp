@@ -1,10 +1,8 @@
 #include "MeshExtrusion.h"
 #include "LaplacianRemesh.h"
 #include "CleanStroke3D.h"
-//#include "Plane.h"
 #include <iostream>
 #include <algorithm>
-//#include <igl/unproject_ray.h>
 #include <igl/triangle/triangulate.h>
 #include <igl/edge_topology.h>
 #include <igl/slice.h>
@@ -25,8 +23,6 @@ bool MeshExtrusion::extrude_prepare(Stroke& base, SurfacePath& surface_path) {
 }
 
 bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke, Stroke& base, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport) {
-
-	//Mesh m(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, -1); //Give ID -1 since we don't use the mesh ID here anyway
 	stroke.counter_clockwise();
 	bool remesh_success = true;
 	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_extrusion_remove_inside(m, surface_path, model, view, proj, viewport, remesh_success);
@@ -174,7 +170,6 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 	post_extrude_main_update_bindings(base, surface_path);
 	update_sharp_edges(m, sharpEV);
 
-	//TODO: request new patches
 	return true;
 }
 

@@ -14,24 +14,9 @@ Mesh::Mesh() :
 	patches(),
 	face_patch_map(),
 	mesh_to_patch_indices()
-	{
-	/*V = (Eigen::MatrixXd(0, 3));
-	F = (Eigen::MatrixXi(0, 3));
-	vertex_boundary_markers = (Eigen::VectorXi());
-	part_of_original_stroke = (Eigen::VectorXi());
-	new_mapped_indices = (Eigen::VectorXi());
-	sharp_edge = (Eigen::VectorXi());
-	ID = (-1);*/
-	}
+	{}
 
 Mesh & Mesh::operator=(Mesh other){
-	/*std::swap(V, other.V);
-	std::swap(F, other.F);
-	std::swap(vertex_boundary_markers, other.vertex_boundary_markers);
-	std::swap(part_of_original_stroke, other.part_of_original_stroke);
-	std::swap(new_mapped_indices, other.new_mapped_indices);
-	std::swap(sharp_edge, other.sharp_edge);
-	std::swap(ID, other.ID);*/
 	F.resize(other.F.rows(), 3);
 	F = other.F;
 	vertex_boundary_markers = other.vertex_boundary_markers;

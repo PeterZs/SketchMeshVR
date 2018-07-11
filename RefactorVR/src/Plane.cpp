@@ -1,6 +1,6 @@
 #include "Plane.h"
 #include <Eigen/Geometry>
-#include <iostream>
+
 Plane::Plane(Eigen::Vector3d v0, Eigen::Vector3d v1, Eigen::Vector3d v2) {
 	Eigen::Vector3d vec0 = v1 - v0;
 	Eigen::Vector3d vec1 = v2 - v0;
