@@ -136,7 +136,7 @@ bool Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
 			return true;
 		}
 
-		double cur_dist, min_dist = INFINITY;
+		/*double cur_dist, min_dist = INFINITY;
 		int closest_vert_idx;
 		for (int i = 0; i < 3; i++) {
 			cur_dist = (hit_pos.transpose() - V.row(F(hits[0].id, i))).norm();
@@ -148,7 +148,7 @@ bool Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
 
 		if (closest_vert_bindings.size() == 0 || closest_vert_idx != closest_vert_bindings.back()) {
 			closest_vert_bindings.push_back(closest_vert_idx);
-		}
+		}*/
 
 		has_points_on_mesh = true;
 

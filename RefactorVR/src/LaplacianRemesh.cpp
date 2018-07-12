@@ -50,6 +50,8 @@ void LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
 			edge = path[i].get_ID();
 			dirty_vertices[EV(edge, 0)] += 1;
 			dirty_vertices[EV(edge, 1)] += 1;
+			dirty_face[EF(edge, 0)] = true;
+			dirty_face[EF(edge, 1)] = true;
 			face = (EF(edge, 0) == face) ? EF(edge, 1) : EF(edge, 0); //get the polygon on the other side of the edge
 		}
 	}
@@ -64,12 +66,12 @@ void LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
 
 
 	//Collect faces along the path
-	for (int i = 0; i < path.size(); i++) {
+/*	for (int i = 0; i < path.size(); i++) {
 		if (path[i].get_type() == PathElement::EDGE) {
 			dirty_face[EF(path[i].get_ID(), 0)] = true;
 			dirty_face[EF(path[i].get_ID(), 1)] = true;
 		}
-	}
+	}*/
 
 	//Remove dirty faces
 	vector<int> clean_faces;
@@ -246,7 +248,12 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 
 
 	if (clean_faces.size() == 0) { //There are no faces left behind (cut that removes everything or extrude that doesn't include at least 1 vertex)
-		std::cerr << "For cuts: this removes all vertices, for extrusions: the base does not include at least 1 vertex.  Please try again. " << std::endl;
+		if (cut_clicked_face == -1) { //Extrusion
+			std::cerr << "The base does not include at least 1 vertex.  Please try again." << std::endl;
+		}
+		else { //Cut
+			std::cerr << "This removes all vertices. Please try again." << std::endl;
+		}
 		remesh_success = false;
 		return Eigen::VectorXi::Zero(1);
 	}
