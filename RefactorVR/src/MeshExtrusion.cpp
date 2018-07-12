@@ -23,6 +23,13 @@ bool MeshExtrusion::extrude_prepare(Stroke& base, SurfacePath& surface_path) {
 }
 
 bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke, Stroke& base, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport) {
+	Eigen::MatrixXi start_F = m.F;
+	Eigen::MatrixXd start_V = m.V;
+	Eigen::VectorXi start_part_of_original_stroke = m.part_of_original_stroke;
+	Eigen::VectorXi start_vertex_boundary_markers = m.vertex_boundary_markers;
+	Eigen::VectorXi start_sharp_edge = m.sharp_edge;
+	Eigen::VectorXi start_new_mapped_indices = m.new_mapped_indices;
+
 	stroke.counter_clockwise();
 	bool remesh_success = true;
 	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_extrusion_remove_inside(m, surface_path, model, view, proj, viewport, remesh_success);
@@ -71,7 +78,7 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 	remove_out_of_bounds_silhouette(silhouette_vertices, center, m.V.row(boundary_vertices[most_left_vertex_idx]), m.V.row(boundary_vertices[most_right_vertex_idx]), dir);
 
 	if(silhouette_vertices.rows() == 0) {
-		cout << "No valid silhouette vertices. Try again." << endl;
+		std::cerr << "No valid silhouette vertices. Try again." << endl;
 		return false;
 	}
 
@@ -163,13 +170,26 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 	generate_mesh(m, back_loop3D, new_center_back, x_vec, y_vec, offset, silhouette_vertices.rows(), back_loop_base_original_indices, sil_original_indices);
 
 
-	//TODO: compared to FiberMesh we should add setting sharp boundaries, settin silhoeutte seam and compute prescribed normals...? 
+	//TODO: compared to FiberMesh we should add setting sharp boundaries, setting silhouette seam and compute prescribed normals...? 
 
     //Update tracking variables with new vertex indices
 	post_extrude_main_update_points(stroke, silhouette_vertices);
 	post_extrude_main_update_bindings(base, surface_path);
-	update_sharp_edges(m, sharpEV);
-
+	try {
+		update_sharp_edges(m, sharpEV);
+	}
+	catch(int ex){
+		if (ex == -1) {
+			std::cerr << "Extrusion results in a non edge-manifold mesh, which cannot be processed. Please try again. " << std::endl;
+			m.F = start_F;
+			m.V = start_V;
+			m.new_mapped_indices = start_new_mapped_indices;
+			m.part_of_original_stroke = start_part_of_original_stroke;
+			m.vertex_boundary_markers = start_vertex_boundary_markers;
+			m.sharp_edge = start_sharp_edge;
+			return false;
+		}
+	}
 	return true;
 }
 
@@ -318,6 +338,9 @@ void MeshExtrusion::create_loop(Mesh& m, Eigen::MatrixXd& loop3D, Eigen::VectorX
 
 /** Updates the sharp_edge tracker with new edge indices after the mesh topology changed. **/
 void MeshExtrusion::update_sharp_edges(Mesh& m, Eigen::MatrixXi sharpEV) {
+	if (!igl::is_edge_manifold(m.F)) {
+		throw - 1;
+	}
 	Eigen::MatrixXi EV, FE, EF;
 	igl::edge_topology(m.V, m.F, EV, FE, EF);
 	m.sharp_edge.resize(EV.rows());

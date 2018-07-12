@@ -90,7 +90,7 @@ bool MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 
 	update_face_indices(m, F2, boundary_vertices, original_v_size);
 	try {
-		update_sharp_edges(m, sharpEV); //TODO: when this fails we need to revert m.F, m.V, m.part_of_original_stroke, m.vertex_boundary_markers 
+		update_sharp_edges(m, sharpEV);
 	}
 	catch (int ex) {
 		if (ex == -1) {
@@ -106,6 +106,9 @@ bool MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 }
 
 void MeshCut::update_sharp_edges(Mesh& m, Eigen::MatrixXi& sharpEV) {
+	if (!igl::is_edge_manifold(m.F)) {
+		throw - 1;
+	}
 	Eigen::MatrixXi EV, FE, EF;
 	igl::edge_topology(m.V, m.F, EV, FE, EF);
 	m.sharp_edge.resize(EV.rows());

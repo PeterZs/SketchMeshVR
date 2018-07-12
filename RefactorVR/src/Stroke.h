@@ -51,6 +51,7 @@ public:
 
 	bool is_loop;
 	bool has_points_on_mesh;
+	bool has_been_outside_mesh;
 	bool has_been_reversed;
 	Eigen::RowVector3d stroke_color;
 	igl::opengl::glfw::Viewer &viewer;

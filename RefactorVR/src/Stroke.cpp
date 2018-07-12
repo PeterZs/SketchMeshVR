@@ -31,6 +31,7 @@ Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::opengl
 	_time1 = std::chrono::high_resolution_clock::now();
 	closest_vert_bindings.clear();
 	has_points_on_mesh = false;
+	has_been_outside_mesh = false;
 	stroke_color = Eigen::RowVector3d(0.8*(rand() / (double)RAND_MAX), 0.8*(rand() / (double)RAND_MAX), 0.8*(rand() / (double)RAND_MAX));
 	has_been_reversed = false;
 }
@@ -48,6 +49,7 @@ Stroke::Stroke(const Stroke& origin) :
 	dep(origin.dep),
 	closest_vert_bindings(origin.closest_vert_bindings),
 	has_points_on_mesh(origin.has_points_on_mesh),
+	has_been_outside_mesh(origin.has_been_outside_mesh),
 	has_been_reversed(origin.has_been_reversed),
 	stroke_color(origin.stroke_color),
 	is_loop(origin.is_loop) {
@@ -68,6 +70,7 @@ void Stroke::swap(Stroke & tmp) {//The pointers to V and F will always be the sa
 	std::swap(this->hand_pos_at_draw, tmp.hand_pos_at_draw);
 	std::swap(this->closest_vert_bindings, tmp.closest_vert_bindings);
 	std::swap(this->has_points_on_mesh, tmp.has_points_on_mesh);
+	std::swap(this->has_been_outside_mesh, tmp.has_been_outside_mesh);
 	std::swap(this->has_been_reversed, tmp.has_been_reversed);
 	std::swap(this->stroke_color, tmp.stroke_color);
 	std::swap(this->dep, tmp.dep);
@@ -304,6 +307,9 @@ void Stroke::addSegmentExtrusionBase(Eigen::Vector3f& pos) {
 		}
 	}
 	else {
+		if (has_points_on_mesh) {
+			has_been_outside_mesh = true;
+		}
 		return;
 	}
 
@@ -382,7 +388,7 @@ void Stroke::prepend_first_point() {
 
 /** Used for CUT. Adds the final point, which is the first point outside of the mesh. Doesn't get drawn. **/
 void Stroke::append_final_point() {
-	Eigen::Vector3d last_point = pos_after_cut + (stroke3DPoints.row(stroke3DPoints.rows() - 1).transpose() - pos_after_cut).dot(dir_after_cut.normalized()) * dir_after_cut.normalized(); //The closest point Pr along a line that starts from P1 and does in direction dir to point P2 is as follows: Pr = P1 + (P2 - P1).dot(dir) * dir with dir normalized
+	Eigen::Vector3d last_point = pos_after_cut + (stroke3DPoints.row(stroke3DPoints.rows() - 1).transpose() - pos_after_cut).dot(dir_after_cut.normalized()) * dir_after_cut.normalized(); //The closest point Pr along a line that starts from P1 and goes in direction dir to point P2 is as follows: Pr = P1 + (P2 - P1).dot(dir) * dir with dir normalized
 	Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
 	Eigen::Vector3f last_point_tmp = last_point.cast<float>();
 	Eigen::Vector3d hit_pos2D = igl::project(last_point_tmp, modelview, viewer.core.get_proj(), viewer.core.viewport).cast<double>();

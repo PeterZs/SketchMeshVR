@@ -136,6 +136,13 @@ void LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
 }
 
 Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success, int cut_clicked_face) {
+	Eigen::MatrixXi start_F = m.F;
+	Eigen::MatrixXd start_V = m.V;
+	Eigen::VectorXi start_part_of_original_stroke = m.part_of_original_stroke;
+	Eigen::VectorXi start_vertex_boundary_markers = m.vertex_boundary_markers;
+	Eigen::VectorXi start_sharp_edge = m.sharp_edge;
+	Eigen::VectorXi start_new_mapped_indices = m.new_mapped_indices;
+
 	vector<bool> dirty_face(m.F.rows());
 	Eigen::VectorXi dirty_vertices(m.V.rows());
 	dirty_vertices.setZero();
@@ -276,7 +283,6 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		}
 	}
 
-	Eigen::MatrixXi prev_F = m.F;
 	Eigen::MatrixXi tmp_F;
 	Eigen::VectorXi row_idx, col_idx(3);
 	row_idx = Eigen::VectorXi::Map(clean_faces.data(), clean_faces.size());
@@ -291,13 +297,13 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	catch (int ex) {
 		if (ex == -1) {
 			std::cerr << "Could not process cut stroke or extrusion base. Please try again. " << std::endl;
-			m.F = prev_F;
+			m.F = start_F;
 			remesh_success = false;
 			return Eigen::VectorXi::Zero(1);
 		}
 		else {
 			std::cout << "Something weird happened. Check what's going on." << std::endl;
-			m.F = prev_F;
+			m.F = start_F;
 			remesh_success = false;
 			return Eigen::VectorXi::Zero(1);
 		}
@@ -389,13 +395,26 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		reverse(outer_boundary_vertices.begin(), outer_boundary_vertices.end());
 	}
 	
-
 	stitch(path_vertices, outer_boundary_vertices, m); //TODO: need to fix that stitching sometimes fails
 
 
 	Eigen::MatrixXi sharpEVcat = igl::cat(1, sharpEV, added_sharpEV);
-	update_sharp_edges(m, sharpEVcat);
-
+	try {
+		update_sharp_edges(m, sharpEVcat);
+	}
+	catch (int ex) {
+		if (ex == -1) {
+			std::cerr << "Remeshing results in a non edge-manifold mesh, which cannot be processed. Please try again. " << std::endl;
+			m.F = start_F;
+			m.V = start_V;
+			m.new_mapped_indices = start_new_mapped_indices;
+			m.part_of_original_stroke = start_part_of_original_stroke;
+			m.vertex_boundary_markers = start_vertex_boundary_markers;
+			m.sharp_edge = start_sharp_edge;
+			remesh_success = false;
+			return Eigen::VectorXi::Zero(1);
+		}
+	}
 	return Eigen::VectorXi::Map(path_vertices.data(), path_vertices.size());
 }
 
@@ -438,6 +457,9 @@ void LaplacianRemesh::update_mesh_values(Mesh& m, Eigen::MatrixXd path, int stro
 
 /** Updates the old sharp edges after the mesh topology changed and inserts newly generated sharp edges. **/
 void LaplacianRemesh::update_sharp_edges(Mesh& m, Eigen::MatrixXi& all_sharpEV) {
+	if (!igl::is_edge_manifold(m.F)) {
+		throw - 1;
+	}
 	igl::edge_topology(m.V, m.F, EV, FE, EF);
 	m.sharp_edge.resize(EV.rows());
 	m.sharp_edge.setZero();

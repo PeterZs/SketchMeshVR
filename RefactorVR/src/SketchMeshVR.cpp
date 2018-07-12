@@ -316,6 +316,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 			if (remove_stroke_clicked == 2) { //Mechanism to force the user to click twice on the same stroke before removing it (safeguard)
 				stroke_was_removed = true;
+				//TODO: below will break if we remove a curve that has vertices that belong to multiple curves, these will then get unmarked as boundary vertices
 				stroke_collection[closest_stroke_idx].undo_stroke_add(vertex_boundary_markers); //Sets the vertex_boundary_markers for the vertices of this stroke to 0 again
 				for (int i = 0; i < (*base_mesh).patches.size(); i++) {
 					(*base_mesh).patches[i]->update_patch_boundary_markers(vertex_boundary_markers);
@@ -333,8 +334,10 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		}
 	}
 	else if (tool_mode == PULL) { //Dragging an existing curve
-		//TODO: FAIL below here might not be needed anymore. Or needed for when initialy hand position is too far awway from the curves?
+		//FAIL below is needed when initialy hand position is too far away from the curves. Switch to FAIL instead of NONE to ensure proper button-release handling
 		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) { //Also allow to go to pull after ADD because sometimes the buttons are hard to differentiate
+			viewer.data().set_points(Eigen::MatrixXd(), black); //Will remove any previous unfinished strokes (e.g. unfinished cut)
+			draw_all_strokes();
 			select_dragging_handle(pos);
 
 			if (handleID == -1) {//User clicked too far from any of the stroke vertices
@@ -620,6 +623,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 				bool success_extrude = MeshExtrusion::extrude_main(*base_mesh, base_surface_path, *added_stroke, *extrusion_base, base_model, base_view, base_proj, base_viewport);
 				if (!success_extrude) { //Catches the case that the extrusion base removes all faces/vertices
+					viewer.update_screen_while_computing = false;
 					prev_tool_mode = NONE;
 					next_added_stroke_ID -= 2;
 					extrusion_base_already_drawn = false;
@@ -629,8 +633,11 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 					int nr_edges = drawn_points.rows() - 1;
 					viewer.data().add_edges(drawn_points.topRows(nr_edges), drawn_points.middleRows(1,nr_edges), black); //Display the stroke in black to show that it went wrong
 					drawn_points = added_stroke->get3DPoints();
+					nr_edges = drawn_points.rows() - 1;
 					viewer.data().add_edges(drawn_points.topRows(nr_edges-1), drawn_points.middleRows(1,nr_edges-1), black); //Display the stroke in black to show that it went wrong
-					viewer.update_screen_while_computing = false;
+					viewer.selected_data_index = 2;
+					viewer.data().show_laser = true;
+					viewer.selected_data_index = 1;
 					return;
 				}
 				(*base_mesh).patches.clear();
@@ -670,12 +677,31 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				viewer.data().set_normals(N_corners); //TODO: NORMALS
 
 				draw_all_strokes();
+				viewer.selected_data_index = 2;
+				viewer.data().show_laser = true;
+				viewer.selected_data_index = 1;
 				extrusion_base_already_drawn = false;
 			}
 			else { //mouse released after extrusion base drawn
 				if (!extrusion_base->has_points_on_mesh) {
 					viewer.update_screen_while_computing = false;
 					prev_tool_mode = NONE;
+					return;
+				}
+				else if (extrusion_base->has_been_outside_mesh || extrusion_base->has_self_intersection()) {
+					if (extrusion_base->has_self_intersection()) {
+						std::cerr << "Extrusion base contains a loop which is illegal. Please try again. " << std::endl;
+					}
+					else {
+						std::cerr << "Extrusion base has parts which are drawn outside of the mesh surface, which is not allowed. Try again. " << std::endl;
+					}
+					prev_tool_mode = NONE;
+					sound_error_beep();
+					draw_all_strokes(); //Will remove the drawn base & silhouette strokes
+					Eigen::MatrixXd drawn_points = extrusion_base->get3DPoints();
+					int nr_edges = drawn_points.rows() - 1;
+					viewer.data().add_edges(drawn_points.topRows(nr_edges), drawn_points.middleRows(1, nr_edges), black); //Display the stroke in black to show that it went wrong
+					viewer.update_screen_while_computing = false;
 					return;
 				}
 

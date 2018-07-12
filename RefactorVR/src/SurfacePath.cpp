@@ -21,7 +21,7 @@ bool SurfacePath::create_from_stroke_extrude(const Stroke & stroke, bool keep_lo
 
 	int faceID = origin_stroke->get_hit_faces()(prev_p, 0);
 	int start_face = faceID;
-	int n = 0;
+	int n = 0, iter = 0;
 	Eigen::RowVector3d pt(0, 0, 0);
 
 	int nr3DPoints = origin_stroke->get3DPoints().rows() - 1; //Don't take the loop duplicate
@@ -37,7 +37,7 @@ bool SurfacePath::create_from_stroke_extrude(const Stroke & stroke, bool keep_lo
 		path.push_back(newElement);
 
  		faceID = extend_path_extrude(prev_p, next_p, faceID);
-		if (faceID == -1) {
+		if (faceID == -1 || iter == 5000) {
 			return false;
 		}
 
@@ -47,6 +47,7 @@ bool SurfacePath::create_from_stroke_extrude(const Stroke & stroke, bool keep_lo
 
 		n = (next_p + 1) % nr3DPoints;
 		prev_p = next_p;
+		iter++;
 	}
 	if (keep_looped) {
 		pt = looped_3DPoints.row(start_p); //The origin_stroke's 3DPoints will be updated with the Path's vertex positions (in MeshExtrusion), so we need to keep it looped
@@ -105,7 +106,7 @@ int SurfacePath::find_next_edge_extrude(int next_p, int prev_p, int prev_edge, i
 			seg_vec.normalize();
 			Eigen::RowVector3d its_vec = cut_point - looped_3DPoints.row(prev_p);
 			its_vec.normalize();
-			if (its_vec.dot(seg_vec) >= 0 && t_val<=0.99999 && t_val>=0.00001) { //Else the projection points into the opposite direction of line segment
+			if (its_vec.dot(seg_vec) >= 0 && t_val<= 0.9999999 && t_val>= 0.0000001) { //Else the projection points into the opposite direction of line segment
 				edge_cut_point = cut_point;
 				return edge;
 			}
@@ -188,6 +189,7 @@ int SurfacePath::extend_path_cut(int prev_p, int next_p, int faceID, bool& on_fr
 	Eigen::RowVector3d start_pos = looped_3DPoints.row(prev_p);
 	Eigen::RowVector3d end_pos = looped_3DPoints.row(next_p);
 	Eigen::Vector3d edge_cut_point;
+	int iter = 0;
 
 	while(true) {
 		//next_p and prev_P are used to index into hit_faces, which only has data stored for "the front half" and then has the info for the "back half" in the second column
@@ -202,7 +204,8 @@ int SurfacePath::extend_path_cut(int prev_p, int next_p, int faceID, bool& on_fr
 		pair<int, int> strokeEdge(prev_p, next_p);
 		edge = find_next_edge_cut(strokeEdge, edge, faceID, on_front_side, cutPlane, start_pos, end_pos, first_iter, edge_cut_point);
 		first_iter = false;
-		if(edge == -1) { //Something is wrong with the stroke, exit gracefully
+		iter++;
+		if(edge == -1 || iter > 1000) { //Something is wrong with the stroke, exit gracefully
 			return -1;
 		}
 
