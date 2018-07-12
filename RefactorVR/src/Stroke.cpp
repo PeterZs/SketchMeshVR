@@ -32,6 +32,8 @@ Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::opengl
 	closest_vert_bindings.clear();
 	has_points_on_mesh = false;
 	has_been_outside_mesh = false;
+	starts_on_mesh = false;
+	ends_on_mesh = false;
 	stroke_color = Eigen::RowVector3d(0.8*(rand() / (double)RAND_MAX), 0.8*(rand() / (double)RAND_MAX), 0.8*(rand() / (double)RAND_MAX));
 	has_been_reversed = false;
 }
@@ -49,6 +51,8 @@ Stroke::Stroke(const Stroke& origin) :
 	dep(origin.dep),
 	closest_vert_bindings(origin.closest_vert_bindings),
 	has_points_on_mesh(origin.has_points_on_mesh),
+	starts_on_mesh(origin.starts_on_mesh),
+	ends_on_mesh(origin.ends_on_mesh),
 	has_been_outside_mesh(origin.has_been_outside_mesh),
 	has_been_reversed(origin.has_been_reversed),
 	stroke_color(origin.stroke_color),
@@ -70,6 +74,8 @@ void Stroke::swap(Stroke & tmp) {//The pointers to V and F will always be the sa
 	std::swap(this->hand_pos_at_draw, tmp.hand_pos_at_draw);
 	std::swap(this->closest_vert_bindings, tmp.closest_vert_bindings);
 	std::swap(this->has_points_on_mesh, tmp.has_points_on_mesh);
+	std::swap(this->starts_on_mesh, tmp.starts_on_mesh);
+	std::swap(this->ends_on_mesh, tmp.ends_on_mesh);
 	std::swap(this->has_been_outside_mesh, tmp.has_been_outside_mesh);
 	std::swap(this->has_been_reversed, tmp.has_been_reversed);
 	std::swap(this->stroke_color, tmp.stroke_color);
@@ -157,6 +163,7 @@ bool Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
 
 		if (stroke3DPoints.rows() == 1 && stroke3DPoints.isZero()) {
 			stroke3DPoints.row(0) << hit_pos[0], hit_pos[1], hit_pos[2];
+			starts_on_mesh = true;
 		}
 		else {
 			stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
@@ -166,7 +173,14 @@ bool Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
 		if (stroke3DPoints.rows() > 1) {
 			viewer.data().add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0, 1, 0));
 		}
+		ends_on_mesh = true;
 		result = true;
+	}
+	else {
+		if (stroke3DPoints.rows() == 1 && stroke3DPoints.isZero()) {
+			starts_on_mesh = false;
+		}
+		ends_on_mesh = false;
 	}
 
 	_time1 = std::chrono::high_resolution_clock::now();

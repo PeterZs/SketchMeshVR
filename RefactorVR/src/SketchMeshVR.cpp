@@ -28,6 +28,7 @@
 #include <igl/opengl/oculusVR.h>
 #include "Mesh.h"
 #include "Patch.h"
+#include "LaplacianRemesh.h"
 
 using namespace std;
 using Viewer = igl::opengl::glfw::Viewer;
@@ -483,13 +484,17 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				return;
 			}
 
-				/*
+				
 			//TODO: Work in progress
 			//TODO: remove all references to stroke.closest_vertex
-			if(added_stroke->starts_on_mesh && added_stroke->ends_on_mesh){
-			LaplacianRemesh::remesh_open_path(m, added_stroke);
-			}else if(!added_stroke->starts_on_mesh && !added_stroke_ends_on_mesh){//Stroke like a cut stroke (starts and ends off mesh to wrap around)
-				//Need to remesh like it's a cut but without removing the inside faces (we get 2 loops of boundary vertices that both need to be stitched, so can't use remesh_open_path)
+			if (added_stroke->starts_on_mesh && added_stroke->ends_on_mesh) {
+				bool success = LaplacianRemesh::remesh_open_path(*base_mesh, *added_stroke);
+				if (!success) {
+					//TODO: handle error
+				}
+			}
+			else if (!added_stroke->starts_on_mesh && !added_stroke->ends_on_mesh) {//Stroke like a cut stroke (starts and ends off mesh to wrap around)
+			   //Need to remesh like it's a cut but without removing the inside faces (we get 2 loops of boundary vertices that both need to be stitched, so can't use remesh_open_path)
 			}
 			//update the added_stroke's stroke3DPoints (maybe already do in remesh_open_path)
 			stroke_collection.push_back(*added_stroke);
@@ -497,15 +502,15 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			(*base_mesh).face_patch_map.clear();
 			(*base_mesh).patches = Patch::init_patches(*base_mesh);
 			draw_all_strokes;
-			*/
+			
 
-			added_stroke->snap_to_vertices(vertex_boundary_markers);
+			/*added_stroke->snap_to_vertices(vertex_boundary_markers);
 			stroke_collection.push_back(*added_stroke);
 
 			(*base_mesh).patches.clear();
 			(*base_mesh).face_patch_map.clear();
 			(*base_mesh).patches = Patch::init_patches(*base_mesh);
-			draw_all_strokes();
+			draw_all_strokes();*/
 		}
 		else if (prev_tool_mode == REMOVE && stroke_was_removed) { //Only redraw if we actually removed a stroke (otherwise we draw unnecessary)
 			stroke_was_removed = false; //Reset

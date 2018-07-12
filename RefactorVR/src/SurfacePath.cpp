@@ -11,7 +11,7 @@ SurfacePath::SurfacePath() {
 }
 
 /** Creates a SurfacePath that contains both the original points in stroke, and new points at the locations where stroke segments cross face edges. Won't wrap around to the backside of the mesh (because it will arrive at the first index again before having to switch direction). Used for extrusion **/
-bool SurfacePath::create_from_stroke_extrude(const Stroke & stroke, bool keep_looped) {
+bool SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 	origin_stroke = new Stroke(stroke);
 	path.clear();
 	
@@ -49,11 +49,10 @@ bool SurfacePath::create_from_stroke_extrude(const Stroke & stroke, bool keep_lo
 		prev_p = next_p;
 		iter++;
 	}
-	if (keep_looped) {
 		pt = looped_3DPoints.row(start_p); //The origin_stroke's 3DPoints will be updated with the Path's vertex positions (in MeshExtrusion), so we need to keep it looped
 		PathElement lastElement(faceID, PathElement::FACE, pt);
 		path.push_back(lastElement);
-	}
+	
 	return true;
 }
 

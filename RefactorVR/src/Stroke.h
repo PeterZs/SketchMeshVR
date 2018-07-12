@@ -53,6 +53,8 @@ public:
 	bool has_points_on_mesh;
 	bool has_been_outside_mesh;
 	bool has_been_reversed;
+	bool starts_on_mesh;
+	bool ends_on_mesh;
 	Eigen::RowVector3d stroke_color;
 	igl::opengl::glfw::Viewer &viewer;
 	
