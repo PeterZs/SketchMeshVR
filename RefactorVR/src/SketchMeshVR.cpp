@@ -520,6 +520,13 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			(*base_mesh).patches.clear();
 			(*base_mesh).face_patch_map.clear();
 			(*base_mesh).patches = Patch::init_patches(*base_mesh);
+
+			viewer.data().clear();
+			viewer.data().set_mesh(V, F);
+			Eigen::MatrixXd N_corners;
+			igl::per_corner_normals(V, F, 50, N_corners);
+			viewer.data().set_normals(N_corners); //TODO: NORMALS
+
 			draw_all_strokes;
 		}
 		else if (prev_tool_mode == REMOVE && stroke_was_removed) { //Only redraw if we actually removed a stroke (otherwise we draw unnecessary)

@@ -13,7 +13,7 @@ using namespace igl;
 bool MeshExtrusion::extrude_prepare(Stroke& base, SurfacePath& surface_path) {
 	base.counter_clockwise();
 	
-	bool success = surface_path.create_from_stroke_extrude(base, true);
+	bool success = surface_path.create_from_stroke_extrude(base);
 
 	if (!success) {
 		return false;
@@ -339,7 +339,8 @@ void MeshExtrusion::create_loop(Mesh& m, Eigen::MatrixXd& loop3D, Eigen::VectorX
 /** Updates the sharp_edge tracker with new edge indices after the mesh topology changed. **/
 void MeshExtrusion::update_sharp_edges(Mesh& m, Eigen::MatrixXi sharpEV) {
 	if (!igl::is_edge_manifold(m.F)) {
-		throw - 1;
+		throw -1;
+		return;
 	}
 	Eigen::MatrixXi EV, FE, EF;
 	igl::edge_topology(m.V, m.F, EV, FE, EF);

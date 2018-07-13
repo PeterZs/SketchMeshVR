@@ -39,24 +39,24 @@ Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::opengl
 }
 
 Stroke::Stroke(const Stroke& origin) :
-	V(origin.V),
-	F(origin.F),
-	viewer(origin.viewer),
-	stroke_ID(origin.stroke_ID),
-	stroke2DPoints(origin.stroke2DPoints),
-	stroke3DPoints(origin.stroke3DPoints),
-	stroke3DPointsBack(origin.stroke3DPointsBack),
-	faces_hit(origin.faces_hit),
-	hand_pos_at_draw(origin.hand_pos_at_draw),
-	dep(origin.dep),
-	closest_vert_bindings(origin.closest_vert_bindings),
-	has_points_on_mesh(origin.has_points_on_mesh),
-	starts_on_mesh(origin.starts_on_mesh),
-	ends_on_mesh(origin.ends_on_mesh),
-	has_been_outside_mesh(origin.has_been_outside_mesh),
-	has_been_reversed(origin.has_been_reversed),
-	stroke_color(origin.stroke_color),
-	is_loop(origin.is_loop) {
+V(origin.V),
+F(origin.F),
+viewer(origin.viewer),
+stroke_ID(origin.stroke_ID),
+stroke2DPoints(origin.stroke2DPoints),
+stroke3DPoints(origin.stroke3DPoints),
+stroke3DPointsBack(origin.stroke3DPointsBack),
+faces_hit(origin.faces_hit),
+hand_pos_at_draw(origin.hand_pos_at_draw),
+dep(origin.dep),
+closest_vert_bindings(origin.closest_vert_bindings),
+has_points_on_mesh(origin.has_points_on_mesh),
+starts_on_mesh(origin.starts_on_mesh),
+ends_on_mesh(origin.ends_on_mesh),
+has_been_outside_mesh(origin.has_been_outside_mesh),
+has_been_reversed(origin.has_been_reversed),
+stroke_color(origin.stroke_color),
+is_loop(origin.is_loop) {
 	_time1 = std::chrono::high_resolution_clock::now();
 }
 
@@ -95,7 +95,7 @@ bool Stroke::addSegment(Eigen::Vector3f& pos) {
 			return false;
 		}
 		else { //If enough time has passed, check if controller moved a large enough distance
-		
+
 			if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < 0.00005625) {
 				return false;
 			}
@@ -116,7 +116,7 @@ bool Stroke::addSegment(Eigen::Vector3f& pos) {
 	}
 	closest_vert_bindings.push_back(stroke3DPoints.rows() - 1); //In the case of DRAW this will match the vertex indices, since we start from 0
 	viewer.data().set_stroke_points(stroke3DPoints); //Will remove all previous points but is okay for draw since it's the only points there are
-	if (stroke3DPoints.rows() > 10 && (stroke3DPoints.bottomRows(1) - stroke3DPoints.row(0)).squaredNorm() < (stroke3DPoints.row(1)-stroke3DPoints.row(0)).squaredNorm()*8.0) { //Show the closing line if the current point is close enough the first point (and we have already at least 10 samples)
+	if (stroke3DPoints.rows() > 10 && (stroke3DPoints.bottomRows(1) - stroke3DPoints.row(0)).squaredNorm() < (stroke3DPoints.row(1) - stroke3DPoints.row(0)).squaredNorm()*8.0) { //Show the closing line if the current point is close enough the first point (and we have already at least 10 samples)
 		viewer.data().add_stroke_points(stroke3DPoints.row(0));
 	}
 	_time1 = std::chrono::high_resolution_clock::now();
@@ -124,25 +124,27 @@ bool Stroke::addSegment(Eigen::Vector3f& pos) {
 }
 
 /** Used for ADD. Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon). After adding the new point it will restart the timer. **/
-bool Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
-	bool result = false;
+void Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
 
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
 		if (timePast < 300000) {
-			return result;
+			return;
 		}
 	}
 
-	Eigen::Vector3d hit_pos, hit_pos_back;
 	vector<igl::Hit> hits;
 
 	if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
-		hit_pos = V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v;
+		if (hits.size() < 2){ //Hand was inside mesh during drawing
+			return; 
+		}
+		Eigen::Vector3d hit_pos = V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v;
+		Eigen::Vector3d hit_pos_back = V.row(F(hits[1].id, 0))*(1.0 - hits[1].u - hits[1].v) + V.row(F(hits[1].id, 1))*hits[1].u + V.row(F(hits[1].id, 2))*hits[1].v;
 
 		if (!stroke3DPoints.isZero() && hit_pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && hit_pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && hit_pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
-			return true;
+			return;
 		}
 
 		/*double cur_dist, min_dist = INFINITY;
@@ -163,18 +165,29 @@ bool Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
 
 		if (stroke3DPoints.rows() == 1 && stroke3DPoints.isZero()) {
 			stroke3DPoints.row(0) << hit_pos[0], hit_pos[1], hit_pos[2];
+			stroke3DPointsBack.row(0) << hit_pos_back[0], hit_pos_back[1], hit_pos_back[2];
+			faces_hit.row(0) << hits[0].id, hits[1].id;
+			hand_pos_at_draw.row(0) << pos.transpose().cast<double>();
 			starts_on_mesh = true;
 		}
 		else {
 			stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
 			stroke3DPoints.row(stroke3DPoints.rows() - 1) << hit_pos[0], hit_pos[1], hit_pos[2];
+
+			stroke3DPointsBack.conservativeResize(stroke3DPointsBack.rows() + 1, Eigen::NoChange);
+			stroke3DPointsBack.row(stroke3DPointsBack.rows() - 1) << hit_pos_back[0], hit_pos_back[1], hit_pos_back[2];
+
+			faces_hit.conservativeResize(faces_hit.rows() + 1, Eigen::NoChange);
+			faces_hit.row(faces_hit.rows() - 1) << hits[0].id, hits[1].id;
+
+			hand_pos_at_draw.conservativeResize(hand_pos_at_draw.rows() + 1, Eigen::NoChange);
+			hand_pos_at_draw.row(hand_pos_at_draw.rows() - 1) << pos.transpose().cast<double>();
 		}
 
 		if (stroke3DPoints.rows() > 1) {
 			viewer.data().add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0, 1, 0));
 		}
 		ends_on_mesh = true;
-		result = true;
 	}
 	else {
 		if (stroke3DPoints.rows() == 1 && stroke3DPoints.isZero()) {
@@ -184,7 +197,7 @@ bool Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
 	}
 
 	_time1 = std::chrono::high_resolution_clock::now();
-	return result;
+	return;
 }
 
 /** Used for CUT. Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its projection as a 2D point. The indices of the front and backside faces that are hit will also be stored.

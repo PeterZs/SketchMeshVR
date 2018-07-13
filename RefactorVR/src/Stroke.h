@@ -15,7 +15,7 @@ public:
 	~Stroke();
     
 	bool addSegment(Eigen::Vector3f& pos);
-	bool addSegmentAdd(Eigen::Vector3f & pos);
+	void addSegmentAdd(Eigen::Vector3f & pos);
 	void addSegmentCut(Eigen::Vector3f & pos);
 	void addSegmentExtrusionBase(Eigen::Vector3f & pos);
 	void addSegmentExtrusionSilhouette(Eigen::Vector3f & pos);

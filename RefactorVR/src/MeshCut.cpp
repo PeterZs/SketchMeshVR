@@ -107,7 +107,8 @@ bool MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 
 void MeshCut::update_sharp_edges(Mesh& m, Eigen::MatrixXi& sharpEV) {
 	if (!igl::is_edge_manifold(m.F)) {
-		throw - 1;
+		throw -1;
+		return;
 	}
 	Eigen::MatrixXi EV, FE, EF;
 	igl::edge_topology(m.V, m.F, EV, FE, EF);
