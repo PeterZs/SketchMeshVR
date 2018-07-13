@@ -487,30 +487,40 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				
 			//TODO: Work in progress
 			//TODO: remove all references to stroke.closest_vertex
+			bool success;
 			if (added_stroke->starts_on_mesh && added_stroke->ends_on_mesh) {
-				bool success = LaplacianRemesh::remesh_open_path(*base_mesh, *added_stroke);
-				if (!success) {
-					//TODO: handle error
-				}
+				success = LaplacianRemesh::remesh_open_path(*base_mesh, *added_stroke);
 			}
 			else if (!added_stroke->starts_on_mesh && !added_stroke->ends_on_mesh) {//Stroke like a cut stroke (starts and ends off mesh to wrap around)
 			   //Need to remesh like it's a cut but without removing the inside faces (we get 2 loops of boundary vertices that both need to be stitched, so can't use remesh_open_path)
+				success = LaplacianRemesh::remesh_cutting_path(*base_mesh, *added_stroke);
 			}
-			//update the added_stroke's stroke3DPoints (maybe already do in remesh_open_path)
+			else {
+				std::cerr << "An added stroke either needs both the end- & startpoint to be outside of the mesh, or both on the mesh. Please try again. " << std::endl;
+				success = false;
+			}
+
+			if (!success) {
+				//TODO: handle error
+				next_added_stroke_ID--; //Undo ID increment since stroke didn't actually get pushed back
+				prev_tool_mode = NONE;
+				sound_error_beep();
+				viewer.data().set_points(Eigen::MatrixXd(), black); //Will remove the drawn stroke
+				draw_all_strokes();
+				Eigen::MatrixXd drawn_points = added_stroke->get3DPoints();
+				int nr_edges = drawn_points.rows() - 1;
+				viewer.data().add_edges(drawn_points.topRows(nr_edges), drawn_points.middleRows(1, nr_edges), black); //Display the stroke in black to show that it went wrong
+				viewer.update_screen_while_computing = false;
+				return;
+			}
+
+
+			//TODO: update the added_stroke's stroke3DPoints (maybe already do in remesh_open_path)
 			stroke_collection.push_back(*added_stroke);
 			(*base_mesh).patches.clear();
 			(*base_mesh).face_patch_map.clear();
 			(*base_mesh).patches = Patch::init_patches(*base_mesh);
 			draw_all_strokes;
-			
-
-			/*added_stroke->snap_to_vertices(vertex_boundary_markers);
-			stroke_collection.push_back(*added_stroke);
-
-			(*base_mesh).patches.clear();
-			(*base_mesh).face_patch_map.clear();
-			(*base_mesh).patches = Patch::init_patches(*base_mesh);
-			draw_all_strokes();*/
 		}
 		else if (prev_tool_mode == REMOVE && stroke_was_removed) { //Only redraw if we actually removed a stroke (otherwise we draw unnecessary)
 			stroke_was_removed = false; //Reset

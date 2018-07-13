@@ -12,28 +12,28 @@ using namespace std;
 using namespace igl;
 
 bool LaplacianRemesh::is_front_loop = true; //Determines extrusion or cut
-//bool LaplacianRemesh::remove_inside_faces = true;
+bool LaplacianRemesh::remove_inside_faces = true;
 
 Eigen::MatrixXi LaplacianRemesh::EV, LaplacianRemesh::FE, LaplacianRemesh::EF;
 vector<vector<int>> LaplacianRemesh::VV;
 
 Eigen::VectorXi LaplacianRemesh::remesh_cut_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success, int cut_clicked_face) {
 	is_front_loop = false;
-	//remove_inside_faces = true;
+	remove_inside_faces = true;
 	adjacency_list(m.F, VV);
 	return remesh(m, surface_path, model, view, proj, viewport, remesh_success, cut_clicked_face);
 }
 
 Eigen::VectorXi LaplacianRemesh::remesh_extrusion_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success) {
 	is_front_loop = true;
-	//remove_inside_faces = true;
+	remove_inside_faces = true;
 	adjacency_list(m.F, VV);
 	return remesh(m, surface_path, model, view, proj, viewport, remesh_success);
 }
 
 bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
 	SurfacePath surface_path;
-	surface_path.create_from_open_stroke(open_path_stroke);
+	surface_path.create_from_open_path(open_path_stroke);
 
 	vector<bool> dirty_face(m.F.rows());
 	Eigen::VectorXi dirty_vertices(m.V.rows());
@@ -153,6 +153,12 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
 	return true;
 }
 
+bool LaplacianRemesh::remesh_cutting_path(Mesh& m, Stroke& cut_path_stroke) {
+	remove_inside_faces = false;
+
+	return true;
+}
+
 Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success, int cut_clicked_face) {
 	Eigen::MatrixXi start_F = m.F;
 	Eigen::MatrixXd start_V = m.V;
@@ -236,11 +242,13 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		}
 	}
 
-	for (int i = 0; i < m.V.rows(); i++) {
-		if (dirty_vertices[i] < 0) {
-			for (int j = 0; j < VF[i].size(); j++) {
-				if (!dirty_face[VF[i][j]]) {
-					propagate_dirty_faces(VF[i][j], dirty_face);
+	if (remove_inside_faces) {
+		for (int i = 0; i < m.V.rows(); i++) {
+			if (dirty_vertices[i] < 0) {
+				for (int j = 0; j < VF[i].size(); j++) {
+					if (!dirty_face[VF[i][j]]) {
+						propagate_dirty_faces(VF[i][j], dirty_face);
+					}
 				}
 			}
 		}
@@ -248,7 +256,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 
 
 	//Revert dirty/clean faces and vertices in case the user clicked on the "clean" part when cutting
-	if (cut_clicked_face >= 0 && !dirty_face[cut_clicked_face]) {
+	if (cut_clicked_face >= 0 && !dirty_face[cut_clicked_face] && remove_inside_faces) {
 		for (int i = 0; i < dirty_face.size(); i++) {
 			dirty_face[i] = !dirty_face[i];
 		}
@@ -362,7 +370,19 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	update_face_indices(m);
 
 	//Up to here disappearing vertices and faces have been removed from the mesh and corresponding indices/markers have been updated
-
+	Eigen::MatrixXi replacing_sharp_edges(0, 2);
+	for (int i = 0; i < path.size(); i++) {
+		if (path[i].get_type() == PathElement::EDGE && m.sharp_edge[path[i].get_ID()]) {
+			//TODO: store that we are removing/splitting a sharp edge, so that we can later set the 2 resulting new edges to be sharp
+			path[i].fixed = true;
+			replacing_sharp_edges.conservativeResize(replacing_sharp_edges.rows() + 2, Eigen::NoChange);
+			replacing_sharp_edges.row(replacing_sharp_edges.rows() - 2) << i, EV(path[i].get_ID(), 0); //Pair of original edge start index and middle vertex index
+			replacing_sharp_edges.row(replacing_sharp_edges.rows() - 1) << i, EV(path[i].get_ID(), 1);//Pair of original edge end index and middle vertex index
+		}
+		else {
+			path[i].fixed = false;
+		}
+	}
 
 	double unit_length = (is_front_loop) ? compute_average_distance_between_onPolygon_vertices(path) : compute_average_length_of_crossing_edges(path, startV, startEV);
 	if (CleanStroke3D::get_stroke_length(path, 0, path.size() - 1) / unit_length < 12) { //We'd end up with less than 12 samples
@@ -380,7 +400,6 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	int original_V_size = m.V.rows();
 	for (int i = 0; i < resampled_path.rows() - 1; i++) { //Do not use the last path vertex, as it is a copy of the first and creates unwanted behaviour
 		path_vertices.push_back(original_V_size + i); //Store the vertex indices (in m.V) of the path vertices
-												  //TODO: set sharp edges and seam edges to fixed here. See lines 646-657 in LaplacianRemesh of FiberMesh
 	}
 
 	update_mesh_values(m, resampled_path, surface_path.get_origin_stroke_ID(), vertex_is_clean.rows());
@@ -391,22 +410,18 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	}
 	surface_path.set_path(new_surface_path);
 
-	//TODO START: not sure how this maps to FiberMesh
+	//TODO: need to make sure that we don't add sharp edges for added strokes (that are not a cut or extrusion)
 	Eigen::MatrixXi added_sharpEV(resampled_path.rows() - 1, 2);
 	for (int i = 0; i < resampled_path.rows() - 1; i++) {
-		//surface_path.get_path_element(i).set_v_idx(size_before_removing + i);
 		added_sharpEV.row(i) << vertex_is_clean.rows() + i, vertex_is_clean.rows() + ((i + 1) + resampled_path.rows() - 1) % (resampled_path.rows() - 1); //Use mod (path.size() - 1) to compensate for start point that is in path twice
 	}
-	//TODO END
 
 
-	//TODO: maybe move this up to right after V slicing?
 	//Update the outer_boundary_vertices (which are indices into V before it was sliced to keep only the clean vertices)
 	for (int i = 0; i < outer_boundary_vertices.size(); i++) {
 		outer_boundary_vertices[i] = m.new_mapped_indices[outer_boundary_vertices[i]];
 	}
 
-	//TODO: maybe move this up to right after V slicing?
 	//Make the outer_boundary_vertices CCW
 	Eigen::VectorXi row_idx2, col_idx2(3);
 	row_idx2 = Eigen::VectorXi::Map(outer_boundary_vertices.data(), outer_boundary_vertices.size());
@@ -415,12 +430,29 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 
 	if (!is_counter_clockwise_boundaries(tmp_V, modelview, proj, viewport, mean_viewpoint, !is_front_loop)) {
 		reverse(outer_boundary_vertices.begin(), outer_boundary_vertices.end());
+		if (!remove_inside_faces) {
+			reverse(inner_boundary_vertices.begin(), inner_boundary_vertices.end());
+		}
 	}
 
 	stitch(path_vertices, outer_boundary_vertices, m); //TODO: need to fix that stitching sometimes fails
+	if (!remove_inside_faces) {
+		for (int i = 0; i < inner_boundary_vertices.size(); i++) {
+			inner_boundary_vertices[i] = m.new_mapped_indices[inner_boundary_vertices[i]];
+		}
+		stitch(path_vertices, inner_boundary_vertices, m);
+	}
+
+	Eigen::MatrixXi sharpEVcat;
+	if (remove_inside_faces) { //True for extrusion and cut, who both create a sharp curve along their path
+		sharpEVcat = igl::cat(1, sharpEV, added_sharpEV); //Add sharp edges that are created due to the newly added curve
+		sharpEVcat = igl::cat(1, sharpEVcat, replacing_sharp_edges); //Add sharp edges that are created due to old sharp edges being broken
+	}
+	else {
+		sharpEVcat = igl::cat(1, sharpEV, replacing_sharp_edges); //Add sharp edges that are created due to old sharp edges being broken
+	}
 
 
-	Eigen::MatrixXi sharpEVcat = igl::cat(1, sharpEV, added_sharpEV);
 	try {
 		update_sharp_edges(m, sharpEVcat);
 	}
@@ -673,12 +705,12 @@ vector<int> LaplacianRemesh::reorder(vector<int> boundary_vertices, Eigen::Vecto
 	return reordered;
 }
 
-void LaplacianRemesh::reverse_path(vector<int> path_vertices) {
+/*void LaplacianRemesh::reverse_path(vector<int> path_vertices) {
 	reverse(path_vertices.begin(), path_vertices.end());
 	int v = path_vertices[path_vertices.size() - 1];
 	path_vertices.insert(path_vertices.begin() + 1, path_vertices.begin(), path_vertices.end() - 1);
 	path_vertices[0] = v;
-}
+}*/
 
 /** For cut we determine if the boundary is CCW by comparing the direction of the normal of the remaining boundary points against the vector from the center of the removed boundary points to the center of the remaining boundary points.
 	For extrusion we simply look at the sign of the inner area of the projected points (since we're looking from the "correct" viewpoint)

@@ -10,6 +10,49 @@ using namespace std;
 SurfacePath::SurfacePath() {
 }
 
+bool SurfacePath::create_from_open_path(const Stroke& stroke) {
+	origin_stroke = new Stroke(stroke);
+	path.clear();
+
+	int prev_p = 0;
+	int start_p = prev_p;
+	int next_p;
+
+	int faceID = origin_stroke->get_hit_faces()(prev_p, 0);
+	int start_face = faceID;
+	int n = 1, iter = 0;
+	Eigen::RowVector3d pt(0, 0, 0);
+
+	std::cout << "check if first and last are the same here. don't want to use looped version." << origin_stroke->get3DPoints().row(0) - origin_stroke->get3DPoints().bottomRows(1) << std::endl;
+	int nr3DPoints = origin_stroke->get3DPoints().rows();
+	looped_3DPoints = origin_stroke->get3DPoints().topRows(nr3DPoints);
+
+	igl::edge_topology(stroke.get_V(), stroke.get_F(), EV, FE, EF);
+
+	while (true) {
+		next_p = n;
+
+		pt = looped_3DPoints.row(prev_p);
+		PathElement newElement(faceID, PathElement::FACE, pt);
+		path.push_back(newElement);
+
+		faceID = extend_path_extrude(prev_p, next_p, faceID);
+		if (faceID == -1 || iter == 5000) {
+			return false;
+		}
+
+		if (next_p == start_p && faceID == start_face) {
+			break;
+		}
+
+		n = (next_p + 1) % nr3DPoints;
+		prev_p = next_p;
+		iter++;
+	}
+
+	return true;
+}
+
 /** Creates a SurfacePath that contains both the original points in stroke, and new points at the locations where stroke segments cross face edges. Won't wrap around to the backside of the mesh (because it will arrive at the first index again before having to switch direction). Used for extrusion **/
 bool SurfacePath::create_from_stroke_extrude(const Stroke & stroke) {
 	origin_stroke = new Stroke(stroke);

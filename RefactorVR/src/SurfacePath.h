@@ -12,6 +12,7 @@ public:
 
 
 	SurfacePath();
+	bool create_from_open_path(const Stroke & stroke);
 	bool create_from_stroke_extrude(const Stroke & stroke);
 	bool create_from_stroke_cut(const Stroke& stroke);
 	int get_origin_stroke_ID();
