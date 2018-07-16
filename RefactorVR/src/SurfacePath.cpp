@@ -32,17 +32,19 @@ bool SurfacePath::create_from_open_path(const Stroke& stroke) {
 	while (true) {
 		next_p = n;
 
+		
+
 		pt = looped_3DPoints.row(prev_p);
 		PathElement newElement(faceID, PathElement::FACE, pt);
 		path.push_back(newElement);
 
+		if (next_p == start_p) { //Don't need to come back to the start face here since it ain't a loop
+			break;
+		}
+
 		faceID = extend_path_extrude(prev_p, next_p, faceID);
 		if (faceID == -1 || iter == 5000) {
 			return false;
-		}
-
-		if (next_p == start_p && faceID == start_face) {
-			break;
 		}
 
 		n = (next_p + 1) % nr3DPoints;

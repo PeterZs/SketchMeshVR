@@ -95,7 +95,6 @@ bool Stroke::addSegment(Eigen::Vector3f& pos) {
 			return false;
 		}
 		else { //If enough time has passed, check if controller moved a large enough distance
-
 			if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < 0.00005625) {
 				return false;
 			}
@@ -144,6 +143,9 @@ void Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
 		Eigen::Vector3d hit_pos_back = V.row(F(hits[1].id, 0))*(1.0 - hits[1].u - hits[1].v) + V.row(F(hits[1].id, 1))*hits[1].u + V.row(F(hits[1].id, 2))*hits[1].v;
 
 		if (!stroke3DPoints.isZero() && hit_pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && hit_pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && hit_pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
+			return;
+		}
+		if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - hit_pos.transpose()).squaredNorm() < 0.00005625) {
 			return;
 		}
 

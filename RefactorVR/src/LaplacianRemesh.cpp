@@ -149,8 +149,16 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
 		}
 	}
 
+
+
+	Eigen::RowVector3d mean_viewpoint = compute_mean_viewpoint(m, outer_boundary_vertices);
+	Eigen::Matrix4f modelview = open_path_stroke.viewer.oculusVR.get_start_action_view() * open_path_stroke.viewer.core.get_model();
+
 	double unit_length = compute_average_distance_between_onPolygon_vertices(path);
 	Eigen::MatrixXd resampled_path = CleanStroke3D::resample_by_length_with_fixes(path, unit_length);
+	if (!is_counter_clockwise_boundaries(resampled_path, modelview, open_path_stroke.viewer.core.get_proj(), open_path_stroke.viewer.core.viewport, mean_viewpoint, true)) {
+		resampled_path = resampled_path.colwise().reverse().eval();
+	}
 
 	vector<int> path_vertices;
 	int original_V_size = m.V.rows(); //TODO: Maybe have to redo below that it doesn't take the last vertex from the resampled path (probably not since it's not a loop)
@@ -164,6 +172,17 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
 	//Add interior path vertices in reversed direction to the path, so we can complete the loop around it
 	for (int i = path_vertices.size() - 2; i > 0; i--) {
 		path_vertices.push_back(path_vertices[i]);
+	}
+
+	//Make the outer_boundary_vertices CCW
+	Eigen::MatrixXd tmp_V;
+	Eigen::VectorXi row_idx2, col_idx2(3);
+	row_idx2 = Eigen::VectorXi::Map(outer_boundary_vertices.data(), outer_boundary_vertices.size());
+	col_idx2.col(0) << 0, 1, 2;
+	igl::slice(m.V, row_idx2, col_idx2, tmp_V); //Keep only the clean "boundary" vertices in the mesh
+
+	if (!is_counter_clockwise_boundaries(tmp_V, modelview, open_path_stroke.viewer.core.get_proj(), open_path_stroke.viewer.core.viewport, mean_viewpoint, !is_front_loop)) {
+		reverse(outer_boundary_vertices.begin(), outer_boundary_vertices.end());
 	}
 
 	//TODO: for open paths we may need to add the extra elseif statement to stitch(), but not sure if this will work together with stitching for cut (since this is also looped over to a backside)
@@ -701,7 +720,7 @@ void LaplacianRemesh::stitch(std::vector<int> path_vertices, std::vector<int> bo
 	Eigen::RowVector3d path_v = start_path_v, outer_v = start_outer_v, next_path_v, next_outer_v;
 	int path_v_idx = path_vertices[0], outer_v_idx = boundary_vertices[0], next_path_v_idx, next_outer_v_idx;
 
-	bool proceed_outer_v;
+	bool proceed_outer_v, prev_proceed_path = false;
 
 	while (true) {
 		next_path_v = m.V.row(path_vertices[(path_idx + 1) % path_vertices.size()]);
@@ -716,8 +735,24 @@ void LaplacianRemesh::stitch(std::vector<int> path_vertices, std::vector<int> bo
 		else if (path_idx == path_vertices.size()) {
 			proceed_outer_v = true;
 		}
-		else if ((path_v - next_path_v).dot(outer_v - next_outer_v) < 0) {		//TODO: add extra else if for "open paths" (added curves?)
+		else if (path_idx == path_vertices.size() / 2 && prev_proceed_path == true) { //The first thing after we created a triangle using the "last" path vertex ALWAYS has to be moving the outer 
+			std::cout << "Do this. " << std::endl;
 			proceed_outer_v = true;
+		}
+		else if ((path_v - next_path_v).dot(outer_v - next_outer_v) < 0 && path_vertices.size() / 2 == path_idx) {		//TODO: add extra else if for "open paths" (added curves?)
+			std::cout << path_idx << "     " << path_vertices.size() / 2 << std::endl;
+		//	if (path_vertices.size() / 2 == path_idx) {
+				proceed_outer_v = true;
+				std::cout << " because of idx" << std::endl;
+
+		/*	}
+			else if ((path_v - next_outer_v).norm() < (outer_v - next_path_v).norm()) {
+				proceed_outer_v = true;
+				std::cout << " because of dist" << std::endl;
+			}
+			else {
+				proceed_outer_v = false;
+			}*/
 		}
 		else if ((path_v - next_outer_v).norm() < (outer_v - next_path_v).norm()) {
 			proceed_outer_v = true;
@@ -736,6 +771,7 @@ void LaplacianRemesh::stitch(std::vector<int> path_vertices, std::vector<int> bo
 			outer_v = next_outer_v;
 			outer_v_idx = next_outer_v_idx;
 			outer_idx++;
+			prev_proceed_path = false;
 		}
 		else {
 			m.F.conservativeResize(m.F.rows() + 1, Eigen::NoChange);
@@ -745,6 +781,7 @@ void LaplacianRemesh::stitch(std::vector<int> path_vertices, std::vector<int> bo
 			path_v = next_path_v;
 			path_v_idx = next_path_v_idx;
 			path_idx++;
+			prev_proceed_path = true;
 		}
 
 		if (path_idx == path_vertices.size() && outer_idx == boundary_vertices.size()) {
