@@ -318,12 +318,12 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 			if (remove_stroke_clicked == 2) { //Mechanism to force the user to click twice on the same stroke before removing it (safeguard)
 				stroke_was_removed = true;
-				//TODO: below will break if we remove a curve that has vertices that belong to multiple curves, these will then get unmarked as boundary vertices
+				//TODO: below will break if we remove a curve that has vertices that belong to multiple curves, these will then get unmarked as boundary vertices. Replace vertex_boundary_markers either with a list per vertex or some bitwise operator (e.g. belonging to boundary 1 gives value 1, belonging to 1 and 2 gives value 3 etc)
 				stroke_collection[closest_stroke_idx].undo_stroke_add(vertex_boundary_markers); //Sets the vertex_boundary_markers for the vertices of this stroke to 0 again
 				for (int i = 0; i < (*base_mesh).patches.size(); i++) {
 					(*base_mesh).patches[i]->update_patch_boundary_markers(vertex_boundary_markers);
 				}
-				//TODO: If we want the mesh to adapt to the removal of the stroke, we need to smooth here
+
 				stroke_collection.erase(stroke_collection.begin() + closest_stroke_idx);
 				remove_stroke_clicked = 0; //Reset
 				prev_closest_stroke_idx = -1;
@@ -487,12 +487,11 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 				
 			//TODO: Work in progress
-			//TODO: remove all references to stroke.closest_vertex
 			bool success;
 			if (added_stroke->starts_on_mesh && added_stroke->ends_on_mesh) {
 				success = LaplacianRemesh::remesh_open_path(*base_mesh, *added_stroke);
 			}
-			else if (!added_stroke->starts_on_mesh && !added_stroke->ends_on_mesh) {//Stroke like a cut stroke (starts and ends off mesh to wrap around)
+			else if (!added_stroke->starts_on_mesh && !added_stroke->ends_on_mesh) { //Stroke like a cut stroke (starts and ends off mesh to wrap around)
 			   //Need to remesh like it's a cut but without removing the inside faces (we get 2 loops of boundary vertices that both need to be stitched, so can't use remesh_open_path)
 				success = LaplacianRemesh::remesh_cutting_path(*base_mesh, *added_stroke);
 			}
@@ -502,7 +501,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			}
 
 			if (!success) {
-				//TODO: handle error
 				next_added_stroke_ID--; //Undo ID increment since stroke didn't actually get pushed back
 				prev_tool_mode = NONE;
 				sound_error_beep();
@@ -515,8 +513,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				return;
 			}
 
-
-			//TODO: update the added_stroke's stroke3DPoints (maybe already do in remesh_open_path)
 			stroke_collection.push_back(*added_stroke);
 			(*base_mesh).patches.clear();
 			(*base_mesh).face_patch_map.clear();
@@ -551,6 +547,21 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			draw_all_strokes();
 		}
 		else if (prev_tool_mode == REMOVE && stroke_was_removed) { //Only redraw if we actually removed a stroke (otherwise we draw unnecessary)
+			for (int i = 0; i < 10; i++) {
+				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
+			}
+
+			for (int i = 0; i < stroke_collection.size(); i++) {
+				stroke_collection[i].update_Positions(V);
+			}
+
+			//TODO: calling clear will erase the mesh/trackball rotation, so only do clear() when absolutely necessary. Check if below works like this
+			//viewer.data().clear();
+			viewer.data().set_mesh(V, F);
+			Eigen::MatrixXd N_corners;
+			igl::per_corner_normals(V, F, 50, N_corners);
+			viewer.data().set_normals(N_corners);
+
 			stroke_was_removed = false; //Reset
 			dirty_boundary = true;
 			draw_all_strokes();
@@ -568,7 +579,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			viewer.data().set_mesh(V, F);
 			Eigen::MatrixXd N_corners;
 			igl::per_corner_normals(V, F, 50, N_corners);
-			viewer.data().set_normals(N_corners); //TODO: NORMALS
+			viewer.data().set_normals(N_corners);
 			draw_all_strokes();
 		}
 		else if (prev_tool_mode == CUT) {
@@ -796,7 +807,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			viewer.data().set_mesh(V, F);
 			Eigen::MatrixXd N_corners;
 			igl::per_corner_normals(V, F, 50, N_corners);
-			viewer.data().set_normals(N_corners); //TODO: NORMALS
+			viewer.data().set_normals(N_corners); 
 
 			draw_all_strokes();
 		}
@@ -825,7 +836,7 @@ bool callback_load_mesh(Viewer& viewer, string filename, Eigen::MatrixXd& V_floo
 		viewer.data().set_mesh(V, F);
 		Eigen::MatrixXd N_corners;
 		igl::per_corner_normals(V, F, 50, N_corners);
-		viewer.data().set_normals(N_corners); //TODO: NORMALS
+		viewer.data().set_normals(N_corners);
 
 		std::cout << filename.substr(filename.find_last_of("/") + 1) << endl;
 	return true;

@@ -39,24 +39,24 @@ Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::opengl
 }
 
 Stroke::Stroke(const Stroke& origin) :
-V(origin.V),
-F(origin.F),
-viewer(origin.viewer),
-stroke_ID(origin.stroke_ID),
-stroke2DPoints(origin.stroke2DPoints),
-stroke3DPoints(origin.stroke3DPoints),
-stroke3DPointsBack(origin.stroke3DPointsBack),
-faces_hit(origin.faces_hit),
-hand_pos_at_draw(origin.hand_pos_at_draw),
-dep(origin.dep),
-closest_vert_bindings(origin.closest_vert_bindings),
-has_points_on_mesh(origin.has_points_on_mesh),
-starts_on_mesh(origin.starts_on_mesh),
-ends_on_mesh(origin.ends_on_mesh),
-has_been_outside_mesh(origin.has_been_outside_mesh),
-has_been_reversed(origin.has_been_reversed),
-stroke_color(origin.stroke_color),
-is_loop(origin.is_loop) {
+	V(origin.V),
+	F(origin.F),
+	viewer(origin.viewer),
+	stroke_ID(origin.stroke_ID),
+	stroke2DPoints(origin.stroke2DPoints),
+	stroke3DPoints(origin.stroke3DPoints),
+	stroke3DPointsBack(origin.stroke3DPointsBack),
+	faces_hit(origin.faces_hit),
+	hand_pos_at_draw(origin.hand_pos_at_draw),
+	dep(origin.dep),
+	closest_vert_bindings(origin.closest_vert_bindings),
+	has_points_on_mesh(origin.has_points_on_mesh),
+	starts_on_mesh(origin.starts_on_mesh),
+	ends_on_mesh(origin.ends_on_mesh),
+	has_been_outside_mesh(origin.has_been_outside_mesh),
+	has_been_reversed(origin.has_been_reversed),
+	stroke_color(origin.stroke_color),
+	is_loop(origin.is_loop) {
 	_time1 = std::chrono::high_resolution_clock::now();
 }
 
@@ -136,8 +136,8 @@ void Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
 	vector<igl::Hit> hits;
 
 	if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
-		if (hits.size() < 2){ //Hand was inside mesh during drawing
-			return; 
+		if (hits.size() < 2) { //Hand was inside mesh during drawing
+			return;
 		}
 		Eigen::Vector3d hit_pos = V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v;
 		Eigen::Vector3d hit_pos_back = V.row(F(hits[1].id, 0))*(1.0 - hits[1].u - hits[1].v) + V.row(F(hits[1].id, 1))*hits[1].u + V.row(F(hits[1].id, 2))*hits[1].v;
@@ -148,20 +148,6 @@ void Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
 		if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - hit_pos.transpose()).squaredNorm() < 0.00005625) {
 			return;
 		}
-
-		/*double cur_dist, min_dist = INFINITY;
-		int closest_vert_idx;
-		for (int i = 0; i < 3; i++) {
-			cur_dist = (hit_pos.transpose() - V.row(F(hits[0].id, i))).norm();
-			if (cur_dist < min_dist) {
-				min_dist = cur_dist;
-				closest_vert_idx = F(hits[0].id, i);
-			}
-		}
-
-		if (closest_vert_bindings.size() == 0 || closest_vert_idx != closest_vert_bindings.back()) {
-			closest_vert_bindings.push_back(closest_vert_idx);
-		}*/
 
 		has_points_on_mesh = true;
 
@@ -208,7 +194,7 @@ void Stroke::addSegmentCut(Eigen::Vector3f& pos) {
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
-		if(timePast < 300000){
+		if (timePast < 300000) {
 			return;
 		}
 	}
@@ -282,7 +268,7 @@ void Stroke::addSegmentCut(Eigen::Vector3f& pos) {
 	return;
 }
 
-/** Used for EXTRUDE. Extrusion base strokes need to be drawn entirely on the mesh (points outside of it will be ignored) and needs to surround at least one vertex. 
+/** Used for EXTRUDE. Extrusion base strokes need to be drawn entirely on the mesh (points outside of it will be ignored) and needs to surround at least one vertex.
 Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its projection as a 2D point. After adding the new point it will restart the timer. Will also store the indices of the faces that are hit. The closest vertex bindings are handled in SurfacePath. **/
 void Stroke::addSegmentExtrusionBase(Eigen::Vector3f& pos) {
 	if (!stroke3DPoints.isZero()) {
@@ -301,7 +287,7 @@ void Stroke::addSegmentExtrusionBase(Eigen::Vector3f& pos) {
 		}
 		Eigen::Vector3d hit_pos = V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v;
 
-		
+
 		if (!stroke3DPoints.isZero() && hit_pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && hit_pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && hit_pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
 			return;
 		}
@@ -429,7 +415,7 @@ void Stroke::append_final_point() {
 	stroke3DPoints.row(stroke3DPoints.rows() - 1) = last_point;
 
 	faces_hit.conservativeResize(faces_hit.rows() + 1, Eigen::NoChange);
-	faces_hit.row(faces_hit.rows() - 1) << -1, -1;	
+	faces_hit.row(faces_hit.rows() - 1) << -1, -1;
 }
 
 void Stroke::strokeReset() {
@@ -475,7 +461,7 @@ bool Stroke::toLoop() {
 
 unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::MatrixXd& mesh_V, Eigen::MatrixXi& mesh_F) {
 	double mean_sample_dist = 0.0;
-	for (int i = 0; i < stroke3DPoints.rows()-1; i++) {
+	for (int i = 0; i < stroke3DPoints.rows() - 1; i++) {
 		mean_sample_dist += (stroke3DPoints.row(i) - stroke3DPoints.row((i + 1) % stroke3DPoints.rows())).norm();
 	}
 	mean_sample_dist /= stroke3DPoints.rows();
@@ -488,7 +474,7 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	for (int i = 0; i < resampled_3DPoints.rows(); i++) { //The last resampled point is a copy of the first element of the original stroke, so add it to create a loop again
 		closest_vert_bindings.push_back(size_before + i);
 	}
-	Eigen::MatrixXd new_3DPoints = stroke3DPoints.topRows(stroke3DPoints.rows()-1);
+	Eigen::MatrixXd new_3DPoints = stroke3DPoints.topRows(stroke3DPoints.rows() - 1);
 	new_3DPoints.conservativeResize(new_3DPoints.rows() + resampled_3DPoints.rows(), Eigen::NoChange);
 	new_3DPoints.bottomRows(resampled_3DPoints.rows()) = resampled_3DPoints;
 	set3DPoints(new_3DPoints);
@@ -496,9 +482,9 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
 	Eigen::MatrixX3d projected_points;
 	igl::project(stroke3DPoints, modelview, viewer.core.get_proj(), viewer.core.viewport, projected_points);
-	dep = projected_points.col(2).topRows(projected_points.rows()-1);
+	dep = projected_points.col(2).topRows(projected_points.rows() - 1);
 
-	stroke2DPoints = projected_points.topRows(projected_points.rows()-1);
+	stroke2DPoints = projected_points.topRows(projected_points.rows() - 1);
 	Eigen::MatrixXd original_stroke2DPoints = stroke2DPoints.leftCols(2);
 	stroke2DPoints = resample_stroke2D(original_stroke2DPoints); //Enabling this might give a discrepancy between what is drawn and the result you get but does give smoother meshes
 
@@ -652,7 +638,7 @@ int Stroke::selectClosestVertex(Eigen::Vector3f pos, double& closest_distance) {
 
 	double closest_dist = INFINITY, dist;
 	int closest_ID;
-	
+
 	for (int i = 0; i < stroke3DPoints.rows(); i++) {
 		dist = (stroke3DPoints.row(i).transpose().cast<float>() - pos).squaredNorm();
 		if (dist < closest_dist) {
@@ -733,49 +719,6 @@ bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::V
 	return true;
 }
 
-/** Used for ADD. Snaps the drawn stroke3DPoints to the closest mesh vertices and sets their boundary_markers accordingly. **/
-/*void Stroke::snap_to_vertices(Eigen::VectorXi &vertex_boundary_markers) {
-	Eigen::VectorXd min_dist;
-	Eigen::VectorXi previous;
-	vector<int> result_path, added_stroke_final_vertices;
-	int prev = -1;
-	vector<vector<int>> adj_list;
-	adjacency_list(F, adj_list);
-
-	if ((stroke3DPoints.row(0) - stroke3DPoints.row(stroke3DPoints.rows() - 1)).norm() < compute_stroke_diag() / 5.0) {
-		is_loop = true;
-	}
-	else {
-		is_loop = false;
-	}
-
-	stroke3DPoints.resize(0, 3);
-	for (int i = 0; i < closest_vert_bindings.size() - 1; i++) {
-		set<int> goal;
-		goal.insert(closest_vert_bindings[i + 1]);
-		dijkstra_compute_paths(closest_vert_bindings[i], goal, adj_list, min_dist, previous);
-		dijkstra_get_shortest_path_to(closest_vert_bindings[i + 1], previous, result_path);
-
-		for (int j = result_path.size() - 1; j >= 0; j--) {
-			int idx = result_path[j];
-			if (idx != prev) {
-				added_stroke_final_vertices.push_back(idx);
-				stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
-				stroke3DPoints.row(stroke3DPoints.rows() - 1) << V.row(added_stroke_final_vertices.back());
-				vertex_boundary_markers[added_stroke_final_vertices.back()] = stroke_ID;
-				prev = idx;
-			}
-		}
-	}
-
-	closest_vert_bindings = added_stroke_final_vertices; //closest_vert_bindings will be updated when the topology changes, added_stroke_final_vertices not, so only use it as a temporary
-	stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
-	stroke3DPoints.row(stroke3DPoints.rows() - 1) << stroke3DPoints.row(0); // Also add a copy of the first point at the end for strokes that are later added, to keep consistency with the initial stroke
-	if (closest_vert_bindings[0] != closest_vert_bindings[closest_vert_bindings.size() - 1]) {
-		closest_vert_bindings.push_back(closest_vert_bindings[0]); //"Loop" the closest_vert_bindings because they are used to determine which 3DPoints to update, and we need 3DPoints to stay a loop for the sake of draw
-	}
-}*/
-
 void Stroke::undo_stroke_add(Eigen::VectorXi& vertex_boundary_markers) {
 	for (int i = 0; i < closest_vert_bindings.size(); i++) {
 		vertex_boundary_markers[closest_vert_bindings[i]] = 0;
@@ -808,8 +751,8 @@ bool Stroke::line_segments_intersect(Eigen::RowVector2d& p1, Eigen::RowVector2d&
 	b1 = p4[0] - p3[0];
 	c1 = p4[1] * p3[0] - p4[0] * p3[1];
 
-	if (((a0*p3[0] + b0*p3[1] + c0)*(a0*p4[0] + b0*p4[1] + c0) < 0) &&
-		((a1*p1[0] + b1*p1[1] + c1)*(a1*p2[0] + b1*p2[1] + c1) < 0)) {
+	if (((a0*p3[0] + b0 * p3[1] + c0)*(a0*p4[0] + b0 * p4[1] + c0) < 0) &&
+		((a1*p1[0] + b1 * p1[1] + c1)*(a1*p2[0] + b1 * p2[1] + c1) < 0)) {
 		return true;
 	}
 	else {

@@ -58,12 +58,8 @@ void SurfaceSmoothing::smooth(Mesh& base_mesh, bool& BOUNDARY_IS_DIRTY){
 		iteration = 0;
 	}
 
-
-
-//	std::cout << "Check that we odn't have duplicate mesh IDs" << std::endl;
 	for (int i = 0; i < base_mesh.patches.size(); i++) {
 		Patch* patch = (base_mesh.patches[i]);
-		//std::cout << (*patch).mesh.ID << std::endl;
 		smooth_main((*patch).mesh, BOUNDARY_IS_DIRTY);
 		(*patch).update_parent_vertex_positions(base_mesh.V);
 		prev_mesh_ID = (*patch).mesh.ID;

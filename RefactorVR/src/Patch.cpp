@@ -10,7 +10,7 @@ std::vector<Patch*> Patch::init_patches(Mesh& h) {
 
 	std::vector<Patch*> patches;
 	h.face_patch_map.resize(h.F.rows(), nullptr);
-	
+
 	for (int i = 0; i < h.F.rows(); i++) {
 		Patch* face_patch = h.face_patch_map[i];
 		if (face_patch == nullptr) {
@@ -40,18 +40,18 @@ void Patch::propagate_patch(Patch* patch, int face, Eigen::VectorXi& faces, std:
 void Patch::create_mesh_structure(Mesh& m, Eigen::VectorXi& faces) {
 	patch_vertices.resize(0, 3);
 	patch_vertex_is_init = Eigen::VectorXi::Zero(m.V.rows());
-	patch_faces.resize(0,3);
+	patch_faces.resize(0, 3);
 	patch_edge_is_init = Eigen::VectorXi::Zero(EF.rows());
-	mesh_to_patch_indices = Eigen::VectorXi::Constant(m.V.rows(),-1);
+	mesh_to_patch_indices = Eigen::VectorXi::Constant(m.V.rows(), -1);
 
 	for (int i = 0; i < faces.rows(); i++) {
 		for (int j = 0; j < 3; j++) {
 			int edge = FE(faces[i], j);
 			get_patch_edge(edge, patch_edge_is_init, patch_vertex_is_init, faces[i], patch_vertices, m.sharp_edge, new_sharp_edge, m.V, m.vertex_boundary_markers, m.part_of_original_stroke, m.new_mapped_indices, mesh_to_patch_indices);
 		}
-	
+
 		parent_faces.conservativeResize(parent_faces.rows() + 1, Eigen::NoChange);
-		parent_faces[i] = faces[i];	
+		parent_faces[i] = faces[i];
 	}
 
 	for (int i = 0; i < faces.rows(); i++) {
@@ -71,7 +71,7 @@ void Patch::create_mesh_structure(Mesh& m, Eigen::VectorXi& faces) {
 
 void Patch::get_patch_edge(int edge, Eigen::VectorXi& patch_edge_is_init, Eigen::VectorXi& patch_vertex_is_init, int face, Eigen::MatrixXd& patch_vertices, Eigen::VectorXi& sharp_edge, Eigen::VectorXi& new_sharp_edge, Eigen::MatrixXd& V_orig, Eigen::VectorXi& boundary_markers_orig, Eigen::VectorXi& part_of_original_orig, Eigen::VectorXi& new_mapped_indices_orig, Eigen::VectorXi& mesh_to_patch_indices) {
 	if (sharp_edge(edge)) {
-		//Do nothing
+
 	}
 	else if (patch_edge_is_init[edge]) {
 		return;

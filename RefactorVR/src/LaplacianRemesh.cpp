@@ -111,37 +111,32 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
 	m.F = tmp_F;
 
 	//NOTE: Output from sort_boundary_vertices is not necessarily counter-clockwise
-	//TODO: Handle errors nicely here (e.g. make this method return a bool that gets checked)
 	try {
-		for (int i = 0; i < outer_boundary_vertices.size(); i++) {
-			std::cout << outer_boundary_vertices[i] << "   ";
-		}
-		std::cout << std::endl;
 		outer_boundary_vertices = sort_boundary_vertices(path[0].get_vertex(), outer_boundary_vertices, m);
 	}
 	catch (int ex) {
 		if (ex == -1) {
 			std::cerr << "Could not process adding stroke. Please try again. " << std::endl;
 			m.F = prev_F;
-			//remesh_success = false;
 			return false;
 		}
 		else {
 			std::cout << "Something weird happened. Check what's going on." << std::endl;
 			m.F = prev_F;
-			//remesh_success = false;
 			return false;
 		}
 	}
 
 	Eigen::MatrixXi replacing_sharp_edges(0, 2);
+	Eigen::MatrixXd sharp_edge_split_positions(0, 3);
 	for (int i = 0; i < path.size(); i++) {
 		if (path[i].get_type() == PathElement::EDGE && m.sharp_edge[path[i].get_ID()]) {
-			//TODO: store that we are removing/splitting a sharp edge, so that we can later set the 2 resulting new edges to be sharp
 			path[i].fixed = true;
 			replacing_sharp_edges.conservativeResize(replacing_sharp_edges.rows() + 2, Eigen::NoChange);
-			replacing_sharp_edges.row(replacing_sharp_edges.rows() - 2) << m.V.rows() + i, EV(path[i].get_ID(), 0); //Pair of original edge start index and middle vertex index
-			replacing_sharp_edges.row(replacing_sharp_edges.rows() - 1) << m.V.rows() + i, EV(path[i].get_ID(), 1); //Pair of original edge end index and middle vertex index
+			replacing_sharp_edges(replacing_sharp_edges.rows() - 2, 1) = EV(path[i].get_ID(), 0); //Pair of original edge start index and middle vertex index (middle vertex index gets set after resampling)
+			replacing_sharp_edges(replacing_sharp_edges.rows() - 1, 1) = EV(path[i].get_ID(), 1); //Pair of original edge end index and middle vertex index (middle vertex index gets set after resampling)
+			sharp_edge_split_positions.conservativeResize(sharp_edge_split_positions.rows() + 1, Eigen::NoChange);
+			sharp_edge_split_positions.bottomRows(1) << path[i].get_vertex().transpose();
 		}
 		else {
 			path[i].fixed = false;
@@ -168,6 +163,12 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
 	vector<PathElement> new_surface_path;
 	for (int i = 0; i < resampled_path.rows(); i++) { //Make the new surfacePath looped (unlike the path_vertices indices) //TODO: remove this comment? (open path ain't looped)
 		new_surface_path.push_back(PathElement(resampled_path.row(i), m.V.rows() + i));
+
+		for (int j = 0; j < sharp_edge_split_positions.rows(); j++) {
+			if (resampled_path.row(i) == sharp_edge_split_positions.row(j)) { //Don't break early, because this will be true for 2 entries in sharp_edge_split_positions (middle vertex is connected to 2 other vertices)
+				replacing_sharp_edges(j, 0) = m.V.rows() + i;
+			}
+		}
 	}
 	surface_path.set_path(new_surface_path);
 
@@ -213,17 +214,17 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
 		}
 	}
 
-
-	//TODO: Maybe add  MeshExtrusion::post_extrude_main_update_points(Stroke &stroke, Eigen::MatrixXd new_positions) here
-
 	update_open_path_points_and_bindings(open_path_stroke, surface_path);
 	return true;
 }
 
 bool LaplacianRemesh::remesh_cutting_path(Mesh& m, Stroke& cut_path_stroke) {
+	bool remesh_success = true;
+	is_front_loop = false;
 	remove_inside_faces = false;
-
-	return true;
+	adjacency_list(m.F, VV);
+	remesh(m, surface_path, cut_path_stroke.viewer.core.get_model(), cut_path_stroke.viewer.oculusVR.get_start_action_view(), cut_path_stroke.viewer.core.get_proj(), cut_path_stroke.viewer.core.viewport, remesh_success);
+	return remesh_success;
 }
 
 Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success, int cut_clicked_face) {
@@ -390,6 +391,9 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	//NOTE: Output from sort_boundary_vertices is not necessarily counter-clockwise
 	try {
 		outer_boundary_vertices = sort_boundary_vertices(path[0].get_vertex(), outer_boundary_vertices, m);
+		if (!remove_inside_faces) {
+			inner_boundary_vertices = sort_boundary_vertices(path[0].get_vertex(), inner_boundary_vertices, m);
+		}
 	}
 	catch (int ex) {
 		if (ex == -1) {
@@ -438,13 +442,15 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 
 	//Up to here disappearing vertices and faces have been removed from the mesh and corresponding indices/markers have been updated
 	Eigen::MatrixXi replacing_sharp_edges(0, 2);
+	Eigen::MatrixXd sharp_edge_split_positions(0, 3);
 	for (int i = 0; i < path.size(); i++) {
 		if (path[i].get_type() == PathElement::EDGE && m.sharp_edge[path[i].get_ID()]) {
-			//TODO: store that we are removing/splitting a sharp edge, so that we can later set the 2 resulting new edges to be sharp
 			path[i].fixed = true;
 			replacing_sharp_edges.conservativeResize(replacing_sharp_edges.rows() + 2, Eigen::NoChange);
-			replacing_sharp_edges.row(replacing_sharp_edges.rows() - 2) << vertex_is_clean.rows() + i, startEV(path[i].get_ID(), 0); //Pair of original edge start index and middle vertex index
-			replacing_sharp_edges.row(replacing_sharp_edges.rows() - 1) << vertex_is_clean.rows() + i, startEV(path[i].get_ID(), 1); //Pair of original edge end index and middle vertex index
+			replacing_sharp_edges(replacing_sharp_edges.rows() - 2, 1) = startEV(path[i].get_ID(), 0); //Pair of original edge start index and middle vertex index (middle vertex index gets set after resampling)
+			replacing_sharp_edges(replacing_sharp_edges.rows() - 1, 1) = startEV(path[i].get_ID(), 1)); //Pair of original edge end index and middle vertex index (middle vertex index gets set after resampling)
+			sharp_edge_split_positions.conservativeResize(sharp_edge_split_positions.rows() + 1, Eigen::NoChange);
+			sharp_edge_split_positions.bottomRows(1) << path[i].get_vertex().transpose();
 		}
 		else {
 			path[i].fixed = false;
@@ -474,8 +480,15 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	vector<PathElement> new_surface_path;
 	for (int i = 0; i < resampled_path.rows(); i++) { //Make the new surfacePath looped (unlike the path_vertices indices)
 		new_surface_path.push_back(PathElement(resampled_path.row(i), size_before_removing + i));
+
+		for (int j = 0; j < sharp_edge_split_positions.rows(); j++) {
+			if (resampled_path.row(i) == sharp_edge_split_positions.row(j)) { //Don't break early, because this will be true for 2 entries in sharp_edge_split_positions (middle vertex is connected to 2 other vertices)
+				replacing_sharp_edges(j, 0) = vertex_is_clean.rows() + i;
+			}
+		}
 	}
 	surface_path.set_path(new_surface_path);
+
 
 	//TODO: need to make sure that we don't add sharp edges for added strokes (that are not a cut or extrusion)
 	Eigen::MatrixXi added_sharpEV(resampled_path.rows() - 1, 2);
@@ -488,6 +501,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	for (int i = 0; i < outer_boundary_vertices.size(); i++) {
 		outer_boundary_vertices[i] = m.new_mapped_indices[outer_boundary_vertices[i]];
 	}
+	
 
 	//Make the outer_boundary_vertices CCW
 	Eigen::VectorXi row_idx2, col_idx2(3);
@@ -497,9 +511,6 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 
 	if (!is_counter_clockwise_boundaries(tmp_V, modelview, proj, viewport, mean_viewpoint, !is_front_loop)) {
 		reverse(outer_boundary_vertices.begin(), outer_boundary_vertices.end());
-		if (!remove_inside_faces) {
-			reverse(inner_boundary_vertices.begin(), inner_boundary_vertices.end());
-		}
 	}
 
 	stitch(path_vertices, outer_boundary_vertices, m); //TODO: need to fix that stitching sometimes fails
@@ -507,6 +518,12 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		for (int i = 0; i < inner_boundary_vertices.size(); i++) {
 			inner_boundary_vertices[i] = m.new_mapped_indices[inner_boundary_vertices[i]];
 		}
+		row_idx2 = Eigen::VectorXi::Map(inner_boundary_vertices.data(), inner_boundary_vertices.size());
+		igl::slice(m.V, row_idx2, col_idx2, tmp_V); //Keep only the clean "boundary" vertices in the mesh
+		if (!is_counter_clockwise_boundaries(tmp_V, modelview, proj, viewport, mean_viewpoint, !is_front_loop)) {
+			reverse(inner_boundary_vertices.begin(), inner_boundary_vertices.end());
+		}
+
 		stitch(path_vertices, inner_boundary_vertices, m);
 	}
 
@@ -600,7 +617,7 @@ void LaplacianRemesh::update_sharp_edges(Mesh& m, Eigen::MatrixXi& all_sharpEV) 
 		col2Equals = EV.col(1).cwiseEqual(max(start, end)).cast<int>();
 		(col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
 
-		m.sharp_edge[equal_pos] = 1; //Set this edge to be sharp
+		m.sharp_edge[equal_pos] = 1;
 	}
 }
 
@@ -734,23 +751,10 @@ void LaplacianRemesh::stitch(std::vector<int> path_vertices, std::vector<int> bo
 			proceed_outer_v = true;
 		}
 		else if (path_idx == path_vertices.size() / 2 && prev_proceed_path == true) { //The first thing after we created a triangle using the "last" path vertex ALWAYS has to be moving the outer 
-			std::cout << "Do this. " << std::endl;
 			proceed_outer_v = true;
 		}
-		else if ((path_v - next_path_v).dot(outer_v - next_outer_v) < 0 && path_vertices.size() / 2 == path_idx) {		//TODO: add extra else if for "open paths" (added curves?)
-			std::cout << path_idx << "     " << path_vertices.size() / 2 << std::endl;
-			//	if (path_vertices.size() / 2 == path_idx) {
+		else if ((path_v - next_path_v).dot(outer_v - next_outer_v) < 0 && path_vertices.size() / 2 == path_idx) {
 			proceed_outer_v = true;
-			std::cout << " because of idx" << std::endl;
-
-			/*	}
-				else if ((path_v - next_outer_v).norm() < (outer_v - next_path_v).norm()) {
-					proceed_outer_v = true;
-					std::cout << " because of dist" << std::endl;
-				}
-				else {
-					proceed_outer_v = false;
-				}*/
 		}
 		else if ((path_v - next_outer_v).norm() < (outer_v - next_path_v).norm()) {
 			proceed_outer_v = true;
@@ -764,8 +768,6 @@ void LaplacianRemesh::stitch(std::vector<int> path_vertices, std::vector<int> bo
 		if (proceed_outer_v) {
 			m.F.conservativeResize(m.F.rows() + 1, Eigen::NoChange);
 			m.F.row(m.F.rows() - 1) << path_v_idx, outer_v_idx, next_outer_v_idx;
-			std::cout << "Added outer: " << path_v_idx << "  " << outer_v_idx << "   " << next_outer_v_idx << std::endl;
-			std::cout << "Coor: " << path_v << std::endl << outer_v << std::endl << next_outer_v << std::endl << std::endl;
 			outer_v = next_outer_v;
 			outer_v_idx = next_outer_v_idx;
 			outer_idx++;
@@ -774,8 +776,6 @@ void LaplacianRemesh::stitch(std::vector<int> path_vertices, std::vector<int> bo
 		else {
 			m.F.conservativeResize(m.F.rows() + 1, Eigen::NoChange);
 			m.F.row(m.F.rows() - 1) << next_path_v_idx, path_v_idx, outer_v_idx;
-			std::cout << "Added path: " << next_path_v_idx << "  " << path_v_idx << "   " << outer_v_idx << std::endl;
-			std::cout << "Coor: " << next_path_v << std::endl << path_v << std::endl << outer_v << std::endl << std::endl;
 			path_v = next_path_v;
 			path_v_idx = next_path_v_idx;
 			path_idx++;
@@ -807,13 +807,6 @@ vector<int> LaplacianRemesh::reorder(vector<int> boundary_vertices, Eigen::Vecto
 	}
 	return reordered;
 }
-
-/*void LaplacianRemesh::reverse_path(vector<int> path_vertices) {
-	reverse(path_vertices.begin(), path_vertices.end());
-	int v = path_vertices[path_vertices.size() - 1];
-	path_vertices.insert(path_vertices.begin() + 1, path_vertices.begin(), path_vertices.end() - 1);
-	path_vertices[0] = v;
-}*/
 
 /** For cut we determine if the boundary is CCW by comparing the direction of the normal of the remaining boundary points against the vector from the center of the removed boundary points to the center of the remaining boundary points.
 	For extrusion we simply look at the sign of the inner area of the projected points (since we're looking from the "correct" viewpoint)
