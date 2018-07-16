@@ -122,7 +122,7 @@ void draw_all_strokes(){
 	for (int i = 0; i < stroke_collection.size(); i++) {
 		added_points = stroke_collection[i].get3DPoints();
 		points_to_hold_back = 1 + !stroke_collection[i].is_loop;
-		viewer.data().add_edges(added_points.topRows(added_points.rows() - points_to_hold_back), added_points.middleRows(1,added_points.rows() - points_to_hold_back), stroke_collection[i].stroke_color);
+		viewer.data().add_edges(added_points.topRows(added_points.rows() - points_to_hold_back), added_points.middleRows(1, added_points.rows() - points_to_hold_back), stroke_collection[i].stroke_color);
 	}
 }
 
@@ -260,6 +260,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) { //Adding a new control curve onto an existing mesh
 			added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID);
 			next_added_stroke_ID++;
+			added_stroke->is_loop = false;
 			added_stroke->addSegmentAdd(pos);
 			prev_tool_mode = ADD;
 		}
@@ -521,13 +522,33 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			(*base_mesh).face_patch_map.clear();
 			(*base_mesh).patches = Patch::init_patches(*base_mesh);
 
+			initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers); //Don't test if the initial one dies
+
+			int nr_removed = 0, original_collection_size = stroke_collection.size();
+			for (int i = 0; i < original_collection_size - 1; i++) { //Don't update the added stroke, as this is done inside the remeshing already
+				if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, vertex_boundary_markers)) {
+					//Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist
+					stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
+					nr_removed++;
+					dirty_boundary = true;
+					continue; //Go to the next stroke, don't update this ones' positions
+				}
+			}
+
+			//TODO: test if below is needed
+			//Update the stroke positions, in case their positions have changed (although they really shouldn't)
+			initial_stroke->update_Positions(V);
+			for (int i = 0; i < stroke_collection.size() - 1; i++) {
+				stroke_collection[i].update_Positions(V);
+			}
+
 			viewer.data().clear();
 			viewer.data().set_mesh(V, F);
 			Eigen::MatrixXd N_corners;
 			igl::per_corner_normals(V, F, 50, N_corners);
-			viewer.data().set_normals(N_corners); //TODO: NORMALS
+			viewer.data().set_normals(N_corners);
 
-			draw_all_strokes;
+			draw_all_strokes();
 		}
 		else if (prev_tool_mode == REMOVE && stroke_was_removed) { //Only redraw if we actually removed a stroke (otherwise we draw unnecessary)
 			stroke_was_removed = false; //Reset
@@ -615,7 +636,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				viewer.data().set_mesh(V, F);
 				Eigen::MatrixXd N_corners;
 				igl::per_corner_normals(V, F, 50, N_corners);
-				viewer.data().set_normals(N_corners); //TODO: NORMALS
+				viewer.data().set_normals(N_corners);
 
 				cut_stroke_already_drawn = false; //Reset
 				draw_all_strokes();

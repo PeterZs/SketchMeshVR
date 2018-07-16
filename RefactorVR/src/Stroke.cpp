@@ -615,7 +615,6 @@ void Stroke::counter_clockwise() {
 		}
 		has_been_reversed = true;
 	}
-
 }
 
 /** Resamples the stroke by moving all vertices to the middle of their neighbors. Essentially has a smoothing effect. **/
@@ -667,7 +666,7 @@ int Stroke::selectClosestVertex(Eigen::Vector3f pos, double& closest_distance) {
 	double stroke_diag = compute_stroke_diag();
 	closest_distance = closest_dist;
 
-	if (stroke3DPoints.rows() > 2 && closest_dist > 0.08*stroke_diag) { //Don't do pulling when the user clicks too far away from any curve (treat as navigation movement)
+	if (stroke3DPoints.rows() > 2 && closest_dist > 0.08 * stroke_diag) { //Don't do pulling when the user clicks too far away from any curve (treat as navigation movement)
 		return -1;
 	}
 	else if (stroke3DPoints.rows() == 2 && closest_dist > 0.08 * (stroke3DPoints.row(0).norm() * 2)) { //The stroke consist of a single point (that's "looped") so the diag will be 0. Use the point's norm instead
@@ -735,7 +734,7 @@ bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::V
 }
 
 /** Used for ADD. Snaps the drawn stroke3DPoints to the closest mesh vertices and sets their boundary_markers accordingly. **/
-void Stroke::snap_to_vertices(Eigen::VectorXi &vertex_boundary_markers) {
+/*void Stroke::snap_to_vertices(Eigen::VectorXi &vertex_boundary_markers) {
 	Eigen::VectorXd min_dist;
 	Eigen::VectorXi previous;
 	vector<int> result_path, added_stroke_final_vertices;
@@ -775,7 +774,7 @@ void Stroke::snap_to_vertices(Eigen::VectorXi &vertex_boundary_markers) {
 	if (closest_vert_bindings[0] != closest_vert_bindings[closest_vert_bindings.size() - 1]) {
 		closest_vert_bindings.push_back(closest_vert_bindings[0]); //"Loop" the closest_vert_bindings because they are used to determine which 3DPoints to update, and we need 3DPoints to stay a loop for the sake of draw
 	}
-}
+}*/
 
 void Stroke::undo_stroke_add(Eigen::VectorXi& vertex_boundary_markers) {
 	for (int i = 0; i < closest_vert_bindings.size(); i++) {

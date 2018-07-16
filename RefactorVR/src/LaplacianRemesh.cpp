@@ -79,12 +79,11 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
 			edge = path[i].get_ID();
 			dirty_vertices[EV(edge, 0)] += 1;
 			dirty_vertices[EV(edge, 1)] += 1;
-			dirty_face[EF(edge, 0)] = true; 
+			dirty_face[EF(edge, 0)] = true;
 			dirty_face[EF(edge, 1)] = true;
 			face = (EF(edge, 0) == face) ? EF(edge, 1) : EF(edge, 0); //get the polygon on the other side of the edge
 		}
 	}
-	std::cout << "Dirty vertices: " << dirty_vertices << std::endl;
 
 	//Collect vertices on the boundary
 	vector<int> outer_boundary_vertices;
@@ -92,6 +91,7 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
 		if (dirty_vertices[i] > 0) {
 			outer_boundary_vertices.push_back(i);
 		}
+		m.new_mapped_indices[i] = i;
 	}
 
 	//Remove dirty faces
@@ -113,10 +113,9 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
 	//NOTE: Output from sort_boundary_vertices is not necessarily counter-clockwise
 	//TODO: Handle errors nicely here (e.g. make this method return a bool that gets checked)
 	try {
-		std::cout << "boundary vertices before: " << std::endl;
 		for (int i = 0; i < outer_boundary_vertices.size(); i++) {
 			std::cout << outer_boundary_vertices[i] << "   ";
-		} 
+		}
 		std::cout << std::endl;
 		outer_boundary_vertices = sort_boundary_vertices(path[0].get_vertex(), outer_boundary_vertices, m);
 	}
@@ -141,8 +140,8 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
 			//TODO: store that we are removing/splitting a sharp edge, so that we can later set the 2 resulting new edges to be sharp
 			path[i].fixed = true;
 			replacing_sharp_edges.conservativeResize(replacing_sharp_edges.rows() + 2, Eigen::NoChange);
-			replacing_sharp_edges.row(replacing_sharp_edges.rows() - 2) << i, EV(path[i].get_ID(), 0); //Pair of original edge start index and middle vertex index
-			replacing_sharp_edges.row(replacing_sharp_edges.rows() - 1) << i, EV(path[i].get_ID(), 1);//Pair of original edge end index and middle vertex index
+			replacing_sharp_edges.row(replacing_sharp_edges.rows() - 2) << m.V.rows() + i, EV(path[i].get_ID(), 0); //Pair of original edge start index and middle vertex index
+			replacing_sharp_edges.row(replacing_sharp_edges.rows() - 1) << m.V.rows() + i, EV(path[i].get_ID(), 1); //Pair of original edge end index and middle vertex index
 		}
 		else {
 			path[i].fixed = false;
@@ -162,12 +161,20 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
 
 	vector<int> path_vertices;
 	int original_V_size = m.V.rows(); //TODO: Maybe have to redo below that it doesn't take the last vertex from the resampled path (probably not since it's not a loop)
-	std::cout << "Check for dups" << std::endl << resampled_path << std::endl << std::endl;
-	for (int i = 0; i < resampled_path.rows(); i++) { 
+	for (int i = 0; i < resampled_path.rows(); i++) {
 		path_vertices.push_back(original_V_size + i); //Store the vertex indices (in m.V) of the path vertices
 	}
 
+	vector<PathElement> new_surface_path;
+	for (int i = 0; i < resampled_path.rows(); i++) { //Make the new surfacePath looped (unlike the path_vertices indices) //TODO: remove this comment? (open path ain't looped)
+		new_surface_path.push_back(PathElement(resampled_path.row(i), m.V.rows() + i));
+	}
+	surface_path.set_path(new_surface_path);
+
 	update_mesh_values(m, resampled_path, surface_path.get_origin_stroke_ID(), m.V.rows(), false);
+
+
+
 
 	//Add interior path vertices in reversed direction to the path, so we can complete the loop around it
 	for (int i = path_vertices.size() - 2; i > 0; i--) {
@@ -206,9 +213,10 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
 		}
 	}
 
-	
-		//TODO: Maybe add  MeshExtrusion::post_extrude_main_update_points(Stroke &stroke, Eigen::MatrixXd new_positions) here
 
+	//TODO: Maybe add  MeshExtrusion::post_extrude_main_update_points(Stroke &stroke, Eigen::MatrixXd new_positions) here
+
+	update_open_path_points_and_bindings(open_path_stroke, surface_path);
 	return true;
 }
 
@@ -435,8 +443,8 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 			//TODO: store that we are removing/splitting a sharp edge, so that we can later set the 2 resulting new edges to be sharp
 			path[i].fixed = true;
 			replacing_sharp_edges.conservativeResize(replacing_sharp_edges.rows() + 2, Eigen::NoChange);
-			replacing_sharp_edges.row(replacing_sharp_edges.rows() - 2) << i, EV(path[i].get_ID(), 0); //Pair of original edge start index and middle vertex index
-			replacing_sharp_edges.row(replacing_sharp_edges.rows() - 1) << i, EV(path[i].get_ID(), 1);//Pair of original edge end index and middle vertex index
+			replacing_sharp_edges.row(replacing_sharp_edges.rows() - 2) << vertex_is_clean.rows() + i, startEV(path[i].get_ID(), 0); //Pair of original edge start index and middle vertex index
+			replacing_sharp_edges.row(replacing_sharp_edges.rows() - 1) << vertex_is_clean.rows() + i, startEV(path[i].get_ID(), 1); //Pair of original edge end index and middle vertex index
 		}
 		else {
 			path[i].fixed = false;
@@ -571,7 +579,6 @@ void LaplacianRemesh::update_mesh_values(Mesh& m, Eigen::MatrixXd path, int stro
 /** Updates the old sharp edges after the mesh topology changed and inserts newly generated sharp edges. **/
 void LaplacianRemesh::update_sharp_edges(Mesh& m, Eigen::MatrixXi& all_sharpEV) {
 	if (!igl::is_edge_manifold(m.F)) {
-		std::cout << "manages this:" << std::endl;
 		throw -1;
 		return;
 	}
@@ -582,6 +589,7 @@ void LaplacianRemesh::update_sharp_edges(Mesh& m, Eigen::MatrixXi& all_sharpEV) 
 	int start, end, equal_pos;
 	Eigen::VectorXi col1Equals, col2Equals;
 	for (int i = 0; i < all_sharpEV.rows(); i++) {
+		std::cout << all_sharpEV(i, 0) << "   " << all_sharpEV(i, 1) << std::endl;
 		start = m.new_mapped_indices(all_sharpEV(i, 0));
 		end = m.new_mapped_indices(all_sharpEV(i, 1));
 		if (start == -1 || end == -1) { //Sharp edge no longer exists
@@ -626,7 +634,7 @@ vector<int> LaplacianRemesh::sort_boundary_vertices(Eigen::Vector3d start_vertex
 	while (true) {
 		iter++;
 		if (iter == 10 * boundary_vertices.size()) { //We're not finding a solution
-			throw -1;
+			throw - 1;
 			return sorted_boundary_vertices; //Will be discarded anyway
 		}
 
@@ -704,16 +712,6 @@ int LaplacianRemesh::find_closest(vector<int> vertices, Eigen::Vector3d base, Me
 /** Stitches the boundary vertices (that are old, already existing mesh vertices) to the path vertices of the newly drawn stroke. **/
 void LaplacianRemesh::stitch(std::vector<int> path_vertices, std::vector<int> boundary_vertices, Mesh& m) {
 	int path_idx = 0, outer_idx = 0;
-	std::cout << std::endl << "path vertices: " << std::endl;
-	for (int i = 0; i < path_vertices.size(); i++) {
-		std::cout << path_vertices[i] << "  ";
-	}
-
-	std::cout << std::endl << "Boundary vertices: " << std::endl;
-	for (int i = 0; i < boundary_vertices.size(); i++) {
-		std::cout << boundary_vertices[i] << "   ";
-	}
-
 	boundary_vertices = reorder(boundary_vertices, m.V.row(path_vertices[0]), m);
 
 	Eigen::RowVector3d start_path_v = m.V.row(path_vertices[0]), start_outer_v = m.V.row(boundary_vertices[0]);
@@ -741,18 +739,18 @@ void LaplacianRemesh::stitch(std::vector<int> path_vertices, std::vector<int> bo
 		}
 		else if ((path_v - next_path_v).dot(outer_v - next_outer_v) < 0 && path_vertices.size() / 2 == path_idx) {		//TODO: add extra else if for "open paths" (added curves?)
 			std::cout << path_idx << "     " << path_vertices.size() / 2 << std::endl;
-		//	if (path_vertices.size() / 2 == path_idx) {
-				proceed_outer_v = true;
-				std::cout << " because of idx" << std::endl;
+			//	if (path_vertices.size() / 2 == path_idx) {
+			proceed_outer_v = true;
+			std::cout << " because of idx" << std::endl;
 
-		/*	}
-			else if ((path_v - next_outer_v).norm() < (outer_v - next_path_v).norm()) {
-				proceed_outer_v = true;
-				std::cout << " because of dist" << std::endl;
-			}
-			else {
-				proceed_outer_v = false;
-			}*/
+			/*	}
+				else if ((path_v - next_outer_v).norm() < (outer_v - next_path_v).norm()) {
+					proceed_outer_v = true;
+					std::cout << " because of dist" << std::endl;
+				}
+				else {
+					proceed_outer_v = false;
+				}*/
 		}
 		else if ((path_v - next_outer_v).norm() < (outer_v - next_path_v).norm()) {
 			proceed_outer_v = true;
@@ -889,4 +887,26 @@ double LaplacianRemesh::compute_average_length_of_crossing_edges(std::vector<Pat
 		}
 	}
 	return total / count;
+}
+
+
+void LaplacianRemesh::update_open_path_points_and_bindings(Stroke& stroke, SurfacePath& surface_path) {
+	vector<PathElement> path = surface_path.get_path();
+	int nr_to_remove = 0;
+	if (path[0].get_vertex() == path[path.size() - 1].get_vertex()) {
+		nr_to_remove = 1;
+	}
+
+	//TODO: check if we actually want a loop below
+	Eigen::MatrixX3d new_3DPoints(path.size() + 1 - nr_to_remove, 3); //Increase size by 1 (if it's not a loop) because we want it to become a loop again
+	vector<int> new_closest_vertex_indices(path.size() + 1 - nr_to_remove);
+	for (int i = 0; i < path.size() - nr_to_remove; i++) {
+		new_3DPoints.row(i) = path[i].get_vertex().transpose();
+		new_closest_vertex_indices[i] = path[i].get_v_idx();
+	}
+	new_3DPoints.row(new_3DPoints.rows() - 1) = new_3DPoints.row(0);
+	new_closest_vertex_indices[new_closest_vertex_indices.size() - 1] = new_closest_vertex_indices[0];
+
+	stroke.set3DPoints(new_3DPoints);
+	stroke.set_closest_vert_bindings(new_closest_vertex_indices);
 }

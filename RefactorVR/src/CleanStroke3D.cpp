@@ -5,11 +5,6 @@ using namespace std;
 using namespace igl;
 
 Eigen::MatrixXd CleanStroke3D::resample_by_length_with_fixes(std::vector<PathElement> path_vertices, double unit_length) {
-	std::cout << "path before resample" << std::endl;
-	for (int i = 0; i < path_vertices.size(); i++) {
-		std::cout << path_vertices[i].get_vertex().transpose() << "  " << path_vertices[i].get_type() << std::endl;
-	}
-
 	if (path_vertices.size() <= 1) {
 		Eigen::MatrixXd result(path_vertices.size(), 3);
 		for (int i = 0; i < path_vertices.size(); i++) {
