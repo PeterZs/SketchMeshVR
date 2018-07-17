@@ -32,7 +32,7 @@ Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::opengl
 	closest_vert_bindings.clear();
 	has_points_on_mesh = false;
 	has_been_outside_mesh = false;
-	starts_on_mesh = false;
+	starts_on_mesh = true;
 	ends_on_mesh = false;
 	stroke_color = Eigen::RowVector3d(0.8*(rand() / (double)RAND_MAX), 0.8*(rand() / (double)RAND_MAX), 0.8*(rand() / (double)RAND_MAX));
 	has_been_reversed = false;
@@ -124,7 +124,6 @@ bool Stroke::addSegment(Eigen::Vector3f& pos) {
 
 /** Used for ADD. Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon). After adding the new point it will restart the timer. **/
 void Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
-
 	if (!stroke3DPoints.isZero()) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
@@ -150,15 +149,21 @@ void Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
 		}
 
 		has_points_on_mesh = true;
+		Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
+		Eigen::Vector3f hit_pos_tmp = hit_pos.cast<float>();
+		Eigen::Vector3d hit_pos2D = igl::project(hit_pos_tmp, modelview, viewer.core.get_proj(), viewer.core.viewport).cast<double>();
 
 		if (stroke3DPoints.rows() == 1 && stroke3DPoints.isZero()) {
+			stroke2DPoints.row(0) << hit_pos2D[0], hit_pos2D[1];
 			stroke3DPoints.row(0) << hit_pos[0], hit_pos[1], hit_pos[2];
 			stroke3DPointsBack.row(0) << hit_pos_back[0], hit_pos_back[1], hit_pos_back[2];
 			faces_hit.row(0) << hits[0].id, hits[1].id;
 			hand_pos_at_draw.row(0) << pos.transpose().cast<double>();
-			starts_on_mesh = true;
 		}
 		else {
+			stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
+			stroke2DPoints.row(stroke2DPoints.rows() - 1) << hit_pos2D[0], hit_pos2D[1];
+
 			stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
 			stroke3DPoints.row(stroke3DPoints.rows() - 1) << hit_pos[0], hit_pos[1], hit_pos[2];
 
@@ -176,10 +181,18 @@ void Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
 			viewer.data().add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0, 1, 0));
 		}
 		ends_on_mesh = true;
+		prev_point_was_on_mesh = true;
 	}
 	else {
-		if (stroke3DPoints.rows() == 1 && stroke3DPoints.isZero()) {
+		if (stroke3DPoints.rows() == 1) { //If we haven't any points yet, store the controller position & direction data so we can later create a looped cutting path
+			pos_before_cut = pos.cast<double>();
+			dir_before_cut = viewer.oculusVR.get_right_touch_direction().cast<double>();
 			starts_on_mesh = false;
+		}
+		else if(prev_point_was_on_mesh) { //Point is outside off the mesh, after we have previously added on-mesh points. Store it for later creating a looped cutting path
+			pos_after_cut = pos.cast<double>();
+			dir_after_cut = viewer.oculusVR.get_right_touch_direction().cast<double>();
+			prev_point_was_on_mesh = false;
 		}
 		ends_on_mesh = false;
 	}

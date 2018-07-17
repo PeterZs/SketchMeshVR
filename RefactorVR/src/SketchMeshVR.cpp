@@ -320,9 +320,13 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				stroke_was_removed = true;
 				//TODO: below will break if we remove a curve that has vertices that belong to multiple curves, these will then get unmarked as boundary vertices. Replace vertex_boundary_markers either with a list per vertex or some bitwise operator (e.g. belonging to boundary 1 gives value 1, belonging to 1 and 2 gives value 3 etc)
 				stroke_collection[closest_stroke_idx].undo_stroke_add(vertex_boundary_markers); //Sets the vertex_boundary_markers for the vertices of this stroke to 0 again
-				for (int i = 0; i < (*base_mesh).patches.size(); i++) {
+			/*	for (int i = 0; i < (*base_mesh).patches.size(); i++) {
 					(*base_mesh).patches[i]->update_patch_boundary_markers(vertex_boundary_markers);
-				}
+				}*/
+				//We might have changed the patch structure (e.g. when removing a sharp cut stroke), so request new patches
+				(*base_mesh).patches.clear();
+				(*base_mesh).face_patch_map.clear();
+				(*base_mesh).patches = Patch::init_patches(*base_mesh);
 
 				stroke_collection.erase(stroke_collection.begin() + closest_stroke_idx);
 				remove_stroke_clicked = 0; //Reset
@@ -493,6 +497,10 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			}
 			else if (!added_stroke->starts_on_mesh && !added_stroke->ends_on_mesh) { //Stroke like a cut stroke (starts and ends off mesh to wrap around)
 			   //Need to remesh like it's a cut but without removing the inside faces (we get 2 loops of boundary vertices that both need to be stitched, so can't use remesh_open_path)
+				added_stroke->prepend_first_point();
+				added_stroke->append_final_point();
+				added_stroke->toLoop();
+
 				success = LaplacianRemesh::remesh_cutting_path(*base_mesh, *added_stroke);
 			}
 			else {

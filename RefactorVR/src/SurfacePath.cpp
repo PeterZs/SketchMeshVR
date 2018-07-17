@@ -23,7 +23,6 @@ bool SurfacePath::create_from_open_path(const Stroke& stroke) {
 	int n = 1, iter = 0;
 	Eigen::RowVector3d pt(0, 0, 0);
 
-	std::cout << "check if first and last are the same here. don't want to use looped version." << origin_stroke->get3DPoints().row(0) - origin_stroke->get3DPoints().bottomRows(1) << std::endl;
 	int nr3DPoints = origin_stroke->get3DPoints().rows();
 	looped_3DPoints = origin_stroke->get3DPoints().topRows(nr3DPoints);
 
