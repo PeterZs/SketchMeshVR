@@ -25,9 +25,9 @@ Eigen::VectorXd initial_curvature;
 Eigen::VectorXd SurfaceSmoothing::curvatures(ptrdiff_t(0));
 int ID = 0, iteration = 0;
 int no_boundary_vertices, no_boundary_adjacent_vertices;
-double SurfaceSmoothing::vertex_weight = 1000.0;// 10.0;
+double SurfaceSmoothing::vertex_weight =  1000.0;// 10.0;
 double SurfaceSmoothing::edge_weight = 0.001;// 1.0;
-double SurfaceSmoothing::factor = 0.8;// 1.9;
+double SurfaceSmoothing::factor =  0.8;// 1.9;
 vector<vector<int>> neighbors;
 
 
@@ -134,7 +134,7 @@ Eigen::VectorXd SurfaceSmoothing::compute_initial_curvature(Mesh &m) {
 	initial_curvatures.setZero();
 	int original_stroke_no_vertices = (m.part_of_original_stroke.array() > 0).count();
 
-	for(int i = 0; i < m.V.rows(); i++) {
+	for(int i = 0; i < m.V.rows(); i++) { //TODO: the 2 if-statements below perform the same action
 		if((m.part_of_original_stroke[i]) && (m.vertex_boundary_markers[i] > 0)) { //Boundary vertex on original stroke
 			Eigen::RowVector3d vec(0, 0, 0);
 			int count = 0;

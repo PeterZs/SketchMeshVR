@@ -22,9 +22,6 @@ public:
 		mesh_to_patch_indices = Eigen::VectorXi();
 	;
 	};
-//	~Patch();
-
-	//Patch& operator=(Patch other);
 
 	static std::vector<Patch*> init_patches(Mesh& h);
 	static void propagate_patch(Patch* patch, int face, Eigen::VectorXi& faces, std::vector<Patch*> &face_patch_map, Eigen::VectorXi& sharp_edge);

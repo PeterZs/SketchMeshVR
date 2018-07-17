@@ -23,7 +23,6 @@ public:
 	void append_final_point();
     void counter_clockwise();
     void strokeReset();
-    //void snap_to_vertices(Eigen::VectorXi & vertex_boundary_markers);
     void undo_stroke_add(Eigen::VectorXi & vertex_boundary_markers);
     void update_Positions(Eigen::MatrixXd V);
     bool update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi & vertex_boundary_markers);
