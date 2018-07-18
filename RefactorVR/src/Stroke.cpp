@@ -5,6 +5,7 @@
 #include <igl/project.h>
 #include <igl/triangle/triangulate.h>
 #include <igl/adjacency_list.h>
+#include <igl/edge_topology.h>
 #include <algorithm> 
 #include <unordered_map>
 
@@ -472,7 +473,7 @@ bool Stroke::toLoop() {
 	return false;
 }
 
-unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::MatrixXd& mesh_V, Eigen::MatrixXi& mesh_F) {
+unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &edge_boundary_markers, Eigen::VectorXi& vertex_is_fixed, Eigen::VectorXi &part_of_original_stroke, Eigen::MatrixXd& mesh_V, Eigen::MatrixXi& mesh_F) {
 	double mean_sample_dist = 0.0;
 	for (int i = 0; i < stroke3DPoints.rows() - 1; i++) {
 		mean_sample_dist += (stroke3DPoints.row(i) - stroke3DPoints.row((i + 1) % stroke3DPoints.rows())).norm();
@@ -554,16 +555,19 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	igl::per_vertex_normals(V2, F2, PER_VERTEX_NORMALS_WEIGHTING_TYPE_UNIFORM, N_Vertices);
 
 	vertex_boundary_markers.resize(V2.rows());
+	vertex_is_fixed.resize(V2.rows());
 	part_of_original_stroke.resize(V2.rows());
 	for (int i = 0; i < V2.rows(); i++) {
 		if (i >= vertex_markers.rows()) { //vertex can't be boundary (it's on backside)
 			V2.row(i) = V2.row(i) + 0.1*N_Vertices.row(i);
 			vertex_boundary_markers[i] = 0;
+			vertex_is_fixed[i] = 0;
 			part_of_original_stroke[i] = 0;
 		}
 		else {
 			if (vertex_markers(i) == 1) { //Don't change boundary vertices
 				vertex_boundary_markers[i] = 1;
+				vertex_is_fixed[i] = 1;
 				part_of_original_stroke[i] = 1;
 				//Don't need to change stroke3DPoints here because they're the same as V2's points.
 
@@ -571,9 +575,11 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 			}
 			V2.row(i) = V2.row(i) + 0.1*N_Vertices.row(i);
 			vertex_boundary_markers[i] = 0;
+			vertex_is_fixed[i] = 0;
 			part_of_original_stroke[i] = 0;
 		}
 	}
+
 
 
 	Eigen::VectorXd dep_tmp = Eigen::VectorXd::Constant(V2.rows(), dep.mean());
@@ -589,6 +595,18 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 
 	mesh_V = V2;
 	mesh_F = F2;
+
+
+	Eigen::MatrixXi EV, FE, EF;
+	igl::edge_topology(V, F, EV, FE, EF);
+	edge_boundary_markers.conservativeResize(EV.rows());
+	edge_boundary_markers.setZero();
+	for (int i = 0; i < EV.rows(); i++) {
+		if (vertex_is_fixed[EV(i, 0)] && vertex_is_fixed[EV(i, 1)]) { //If both ends of the edge are fixed, then the edge must be on the boundary
+			edge_boundary_markers[i] = 1;
+		}
+	}
+
 	return backside_vertex_map;
 }
 
@@ -736,6 +754,19 @@ void Stroke::undo_stroke_add(Eigen::VectorXi& vertex_boundary_markers) {
 	for (int i = 0; i < closest_vert_bindings.size(); i++) {
 		vertex_boundary_markers[closest_vert_bindings[i]] = 0;
 	}
+
+	/*for (int i = 0; i < stroke_edges.size(); i++) {
+		edge_boundary_markers[stroke_edges[i]] = 0;
+	}
+
+	for (int i = 0; i < closest_vert_bindings.size(); i++) {
+		vertex_is_fixed[closest_vert_bindings[i]] = 0;
+		for (int j = 0; j < neighbors[i].size(); j++) {
+			if (edge_boundary_markers[this_edge] > 0) {
+				vertex_is_fixed[closest_vert_bindings[i]] = 1;
+			}
+		}
+	}*/
 }
 
 //Only works for strokes that have valid stroke2DPoints (e.g. cut, extrusion base and extrusion silhouette strokes). Naive implementation in O(n^2)

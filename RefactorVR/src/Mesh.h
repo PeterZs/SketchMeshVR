@@ -9,12 +9,14 @@ class Mesh {
 
 public:
 	Mesh();
-    Mesh(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &part_of_original_stroke, Eigen::VectorXi &new_mapped_indices, Eigen::VectorXi & sharp_edge, int ID);
+    Mesh(Eigen::MatrixXd &V, Eigen::MatrixXi &F, Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi &vertex_is_fixed, Eigen::VectorXi &part_of_original_stroke, Eigen::VectorXi &new_mapped_indices, Eigen::VectorXi & sharp_edge, int ID);
 	Mesh& operator=(Mesh other);
 	~Mesh();
 	Eigen::MatrixXd &V;
 	Eigen::MatrixXi &F;
 	Eigen::VectorXi &vertex_boundary_markers;
+	Eigen::VectorXi &edge_boundary_markers;
+	Eigen::VectorXi &vertex_is_fixed;
     Eigen::VectorXi &part_of_original_stroke;
 	Eigen::VectorXi &new_mapped_indices;
 	Eigen::VectorXi &sharp_edge;

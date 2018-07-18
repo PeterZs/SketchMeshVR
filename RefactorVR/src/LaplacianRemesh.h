@@ -30,9 +30,11 @@ private:
 	static std::vector<int> reorder(std::vector<int> boundary_vertices, Eigen::Vector3d start_v, Mesh & m);
 	static Eigen::RowVector3d compute_mean_viewpoint(Mesh & m, std::vector<int> inner_boundary_vertices);
 	static void propagate_dirty_faces(int face, std::vector<bool>& dirty_face);
-	static void update_sharp_edges(Mesh & m, Eigen::MatrixXi & all_sharpEV);
-	static void update_mesh_values(Mesh & m, Eigen::MatrixXd path, int stroke_ID, int new_mapped_start, bool hold_back_due_to_loop);
+	static void update_edge_indicators(Mesh & m, Eigen::MatrixXi & all_sharpEV);
+	//static void update_mesh_values(Mesh & m, Eigen::MatrixXd path, int stroke_ID, int new_mapped_start, bool hold_back_due_to_loop);
 	static void update_face_indices(Mesh & m);
+
+	static void update_mesh_values(Mesh & m, Eigen::MatrixXd path, int stroke_ID, int new_mapped_start, bool hold_back_due_to_loop, Eigen::MatrixXi & added_edges);
 
 
 

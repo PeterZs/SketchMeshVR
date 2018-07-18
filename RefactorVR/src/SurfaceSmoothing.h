@@ -28,7 +28,8 @@ private:
 	static void smooth_main(Mesh & m, bool BOUNDARY_IS_DIRTY);
     static void compute_target_vertices(Mesh & m, Eigen::MatrixXd & L, Eigen::VectorXd & target_LMs, Eigen::VectorXd & target_edge_lengths, bool BOUNDARY_IS_DIRTY);
 	static Eigen::MatrixXd compute_laplacian_matrix(Mesh & m);
-	static Eigen::VectorXd compute_initial_curvature(Mesh & m);
+	//static Eigen::VectorXd compute_initial_curvature(Mesh & m);
+	static Eigen::VectorXd compute_initial_curvature_test(Mesh & m);
 	static Eigen::VectorXd compute_target_LMs(Mesh & m, Eigen::MatrixXd & L, bool BOUNDARY_IS_DIRTY);
 	static Eigen::VectorXd compute_target_edge_lengths(Mesh & m, Eigen::MatrixXd & L);
 	static Eigen::MatrixX3d compute_vertex_laplacians(Mesh & m);

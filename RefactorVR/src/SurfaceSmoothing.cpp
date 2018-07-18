@@ -95,12 +95,13 @@ void SurfaceSmoothing::smooth_main(Mesh &m, bool BOUNDARY_IS_DIRTY) {
 	}
 
 	if(BOUNDARY_IS_DIRTY || m.ID != prev_mesh_ID) {
-		no_boundary_vertices = (m.vertex_boundary_markers.array() > 0).count();
+		no_boundary_vertices = (m.vertex_is_fixed.array() > 0).count();
 		no_boundary_adjacent_vertices = 0;
 		for(int i = 0; i < m.V.rows(); i++) {
-			if(m.vertex_boundary_markers[i] > 0) {
+			if (m.vertex_is_fixed[i] > 0) {
+
 				for(int j = 0; j < neighbors[i].size(); j++) {
-					if(m.vertex_boundary_markers[neighbors[i][j]] == 0) {
+					if (m.vertex_is_fixed[neighbors[i][j]] == 0) {
 						no_boundary_adjacent_vertices++;
 					}
 				}
@@ -129,7 +130,7 @@ Eigen::MatrixXd SurfaceSmoothing::compute_laplacian_matrix(Mesh &m) {
 	return (Eigen::MatrixXd) -U;
 }
 
-Eigen::VectorXd SurfaceSmoothing::compute_initial_curvature(Mesh &m) {
+/*Eigen::VectorXd SurfaceSmoothing::compute_initial_curvature(Mesh &m) {
 	Eigen::VectorXd initial_curvatures(m.V.rows());
 	initial_curvatures.setZero();
 //	int original_stroke_no_vertices = (m.part_of_original_stroke.array() > 0).count();
@@ -160,7 +161,33 @@ Eigen::VectorXd SurfaceSmoothing::compute_initial_curvature(Mesh &m) {
 	}
 
 	return initial_curvatures;
+}*/
+
+Eigen::VectorXd SurfaceSmoothing::compute_initial_curvature_test(Mesh& m) {
+	Eigen::VectorXd initial_curvatures(m.V.rows());
+	initial_curvatures.setZero();
+		for (int i = 0; i < m.V.rows(); i++) {
+			if (m.vertex_is_fixed[i] > 0) {
+				Eigen::RowVector3d center(0, 0, 0);
+				int count = 0;
+				for (int j = 0; j < neighbors[i].size(); j++) {
+					if (m.vertex_is_fixed[neighbors[i][j]] == 0) {
+						continue;
+					}
+					center += m.V.row(neighbors[i][j]);
+					count++;
+
+				}
+				if (count == 1) {
+					continue; //Leave curvature at 0
+				}
+				double d = vertex_normals.row(i).dot(m.V.row(i) - (1.0 / count)*center);
+				initial_curvatures[i] = max(0.0, d);
+			}
+		}
+		return initial_curvatures;
 }
+
 
 Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L, bool BOUNDARY_IS_DIRTY) {
 	Eigen::SparseMatrix<double> A = get_precompute_matrix_for_LM_and_edges(m);
@@ -173,7 +200,7 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 				tripletList.push_back(T(i, j, L(i, j)));
 			}
 		
-			if(m.vertex_boundary_markers[i] > 0) { //Constrain only the boundary in the first iteration
+			if (m.vertex_is_fixed[i] > 0) { //Constrain only the boundary in the first iteration
 				tripletList.push_back(T(m.V.rows() + i, i, 1));
 			}
 		}
@@ -191,7 +218,8 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 		A.prune([nr_V](int i, int j, float) {return i < nr_V; }); //Keeps the first #V rows (which contains L, which didn't change) and prunes the rest
 	
 		for(int i = 0; i < m.V.rows(); i++) {
-			if(m.vertex_boundary_markers[i] > 0) { //Constrain only the current boundary in the first iteration
+			if (m.vertex_is_fixed[i] > 0) { //Constrain only the current boundary in the first iteration
+
 				A.coeffRef(m.V.rows() + i, i) = 1; //For target LM'/edge length'
 			}
 		}
@@ -223,7 +251,7 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 	
     Eigen::VectorXd current_curvatures;
 	if(iteration == 0) {
-		initial_curvature = compute_initial_curvature(m);
+		initial_curvature = compute_initial_curvature_test(m);
     }else{
         current_curvatures = get_curvatures(m);
     }
@@ -231,7 +259,7 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 	Eigen::VectorXd b = Eigen::VectorXd::Zero(m.V.rows()*2);
     for(int i = 0; i < m.V.rows(); i++) {
 		if(iteration == 0) {
-			if(m.vertex_boundary_markers[i] > 0) {
+			if (m.vertex_is_fixed[i] > 0) {
 				b[m.V.rows() + i] = initial_curvature[i];
 			}
 		} else {
@@ -259,10 +287,10 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_edge_lengths(Mesh &m, Eigen::Ma
 	double cum_edge_length;
 	if(iteration == 0){
 		for(int i = 0; i < m.V.rows(); i++) {
-			if(m.vertex_boundary_markers[i] > 0) {
+			if (m.vertex_is_fixed[i] > 0) {
 				cum_edge_length = 0.0;
 				for(int j = 0; j < neighbors[i].size(); j++) {
-                    if(m.vertex_boundary_markers[neighbors[i][j]] > 0){
+					if (m.vertex_is_fixed[neighbors[i][j]] > 0) {
                         cum_edge_length += (m.V.row(neighbors[i][j]) - m.V.row(i)).norm();
                     }
 				}
@@ -306,12 +334,12 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 			for(int j = 0; j < m.V.rows(); j++) {
 				tripletList.push_back(T(i, j, L(i, j)*laplacian_weights[i]));
 			}
-			if(m.vertex_boundary_markers[i] > 0) { //Constrain only the boundary LMs and edges
+			if (m.vertex_is_fixed[i] > 0) { //Constrain only the boundary LMs and edges
 				tripletList.push_back(T(m.V.rows() + count, i, vertex_weight));
 				count++;
 
 				for(int j = 0; j < neighbors[i].size(); j++) {
-					if(m.vertex_boundary_markers[neighbors[i][j]] == 0) {
+					if (m.vertex_is_fixed[neighbors[i][j]] == 0) {
 						tripletList.push_back(T(m.V.rows() + no_boundary_vertices + count2, i, edge_weight));
 						tripletList.push_back(T(m.V.rows() + no_boundary_vertices + count2, neighbors[i][j], -edge_weight));
 						count2++;
@@ -343,14 +371,16 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 		by[i] = delta(1) * laplacian_weights[i];
 		bz[i] = delta(2) * laplacian_weights[i];
 
-		if(m.vertex_boundary_markers[i] > 0) {
+		if (m.vertex_is_fixed[i] > 0) {
+
 			bx[m.V.rows() + count2] = m.V(i, 0) * vertex_weight;
 			by[m.V.rows() + count2] = m.V(i, 1) * vertex_weight;
 			bz[m.V.rows() + count2] = m.V(i, 2) * vertex_weight;
 			count2++;
 
 			for(int j = 0; j < neighbors[i].size(); j++) {
-				if(m.vertex_boundary_markers[neighbors[i][j]] == 0) {
+				if (m.vertex_is_fixed[neighbors[i][j]] == 0) {
+
 					Eigen::Vector3d vec = (m.V.row(i) - m.V.row(neighbors[i][j]));
 					vec.normalize();
 					Eigen::Vector3d edge_vec = (target_edge_lengths[i] + target_edge_lengths[neighbors[i][j]]) / 2.0 * vec;
@@ -369,7 +399,7 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 	Eigen::VectorXd Vnewz = (*solver2_array[m.ID - 1]).solve(AT*bz);
 
 	for(int i = 0; i < m.V.rows(); i++) {
-		if(m.vertex_boundary_markers[i] == 0){ //Only update non-fixed points (curve points are fixed)
+		if (m.vertex_is_fixed[i] == 0) { //Only update non-fixed points (curve points are fixed)
 			m.V.row(i) << Vnewx[i], Vnewy[i], Vnewz[i];
 		}
 	}

@@ -44,6 +44,10 @@ Eigen::MatrixXd V(0,3);
 Eigen::MatrixXi F(0,3);
 //Per vertex indicator of whether vertex is on boundary (on boundary if == 1)
 Eigen::VectorXi vertex_boundary_markers;
+//Per vertex indicator of whether vertex position is fixed
+Eigen::VectorXi vertex_is_fixed;
+//Per edge indicator of what curve (or none if == 0) each edge belongs to
+Eigen::VectorXi edge_boundary_markers;
 //Per vertex indicator of whether vertex is on original stroke (outline of shape) (on OG stroke if ==1)
 Eigen::VectorXi part_of_original_stroke;
 //Per edge indicator of whether the edge is sharp (if == 1 then sharp, otherwise smooth)
@@ -180,6 +184,8 @@ void reset_before_draw() {
 	(*base_mesh).V.resize(0, 3);
 	(*base_mesh).F.resize(0, 3);
 	(*base_mesh).vertex_boundary_markers.resize(0);
+	(*base_mesh).vertex_is_fixed.resize(0);
+	(*base_mesh).edge_boundary_markers.resize(0);
 	(*base_mesh).part_of_original_stroke.resize(0);
 	(*base_mesh).new_mapped_indices.resize(0);
 	(*base_mesh).sharp_edge.resize(0);
@@ -438,13 +444,15 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			draw_should_block = false; 
 		
 			if (initial_stroke->toLoop()) { //Returns false if the stroke only consists of 1 point (user just clicked)
-				initial_stroke->generate3DMeshFromStroke(vertex_boundary_markers, part_of_original_stroke, V, F);
+				initial_stroke->generate3DMeshFromStroke(vertex_boundary_markers, edge_boundary_markers, vertex_is_fixed, part_of_original_stroke, V, F);
 		
 				if (!igl::is_edge_manifold(F)) { //Check if the drawn stroke results in an edge-manifold mesh, otherwise sound a beep and revert
 					sound_error_beep();
 					Eigen::MatrixXd drawn_points = initial_stroke->get3DPoints();
 					initial_stroke->strokeReset();
 					vertex_boundary_markers.resize(0);
+					vertex_is_fixed.resize(0);
+					edge_boundary_markers.resize(0);
 					part_of_original_stroke.resize(0);
 					dirty_boundary = true;
 
@@ -475,7 +483,8 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				viewer.data().set_normals(N_corners);
 
 				//Overlay the drawn stroke
-				int strokeSize = (vertex_boundary_markers.array() > 0).count();
+				//int strokeSize = (vertex_boundary_markers.array() > 0).count();
+				int strokeSize = (vertex_is_fixed.array() > 0).count();
 				Eigen::MatrixXd strokePoints = V.block(0, 0, strokeSize, 3);
 				viewer.data().set_stroke_points(igl::cat(1, strokePoints, (Eigen::MatrixXd) V.row(0)));
 			}	
@@ -872,7 +881,7 @@ void menu_closed() {
 int main(int argc, char *argv[]) {
 	//Init stroke selector
 	initial_stroke = new Stroke(V, F, viewer, 0);
-	base_mesh = new Mesh(V, F, vertex_boundary_markers, part_of_original_stroke, new_mapped_indices, sharp_edge, 0);
+	base_mesh = new Mesh(V, F, vertex_boundary_markers, edge_boundary_markers, vertex_is_fixed, part_of_original_stroke, new_mapped_indices, sharp_edge, 0);
 
 	Eigen::MatrixXd V_floor(4, 3);
 	V_floor.row(0) << -10, 0, -10;
