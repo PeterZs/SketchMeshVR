@@ -132,7 +132,7 @@ Eigen::MatrixXd SurfaceSmoothing::compute_laplacian_matrix(Mesh &m) {
 Eigen::VectorXd SurfaceSmoothing::compute_initial_curvature(Mesh &m) {
 	Eigen::VectorXd initial_curvatures(m.V.rows());
 	initial_curvatures.setZero();
-	int original_stroke_no_vertices = (m.part_of_original_stroke.array() > 0).count();
+//	int original_stroke_no_vertices = (m.part_of_original_stroke.array() > 0).count();
 
 	for(int i = 0; i < m.V.rows(); i++) { //TODO: the 2 if-statements below perform the same action
 		if((m.part_of_original_stroke[i]) && (m.vertex_boundary_markers[i] > 0)) { //Boundary vertex on original stroke
