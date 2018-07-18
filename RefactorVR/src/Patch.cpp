@@ -47,7 +47,7 @@ void Patch::create_mesh_structure(Mesh& m, Eigen::VectorXi& faces) {
 	for (int i = 0; i < faces.rows(); i++) {
 		for (int j = 0; j < 3; j++) {
 			int edge = FE(faces[i], j);
-			get_patch_edge(edge, patch_edge_is_init, patch_vertex_is_init, faces[i], patch_vertices, m.sharp_edge, new_sharp_edge, m.edge_boundary_markers, new_edge_boundary_markers, m.V, m.vertex_boundary_markers, m.vertex_is_fixed, m.part_of_original_stroke, m.new_mapped_indices, mesh_to_patch_indices);
+			get_patch_edge(edge, patch_edge_is_init, patch_vertex_is_init, faces[i], patch_vertices, m.sharp_edge, new_sharp_edge, m.edge_boundary_markers, new_edge_boundary_markers, m.V, m.vertex_boundary_markers, m.vertex_is_fixed, m.new_mapped_indices, mesh_to_patch_indices);
 		}
 
 		parent_faces.conservativeResize(parent_faces.rows() + 1, Eigen::NoChange);
@@ -63,7 +63,7 @@ void Patch::create_mesh_structure(Mesh& m, Eigen::VectorXi& faces) {
 	mesh.vertex_boundary_markers = new_vertex_boundary_markers;
 	mesh.edge_boundary_markers = new_edge_boundary_markers;
 	mesh.vertex_is_fixed = new_vertex_is_fixed;
-	mesh.part_of_original_stroke = new_part_of_original_stroke;
+	//mesh.part_of_original_stroke = new_part_of_original_stroke;
 	mesh.new_mapped_indices = new_mapped_indices;
 	mesh.sharp_edge = new_sharp_edge;
 	mesh.ID = next_mesh_ID;
@@ -71,7 +71,7 @@ void Patch::create_mesh_structure(Mesh& m, Eigen::VectorXi& faces) {
 	next_mesh_ID++;
 }
 
-void Patch::get_patch_edge(int edge, Eigen::VectorXi& patch_edge_is_init, Eigen::VectorXi& patch_vertex_is_init, int face, Eigen::MatrixXd& patch_vertices, Eigen::VectorXi& sharp_edge, Eigen::VectorXi& new_sharp_edge, Eigen::VectorXi &edge_boundary_markers, Eigen::VectorXi &new_edge_boundary_markers, Eigen::MatrixXd& V_orig, Eigen::VectorXi& boundary_markers_orig, Eigen::VectorXi & vertex_is_fixed_orig, Eigen::VectorXi& part_of_original_orig, Eigen::VectorXi& new_mapped_indices_orig, Eigen::VectorXi& mesh_to_patch_indices) {
+void Patch::get_patch_edge(int edge, Eigen::VectorXi& patch_edge_is_init, Eigen::VectorXi& patch_vertex_is_init, int face, Eigen::MatrixXd& patch_vertices, Eigen::VectorXi& sharp_edge, Eigen::VectorXi& new_sharp_edge, Eigen::VectorXi &edge_boundary_markers, Eigen::VectorXi &new_edge_boundary_markers, Eigen::MatrixXd& V_orig, Eigen::VectorXi& boundary_markers_orig, Eigen::VectorXi & vertex_is_fixed_orig, Eigen::VectorXi& new_mapped_indices_orig, Eigen::VectorXi& mesh_to_patch_indices) {
 	if (sharp_edge(edge)) {
 
 	}
@@ -81,8 +81,8 @@ void Patch::get_patch_edge(int edge, Eigen::VectorXi& patch_edge_is_init, Eigen:
 
 	int start = EV(edge, 0);
 	int end = EV(edge, 1);
-	get_patch_vertex(start, face, patch_vertices, patch_vertex_is_init, V_orig, boundary_markers_orig, vertex_is_fixed_orig, part_of_original_orig, new_mapped_indices_orig, mesh_to_patch_indices);
-	get_patch_vertex(end, face, patch_vertices, patch_vertex_is_init, V_orig, boundary_markers_orig, vertex_is_fixed_orig, part_of_original_orig, new_mapped_indices_orig, mesh_to_patch_indices);
+	get_patch_vertex(start, face, patch_vertices, patch_vertex_is_init, V_orig, boundary_markers_orig, vertex_is_fixed_orig, new_mapped_indices_orig, mesh_to_patch_indices);
+	get_patch_vertex(end, face, patch_vertices, patch_vertex_is_init, V_orig, boundary_markers_orig, vertex_is_fixed_orig, new_mapped_indices_orig, mesh_to_patch_indices);
 	new_sharp_edge.conservativeResize(new_sharp_edge.rows() + 1);
 	new_sharp_edge.tail(1) << sharp_edge[edge];
 	new_edge_boundary_markers.conservativeResize(new_edge_boundary_markers.rows() + 1);
@@ -91,7 +91,7 @@ void Patch::get_patch_edge(int edge, Eigen::VectorXi& patch_edge_is_init, Eigen:
 }
 
 
-void Patch::get_patch_vertex(int v_idx, int face, Eigen::MatrixXd& patch_vertices, Eigen::VectorXi& patch_vertex_is_init, Eigen::MatrixXd& V_orig, Eigen::VectorXi& boundary_markers_orig, Eigen::VectorXi& vertex_is_fixed_orig, Eigen::VectorXi& part_of_original_orig, Eigen::VectorXi& new_mapped_indices_orig, Eigen::VectorXi& mesh_to_patch_indices) {
+void Patch::get_patch_vertex(int v_idx, int face, Eigen::MatrixXd& patch_vertices, Eigen::VectorXi& patch_vertex_is_init, Eigen::MatrixXd& V_orig, Eigen::VectorXi& boundary_markers_orig, Eigen::VectorXi& vertex_is_fixed_orig, Eigen::VectorXi& new_mapped_indices_orig, Eigen::VectorXi& mesh_to_patch_indices) {
 	if (patch_vertex_is_init[v_idx]) {
 		return;
 	}
@@ -105,8 +105,8 @@ void Patch::get_patch_vertex(int v_idx, int face, Eigen::MatrixXd& patch_vertice
 	new_vertex_boundary_markers.tail(1) << boundary_markers_orig.row(v_idx);
 	new_vertex_is_fixed.conservativeResize(new_vertex_is_fixed.rows() + 1);
 	new_vertex_is_fixed.tail(1) << vertex_is_fixed_orig.row(v_idx);
-	new_part_of_original_stroke.conservativeResize(new_part_of_original_stroke.rows() + 1);
-	new_part_of_original_stroke.tail(1) << part_of_original_orig.row(v_idx);
+	//new_part_of_original_stroke.conservativeResize(new_part_of_original_stroke.rows() + 1);
+	//new_part_of_original_stroke.tail(1) << part_of_original_orig.row(v_idx);
 	new_mapped_indices.conservativeResize(new_mapped_indices.rows() + 1);
 	new_mapped_indices.tail(1) << -1;// new_mapped_indices_orig.row(v_idx); //TODO: CHECK IF WE NEED THE NEW_MAPPED_INDICES OR IF THESE ARE ALWAYS UNINITIALIZED WHEN THIS IS CALLED
 	patch_vertex_is_init[v_idx] = 1;

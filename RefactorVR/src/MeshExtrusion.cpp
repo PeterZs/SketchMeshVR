@@ -26,7 +26,7 @@ bool MeshExtrusion::extrude_prepare(Stroke& base, SurfacePath& surface_path) {
 bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke, Stroke& base, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport) {
 	Eigen::MatrixXi start_F = m.F;
 	Eigen::MatrixXd start_V = m.V;
-	Eigen::VectorXi start_part_of_original_stroke = m.part_of_original_stroke;
+	//Eigen::VectorXi start_part_of_original_stroke = m.part_of_original_stroke;
 	Eigen::VectorXi start_vertex_boundary_markers = m.vertex_boundary_markers;
 	Eigen::VectorXi start_edge_boundary_markers = m.edge_boundary_markers;
 	Eigen::VectorXi start_vertex_is_fixed = m.vertex_is_fixed;
@@ -45,21 +45,6 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 	Eigen::MatrixXi EV, FE, EF;
 	igl::edge_topology(m.V, m.F, EV, FE, EF);
 
-	//vector<int> sharp_edge_indices;
-	/*Eigen::MatrixXi boundary_markers(0, 3), sharpEV(0, 2);
-	for(int i = 0; i < m.sharp_edge.rows(); i++) {
-		if (m.sharp_edge[i]) {
-			//	sharp_edge_indices.push_back(i);
-			sharpEV.conservativeResize(sharpEV.rows() + 1, Eigen::NoChange);
-			sharpEV.bottomRows(1) << EV(i, 0), EV(i, 1);
-		}
-		if (m.edge_boundary_markers[i]) {
-			boundary_markers.conservativeResize(boundary_markers.rows() + 1, Eigen::NoChange);
-			boundary_markers.bottomRows(1) << EV(i, 0), EV(i, 1), m.edge_boundary_markers[i];
-		}
-	}*/
-
-
 	Eigen::MatrixXi original_sharp_or_boundary_edges(0, 4);
 	for (int i = 0; i < m.sharp_edge.rows(); i++) {
 		if (m.sharp_edge[i] || m.edge_boundary_markers[i]) {
@@ -67,16 +52,6 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 			original_sharp_or_boundary_edges.bottomRows(1) << EV(i, 0), EV(i, 1), m.edge_boundary_markers[i], m.sharp_edge[i];
 		}
 	}
-
-
-
-    //Store the vertex indices for sharp edges in the original mesh
-	/*Eigen::MatrixXi sharpEV;
-	Eigen::VectorXi sharpEV_row_idx, sharpEV_col_idx(2);
-	sharpEV_row_idx = Eigen::VectorXi::Map(sharp_edge_indices.data(), sharp_edge_indices.size());
-	sharpEV_col_idx.col(0) << 0, 1;
-	igl::slice(EV, sharpEV_row_idx, sharpEV_col_idx, sharpEV);*/
-
 
     //Compute the real 3D positions of the silhouette stroke
 	Eigen::RowVector3d center(0, 0, 0);
@@ -201,8 +176,6 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 	Eigen::MatrixXi new_edge_indicators;
 	new_edge_indicators = igl::cat(1, original_sharp_or_boundary_edges, added_edges); //Add sharp and boundary edge indicators that are created due to the newly added curve
 	try {
-		//update_sharp_edges(m, sharpEV);
-		//update_boundary_edges(m, boundary_markers);
 		update_edge_indicators(m, new_edge_indicators);
 	}
 	catch(int ex){
@@ -211,7 +184,7 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 			m.F = start_F;
 			m.V = start_V;
 			m.new_mapped_indices = start_new_mapped_indices;
-			m.part_of_original_stroke = start_part_of_original_stroke;
+			//m.part_of_original_stroke = start_part_of_original_stroke;
 			m.vertex_boundary_markers = start_vertex_boundary_markers;
 			m.edge_boundary_markers = start_edge_boundary_markers;
 			m.vertex_is_fixed = start_vertex_is_fixed;
@@ -282,10 +255,10 @@ void MeshExtrusion::generate_mesh(Mesh& m, Eigen::MatrixXd loop3D, Eigen::Vector
 			vert += offset.transpose();
 			m.V.conservativeResize(m.V.rows() + 1, Eigen::NoChange);
 			m.V.row(m.V.rows() - 1) = vert;
-			m.part_of_original_stroke.conservativeResize(m.part_of_original_stroke.rows() + 1);
+			//m.part_of_original_stroke.conservativeResize(m.part_of_original_stroke.rows() + 1);
 			m.vertex_boundary_markers.conservativeResize(m.vertex_boundary_markers.rows() + 1);
 			m.vertex_is_fixed.conservativeResize(m.vertex_is_fixed.rows() + 1);
-			m.part_of_original_stroke(m.part_of_original_stroke.rows() - 1) = 0;
+			//m.part_of_original_stroke(m.part_of_original_stroke.rows() - 1) = 0;
 			m.vertex_boundary_markers(m.vertex_boundary_markers.rows() - 1) = 0; //Interior mesh vertex, so non-boundary
 			m.vertex_is_fixed(m.vertex_is_fixed.rows() - 1) = 0; //Interior mesh vertex, so non-fixed
 		}
@@ -338,13 +311,13 @@ vector<int> MeshExtrusion::add_silhouette_vertices(Mesh& m, int stroke_ID, Eigen
 	vector<int> sil_original_indices;
 	int size_before_silhouette = m.V.rows();
 	m.V.conservativeResize(m.V.rows() + silhouette_vertices.rows(), Eigen::NoChange);
-	m.part_of_original_stroke.conservativeResize(m.part_of_original_stroke.rows() + silhouette_vertices.rows());
+	//m.part_of_original_stroke.conservativeResize(m.part_of_original_stroke.rows() + silhouette_vertices.rows());
 	m.vertex_boundary_markers.conservativeResize(m.vertex_boundary_markers.rows() + silhouette_vertices.rows());
 	m.vertex_is_fixed.conservativeResize(m.vertex_is_fixed.rows() + silhouette_vertices.rows());
 
 	for (int i = 0; i < silhouette_vertices.rows(); i++) {
 		m.V.row(size_before_silhouette + i) = silhouette_vertices.row(i);
-		m.part_of_original_stroke[size_before_silhouette + i] = 0;
+		//m.part_of_original_stroke[size_before_silhouette + i] = 0;
 		m.vertex_boundary_markers[size_before_silhouette + i] = stroke_ID;
 		m.vertex_is_fixed[size_before_silhouette + i] = 1;
 		sil_original_indices.push_back(size_before_silhouette + i);
@@ -406,61 +379,6 @@ void MeshExtrusion::update_edge_indicators(Mesh& m, Eigen::MatrixXi& edges_to_up
 		m.sharp_edge[equal_pos] = edges_to_update(i, 3);
 	}
 }
-
-/** Updates the sharp_edge tracker with new edge indices after the mesh topology changed. **/
-/*void MeshExtrusion::update_sharp_edges(Mesh& m, Eigen::MatrixXi sharpEV) {
-	if (!igl::is_edge_manifold(m.F)) {
-		throw -1;
-		return;
-	}
-	Eigen::MatrixXi EV, FE, EF;
-	igl::edge_topology(m.V, m.F, EV, FE, EF);
-	m.sharp_edge.resize(EV.rows());
-	m.sharp_edge.setZero();
-
-	int start, end, equal_pos;
-	Eigen::VectorXi col1Equals, col2Equals;
-	for (int i = 0; i < sharpEV.rows(); i++) {
-		start = sharpEV(i, 0); //No vertices were removed in the meantime, so use indices as-is
-		end = sharpEV(i, 1);
-		if (start == -1 || end == -1) { //Sharp edge no longer exists
-			continue;
-		}
-
-		col1Equals = EV.col(0).cwiseEqual(std::min(start, end)).cast<int>();
-		col2Equals = EV.col(1).cwiseEqual(std::max(start, end)).cast<int>();
-		(col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
-
-		m.sharp_edge[equal_pos] = 1; //Set this edge to be sharp
-	}
-}*/
-
-/*void MeshExtrusion::update_boundary_edges(Mesh& m, Eigen::MatrixXi& boundary_markers) {
-	if (!igl::is_edge_manifold(m.F)) {
-		throw - 1;
-		return;
-	}
-	Eigen::MatrixXi EV, FE, EF;
-	igl::edge_topology(m.V, m.F, EV, FE, EF);
-	m.edge_boundary_markers.resize(EV.rows());
-	m.edge_boundary_markers.setZero();
-
-	int start, end, equal_pos;
-	Eigen::VectorXi col1Equals, col2Equals;
-	for (int i = 0; i < boundary_markers.rows(); i++) {
-		start = boundary_markers(i, 0);
-		end = boundary_markers(i, 1);
-		if (start == -1 || end == -1) { //Boundary edge no longer exists
-			continue;
-		}
-
-		col1Equals = EV.col(0).cwiseEqual(min(start, end)).cast<int>();
-		col2Equals = EV.col(1).cwiseEqual(max(start, end)).cast<int>();
-		(col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
-
-		m.edge_boundary_markers[equal_pos] = boundary_markers(i, 2); //Set this edge to its previous boundary ID
-	}
-}*/
 
 /** Updates the old face indices with the new indexing and inserts new faces that are made in triangulation. **/
 void MeshExtrusion::update_face_indices(Mesh& m, Eigen::MatrixXi& F2, vector<int> sil_original_indices, vector<int> loop_base_original_indices, int nr_silhouette_vert, int size_before_gen, int loop2D_size) {

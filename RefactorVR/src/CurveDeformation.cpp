@@ -25,25 +25,26 @@ Eigen::SparseLU<Eigen::SparseMatrix<double>> solverPosRot;
 void CurveDeformation::startPullCurve(Stroke& _stroke, int _handle_ID) {
 	start_pos = (_stroke.get3DPoints()).row(_handle_ID);
 	moving_vertex_ID = _stroke.get_vertex_idx_for_point(_handle_ID); //The global vertex index (in V) for the moving vertex
-	current_ROI_size = 0.0;
-	curve_diag_length = compute_curve_diag_length(_stroke);
-	handle_ID = _handle_ID;
 	no_vertices = _stroke.get3DPoints().rows() - 1; //We should ignore the last one, which is a copy of the first one
-	no_ROI_vert = -1;
-	Rot.resize(no_vertices);
 	vert_bindings = _stroke.get_closest_vert_bindings();
 	stroke_is_loop = _stroke.is_loop;
 	stroke_ID = _stroke.get_ID();
+	curve_diag_length = compute_curve_diag_length(_stroke);
+	handle_ID = _handle_ID;
+	Rot.resize(no_vertices);
+	no_ROI_vert = -1;
+	current_ROI_size = 0.0;
 }
 
 //pos is the position to where the user dragged the vertex
-void CurveDeformation::pullCurve(const Eigen::RowVector3d& pos, Eigen::MatrixXd& V, Eigen::VectorXi& part_of_original_stroke) {
+void CurveDeformation::pullCurve(const Eigen::RowVector3d& pos, Eigen::MatrixXd& V) {
 	double drag_size = (pos - start_pos).norm();
-	drag_size /= curve_diag_length;
+	drag_size /= curve_diag_length; //TODO: Not sure if this is neccessary? pUllmesh2 doesn't do it
 	bool ROI_is_updated = false;
-	if(!current_ROI_size || (fabs(drag_size - current_ROI_size) > 0.01)) { //Take the deformation and ROI size as percentages
+	if(!current_ROI_size || (fabs(drag_size - current_ROI_size) > 0.01)) { //Take the current drag_size and current_ROI_size relative to the size of the stroke we're pulling on. //TODO: test if we want to take it relative to the size of the whole mesh instead (we have access to V after all)?
 		ROI_is_updated = update_ROI(drag_size);
 	}
+
 	if(no_ROI_vert == 0 || current_ROI_size == 0) { //If we have no other "free" vertices other than the handle vertex, we simply move it to the target position
 		V.row(moving_vertex_ID) = pos;
 	} else {
@@ -51,7 +52,7 @@ void CurveDeformation::pullCurve(const Eigen::RowVector3d& pos, Eigen::MatrixXd&
 			setup_for_update_curve(V);
 		}
 		V.row(moving_vertex_ID) = pos;
-		update_curve(V, part_of_original_stroke);
+		update_curve(V);
 	}
 }
 
@@ -81,6 +82,38 @@ bool CurveDeformation::update_ROI(double drag_size) {
 	compute_ROI_boundaries(ROI_1, ROI_2);
 	setup_fixed_indices(ROI_1, ROI_2);
 	return true;
+}
+
+bool CurveDeformation::update_ROI_test(double drag_size) {
+	//TODO: PullMesh2 returns all vertices to the positions that they had at the time of being added to the last ROI (so e.g. the handle will have a new "original" position everytime new vertices get added to the ROI
+	vector<int> vertices_in_range = collect_vertices_within_drag_length(drag_size);
+}
+
+vector<int> CurveDeformation::collect_vertices_within_drag_length(double drag_size) {
+	Eigen::VectorXi visited(V.rows());
+	Eigen::VectorXd distance(V.rows());
+	visited[handle_ID] = 1;
+	distance[handle_ID] = drag_size;
+
+	vector<int> vertices_in_range;
+	vertices_in_range.push_back(handle_ID);
+	propagate(-1, handle_ID, drag_size, vertices_in_range);
+}
+
+void CurveDeformation::propagate(int prev_edge, int vert, double remaining_distance, vector<int>& vertices_in_range) {
+	int next_vert;
+	for (int i = 0; i < neighbors[vert].size(); i++) {
+		int edge = find_edge(vert, neighbors[vert][i]);
+		if (edge_boundary_markers[edge]) {
+			if (remaning_length - (V.row(vert) - V.row(neighbors[vert][i])).norm() > 0) {
+				next_vert = neighbors[vert][i];
+				if (visited[next_vert]) {
+					continue;
+				}
+				visited[next_vert] = true;
+			}
+		}
+	}
 }
 
 void CurveDeformation::compute_ROI_boundaries(int& ROI_1, int& ROI_2) {
@@ -195,7 +228,7 @@ void CurveDeformation::setup_for_L1_position_step(Eigen::MatrixXd& V) {
 	solverL1.compute(A_L1_T*A_L1);
 }
 
-void CurveDeformation::update_curve(Eigen::MatrixXd& V, Eigen::VectorXi & part_of_original_stroke) {
+void CurveDeformation::update_curve(Eigen::MatrixXd& V) {
 	for(int i = 0; i < no_vertices; i++) {
 		Rot[i] = Eigen::Matrix3d::Identity();
 	}
@@ -204,7 +237,7 @@ void CurveDeformation::update_curve(Eigen::MatrixXd& V, Eigen::VectorXi & part_o
 		solve_for_pos_and_rot(V);
 		update_rot();
 	}
-	final_L1_pos(V, part_of_original_stroke);
+	final_L1_pos(V);
 }
 
 void CurveDeformation::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
@@ -333,7 +366,7 @@ Eigen::Matrix3d CurveDeformation::compute_orthonormal(Eigen::Matrix3d& rot) {
 	return svd.matrixU()*VT;
 }
 
-void CurveDeformation::final_L1_pos(Eigen::MatrixXd &V, Eigen::VectorXi & part_of_original_stroke) {
+void CurveDeformation::final_L1_pos(Eigen::MatrixXd &V) {
 	Eigen::VectorXd Bx(no_vertices + fixed_indices.size()), By(no_vertices + fixed_indices.size()), Bz(no_vertices + fixed_indices.size());
 	Eigen::Vector3d Rl;
 	for(int i = 0; i < no_vertices; i++) {
@@ -352,7 +385,12 @@ void CurveDeformation::final_L1_pos(Eigen::MatrixXd &V, Eigen::VectorXi & part_o
 	Eigen::VectorXd xpos = solverL1.solve(A_L1_T*Bx);
 	Eigen::VectorXd ypos = solverL1.solve(A_L1_T*By);
 	Eigen::VectorXd zpos = solverL1.solve(A_L1_T*Bz);
-	if(stroke_ID == 0) { //We're pulling on the original stroke
+	for (int i = 0; i < no_vertices; i++) { //update the position of non-fixed vertices of the stroke that is being pulled on
+		if (!is_fixed[i]) {
+			V.row(vert_bindings[i]) << xpos[i], ypos[i], zpos[i];
+		}
+	}
+	/*if(stroke_ID == 0) { //We're pulling on the original stroke
 		for(int i = 0; i < no_vertices; i++) { //update the position of non-fixed vertices of the stroke that is being pulled on
 			if(!is_fixed[i]) {
 				V.row(vert_bindings[i]) << xpos[i], ypos[i], zpos[i];
@@ -364,6 +402,6 @@ void CurveDeformation::final_L1_pos(Eigen::MatrixXd &V, Eigen::VectorXi & part_o
 				V.row(vert_bindings[i]) << xpos[i], ypos[i], zpos[i];
 			}
 		}
-	}
+	}*/
 
 }

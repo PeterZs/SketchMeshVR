@@ -36,28 +36,13 @@ bool MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke, int c
 bool MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 	Eigen::MatrixXi start_F = m.F;
 	Eigen::MatrixXd start_V = m.V;
-	Eigen::VectorXi start_part_of_original_stroke = m.part_of_original_stroke;
+	//Eigen::VectorXi start_part_of_original_stroke = m.part_of_original_stroke;
 	Eigen::VectorXi start_vertex_boundary_markers = m.vertex_boundary_markers;
 	Eigen::VectorXi start_edge_boundary_markers = m.edge_boundary_markers;
 	Eigen::VectorXi start_vertex_is_fixed = m.vertex_is_fixed;
 
 	Eigen::MatrixXi EV, FE, EF;
 	igl::edge_topology(m.V, m.F, EV, FE, EF);
-
-	//vector<int> sharp_edge_indices;
-	//Select the sharp and boundary edges in the original mesh
-	/*Eigen::MatrixXi boundary_markers(0, 3), sharpEV(0, 2);
-	for (int i = 0; i < m.sharp_edge.rows(); i++) {
-		if (m.sharp_edge[i]) {
-		//	sharp_edge_indices.push_back(i);
-			sharpEV.conservativeResize(sharpEV.rows() + 1, Eigen::NoChange);
-			sharpEV.bottomRows(1) << EV(i, 0), EV(i, 1);
-		}
-		if (m.edge_boundary_markers[i]) {
-			boundary_markers.conservativeResize(boundary_markers.rows() + 1, Eigen::NoChange);
-			boundary_markers.bottomRows(1) << EV(i, 0), EV(i, 1), m.edge_boundary_markers[i];
-		}
-	}*/
 
 	Eigen::MatrixXi original_sharp_or_boundary_edges(0, 4);
 	for (int i = 0; i < m.sharp_edge.rows(); i++) {
@@ -66,14 +51,6 @@ bool MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 			original_sharp_or_boundary_edges.bottomRows(1) << EV(i, 0), EV(i, 1), m.edge_boundary_markers[i], m.sharp_edge[i];
 		}
 	}
-
-
-	//Keep only the sharp edges in the original mesh
-	/*Eigen::MatrixXi sharpEV;
-	Eigen::VectorXi sharpEV_row_idx, sharpEV_col_idx(2);
-	sharpEV_row_idx = Eigen::VectorXi::Map(sharp_edge_indices.data(), sharp_edge_indices.size());
-	sharpEV_col_idx.col(0) << 0, 1;
-	igl::slice(EV, sharpEV_row_idx, sharpEV_col_idx, sharpEV);*/
 
 	//project points to 2D
 	Eigen::MatrixXd boundary_vertices_2D(boundary_vertices.rows(), 2);
@@ -92,7 +69,7 @@ bool MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 
 	int original_v_size = m.V.rows() - boundary_vertices.rows();
 	m.V.conservativeResize(original_v_size + V2.rows(), Eigen::NoChange);
-	m.part_of_original_stroke.conservativeResize(original_v_size + V2.rows());
+	//m.part_of_original_stroke.conservativeResize(original_v_size + V2.rows());
 	m.vertex_boundary_markers.conservativeResize(original_v_size + V2.rows());	
 	m.vertex_is_fixed.conservativeResize(original_v_size + V2.rows());
 
@@ -104,7 +81,7 @@ bool MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 			v_tmp += x_vec*V2(i, 0);
 			v_tmp += y_vec*V2(i, 1);
 			m.V.row(original_v_size + i) << v_tmp.transpose();
-			m.part_of_original_stroke[original_v_size + i] = 0;
+			//m.part_of_original_stroke[original_v_size + i] = 0;
 			m.vertex_boundary_markers[original_v_size + i] = 0;
 			m.vertex_is_fixed[original_v_size + i] = 0;
 		}
@@ -112,8 +89,6 @@ bool MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 
 	update_face_indices(m, F2, boundary_vertices, original_v_size);
 	try {
-	//	update_sharp_edges(m, sharpEV);
-	//	update_boundary_edges(m, boundary_markers);
 		update_edge_indicators(m, original_sharp_or_boundary_edges);
 	}
 	catch (int ex) {
@@ -121,7 +96,7 @@ bool MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 			std::cerr << "Cut resulted in a non edge-manifold mesh, which is not allowed. Please try again. " << std::endl;
 			m.F = start_F;
 			m.V = start_V;
-			m.part_of_original_stroke = start_part_of_original_stroke;
+			//m.part_of_original_stroke = start_part_of_original_stroke;
 			m.vertex_boundary_markers = start_vertex_boundary_markers;
 			m.edge_boundary_markers = start_edge_boundary_markers;
 			m.vertex_is_fixed = start_vertex_is_fixed;
@@ -161,61 +136,6 @@ void MeshCut::update_edge_indicators(Mesh& m, Eigen::MatrixXi& edges_to_update) 
 		m.sharp_edge[equal_pos] = edges_to_update(i, 3);
 	}
 }
-
-/*
-void MeshCut::update_sharp_edges(Mesh& m, Eigen::MatrixXi& sharpEV) {
-	if (!igl::is_edge_manifold(m.F)) {
-		throw -1;
-		return;
-	}
-	Eigen::MatrixXi EV, FE, EF;
-	igl::edge_topology(m.V, m.F, EV, FE, EF);
-	m.sharp_edge.resize(EV.rows());
-	m.sharp_edge.setZero();
-
-	int start, end, equal_pos;
-	Eigen::VectorXi col1Equals, col2Equals;
-	for(int i = 0; i < sharpEV.rows(); i++) {
-		start = sharpEV(i, 0);
-		end = sharpEV(i, 1);
-		if(start == -1 || end == -1) { //Sharp edge no longer exists
-			continue;
-		}
-
-		col1Equals = EV.col(0).cwiseEqual(min(start, end)).cast<int>();
-		col2Equals = EV.col(1).cwiseEqual(max(start, end)).cast<int>();
-		(col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
-
-		m.sharp_edge[equal_pos] = 1; //Set this edge to be sharp
-	}
-}*/
-
-/*void MeshCut::update_boundary_edges(Mesh& m, Eigen::MatrixXi& boundary_markers) {
-	if (!igl::is_edge_manifold(m.F)) {
-		throw - 1;
-		return;
-	}
-	Eigen::MatrixXi EV, FE, EF;
-	igl::edge_topology(m.V, m.F, EV, FE, EF);
-	m.edge_boundary_markers.resize(EV.rows());
-	m.edge_boundary_markers.setZero();
-
-	int start, end, equal_pos;
-	Eigen::VectorXi col1Equals, col2Equals;
-	for (int i = 0; i < boundary_markers.rows(); i++) {
-		start = boundary_markers(i, 0);
-		end = boundary_markers(i, 1);
-		if (start == -1 || end == -1) { //Boundary edge no longer exists
-			continue;
-		}
-
-		col1Equals = EV.col(0).cwiseEqual(min(start, end)).cast<int>();
-		col2Equals = EV.col(1).cwiseEqual(max(start, end)).cast<int>();
-		(col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
-
-		m.edge_boundary_markers[equal_pos] = boundary_markers(i, 2); //Set this edge to its previous boundary ID
-	}
-}*/
 
 void MeshCut::update_face_indices(Mesh& m, Eigen::MatrixXi& F2, Eigen::VectorXi& boundary_vertices, int original_v_size) {
 	int vert_idx_in_mesh, size_before = m.F.rows();

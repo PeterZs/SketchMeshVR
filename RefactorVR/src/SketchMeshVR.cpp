@@ -49,7 +49,7 @@ Eigen::VectorXi vertex_is_fixed;
 //Per edge indicator of what curve (or none if == 0) each edge belongs to
 Eigen::VectorXi edge_boundary_markers;
 //Per vertex indicator of whether vertex is on original stroke (outline of shape) (on OG stroke if ==1)
-Eigen::VectorXi part_of_original_stroke;
+//Eigen::VectorXi part_of_original_stroke;
 //Per edge indicator of whether the edge is sharp (if == 1 then sharp, otherwise smooth)
 Eigen::VectorXi sharp_edge;
 //Takes care of index mapping from before a cut/extrusion action to after (since some vertices are removed)
@@ -186,7 +186,7 @@ void reset_before_draw() {
 	(*base_mesh).vertex_boundary_markers.resize(0);
 	(*base_mesh).vertex_is_fixed.resize(0);
 	(*base_mesh).edge_boundary_markers.resize(0);
-	(*base_mesh).part_of_original_stroke.resize(0);
+	//(*base_mesh).part_of_original_stroke.resize(0);
 	(*base_mesh).new_mapped_indices.resize(0);
 	(*base_mesh).sharp_edge.resize(0);
 	(*base_mesh).mesh_to_patch_indices.resize(0);
@@ -362,7 +362,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		}
 		else if (prev_tool_mode == PULL) {
 			if (turnNr == 0) { 
-				CurveDeformation::pullCurve(pos.transpose().cast<double>(), (*base_mesh).V, (*base_mesh).part_of_original_stroke);
+				CurveDeformation::pullCurve(pos.transpose().cast<double>(), (*base_mesh).V);
 				for (int i = 0; i < (*base_mesh).patches.size(); i++) {
 					(*base_mesh).patches[i]->update_patch_vertex_positions((*base_mesh).V);
 				}
@@ -444,7 +444,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			draw_should_block = false; 
 		
 			if (initial_stroke->toLoop()) { //Returns false if the stroke only consists of 1 point (user just clicked)
-				initial_stroke->generate3DMeshFromStroke(vertex_boundary_markers, edge_boundary_markers, vertex_is_fixed, part_of_original_stroke, V, F);
+				initial_stroke->generate3DMeshFromStroke(vertex_boundary_markers, edge_boundary_markers, vertex_is_fixed, V, F);
 		
 				if (!igl::is_edge_manifold(F)) { //Check if the drawn stroke results in an edge-manifold mesh, otherwise sound a beep and revert
 					sound_error_beep();
@@ -453,7 +453,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 					vertex_boundary_markers.resize(0);
 					vertex_is_fixed.resize(0);
 					edge_boundary_markers.resize(0);
-					part_of_original_stroke.resize(0);
+					//part_of_original_stroke.resize(0);
 					dirty_boundary = true;
 
 					viewer.data().add_edges(drawn_points.block(0, 0, drawn_points.rows() - 1, 3), drawn_points.block(1, 0, drawn_points.rows() - 1, 3), black); //Display the stroke in black to show that it went wrong
@@ -881,7 +881,7 @@ void menu_closed() {
 int main(int argc, char *argv[]) {
 	//Init stroke selector
 	initial_stroke = new Stroke(V, F, viewer, 0);
-	base_mesh = new Mesh(V, F, vertex_boundary_markers, edge_boundary_markers, vertex_is_fixed, part_of_original_stroke, new_mapped_indices, sharp_edge, 0);
+	base_mesh = new Mesh(V, F, vertex_boundary_markers, edge_boundary_markers, vertex_is_fixed, new_mapped_indices, sharp_edge, 0);
 
 	Eigen::MatrixXd V_floor(4, 3);
 	V_floor.row(0) << -10, 0, -10;
