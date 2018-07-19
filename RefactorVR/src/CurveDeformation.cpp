@@ -1,4 +1,6 @@
 #include "CurveDeformation.h"
+#include <igl/adjacency_list.h>
+#include <igl/edge_topology.h>
 #include <Eigen/Sparse>
 
 using namespace std;
@@ -22,7 +24,10 @@ Eigen::SparseMatrix<double> A, A_L1_T;
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solverL1; //Solver for final vertex positions (with L1)
 Eigen::SparseLU<Eigen::SparseMatrix<double>> solverPosRot;
 
-void CurveDeformation::startPullCurve(Stroke& _stroke, int _handle_ID) {
+vector<vector<int>> neighbors;
+Eigen::MatrixXi EV, FE, EF;	
+
+void CurveDeformation::startPullCurve(Stroke& _stroke, int _handle_ID, Eigen::MatrixXd& V, Eigen::MatrixXi& F) {
 	start_pos = (_stroke.get3DPoints()).row(_handle_ID);
 	moving_vertex_ID = _stroke.get_vertex_idx_for_point(_handle_ID); //The global vertex index (in V) for the moving vertex
 	no_vertices = _stroke.get3DPoints().rows() - 1; //We should ignore the last one, which is a copy of the first one
@@ -34,6 +39,8 @@ void CurveDeformation::startPullCurve(Stroke& _stroke, int _handle_ID) {
 	Rot.resize(no_vertices);
 	no_ROI_vert = -1;
 	current_ROI_size = 0.0;
+	adjacency_list(F, neighbors);
+	igl::edge_topology(V, F, EV, FE, EF);
 }
 
 //pos is the position to where the user dragged the vertex
@@ -87,6 +94,32 @@ bool CurveDeformation::update_ROI(double drag_size) {
 bool CurveDeformation::update_ROI_test(double drag_size) {
 	//TODO: PullMesh2 returns all vertices to the positions that they had at the time of being added to the last ROI (so e.g. the handle will have a new "original" position everytime new vertices get added to the ROI
 	vector<int> vertices_in_range = collect_vertices_within_drag_length(drag_size);
+	if (vertices_in_range.size() == prev_range_size) {
+		return false;
+	}
+	prev_range_size = vertices_in_range.size();
+
+	vertices_in_range = sort_by_distance(vertices_in_range);
+
+	//Collect vertices in each each curve and construct cuve hierarchy
+	Eigen::VectorXi edge_consumed(EV.rows()), fixed(V.rows());
+	for (int i = 0; i < V.rows(); i++) {
+		while (true) {
+			PulledCurve curve = create_pulled_curve_by_propagation(v, edge_consumed);
+			if (curve == null) {
+				break;
+			}
+			curves.push_back(curve);
+
+			for (int j = 0; j < curve.vertices.size(); j++) {
+				if (fixed[curve.vertices[j]] && !curve.fixed_vertices.contains(curve.vertices[j])) {
+					curve.fixed_vertices.push_back(curve.vertices[j]);
+				}
+				fixed[curve.vertices[j]] = 1;
+			}
+		}
+	}
+	return true;
 }
 
 vector<int> CurveDeformation::collect_vertices_within_drag_length(double drag_size) {
@@ -98,22 +131,47 @@ vector<int> CurveDeformation::collect_vertices_within_drag_length(double drag_si
 	vector<int> vertices_in_range;
 	vertices_in_range.push_back(handle_ID);
 	propagate(-1, handle_ID, drag_size, vertices_in_range);
+
+	return vertices_in_range;
 }
 
 void CurveDeformation::propagate(int prev_edge, int vert, double remaining_distance, vector<int>& vertices_in_range) {
 	int next_vert;
 	for (int i = 0; i < neighbors[vert].size(); i++) {
 		int edge = find_edge(vert, neighbors[vert][i]);
+		if (edge == prev_edge) {
+			continue;
+		}
+		double edge_length = (V.row(vert) - V.row(neighbors[vert][i])).norm();
 		if (edge_boundary_markers[edge]) {
-			if (remaning_length - (V.row(vert) - V.row(neighbors[vert][i])).norm() > 0) {
+			if (remaining_distance - edge_length > 0) {
 				next_vert = neighbors[vert][i];
 				if (visited[next_vert]) {
 					continue;
 				}
 				visited[next_vert] = true;
+				distance[next_vert] = remaining_distance - edge_length;
+				vertices_in_range.push_back(next_vert);
+				propagate(edge, next_vert, remaining_distance - edge_length, vertices_in_range);
 			}
 		}
 	}
+}
+
+int CurveDeformation::find_edge(int start, int end) {
+	Eigen::VectorXi col1Equals, col2Equals;
+	int equal_pos;
+	col1Equals = EV.col(0).cwiseEqual(min(start, end)).cast<int>();
+	col2Equals = EV.col(1).cwiseEqual(max(start, end)).cast<int>();
+	(col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
+
+	return equal_pos;
+}
+
+vector<int> CurveDeformation::sort_by_distance(std::vector<int> vertices_in_range) {
+	std::vector<int> sorted_vertices;
+
+	return sorted_vertices;
 }
 
 void CurveDeformation::compute_ROI_boundaries(int& ROI_1, int& ROI_2) {
