@@ -905,7 +905,7 @@ typedef enum ovrTouch_ {
       ovrTouch_X | ovrTouch_Y | ovrTouch_LThumb | ovrTouch_LThumbRest | ovrTouch_LIndexTrigger,
 
   // Finger pose state
-  // Derived internally based on distance, proximity to sensors and filtering.
+  // Derived internally based on distance_to_vert, proximity to sensors and filtering.
   ovrTouch_RIndexPointing = 0x00000020,
   ovrTouch_RThumbUp = 0x00000040,
   ovrTouch_LIndexPointing = 0x00002000,
@@ -1900,7 +1900,7 @@ ovr_GetControllerVibrationState(
 /// \param[in] deviceBitmask Bitmask of one or more tracked devices to test.
 /// \param[in] boundaryType Must be either ovrBoundary_Outer or ovrBoundary_PlayArea.
 /// \param[out] outTestResult Result of collision/proximity test, contains information such as
-/// distance and closest point.
+/// distance_to_vert and closest point.
 /// \return Returns an ovrResult for which OVR_SUCCESS(result) is false upon error and true
 ///         upon success. Return values include but aren't limited to:
 ///     - ovrSuccess: The call succeeded and a result was returned.
@@ -1925,7 +1925,7 @@ ovr_TestBoundary(
 /// \param[in] singleBoundaryType Must be either ovrBoundary_Outer or ovrBoundary_PlayArea to test
 /// against
 /// \param[out] outTestResult Result of collision/proximity test, contains information such as
-/// distance and closest point.
+/// distance_to_vert and closest point.
 /// \return Returns an ovrResult for which OVR_SUCCESS(result) is false upon error and true
 ///         upon success. Return values include but aren't limited to:
 ///     - ovrSuccess: The call succeeded and a result was returned.

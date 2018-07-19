@@ -160,7 +160,7 @@ void set_laser_points(Eigen::Vector3f& pos) {
 	if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 		laser_end_point = (V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v);
 	}
-	else { //First check for intersections with the mesh, then with the floor and finally just set the end point at a far distance
+	else { //First check for intersections with the mesh, then with the floor and finally just set the end point at a far distance_to_vert
 		viewer.selected_data_index = 0;
 		if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), viewer.data().V, viewer.data().F, hits)) {
 			laser_end_point = (viewer.data().V.row(viewer.data().F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + viewer.data().V.row(viewer.data().F(hits[0].id, 1))*hits[0].u + viewer.data().V.row(viewer.data().F(hits[0].id, 2))*hits[0].v);
@@ -325,7 +325,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			if (remove_stroke_clicked == 2) { //Mechanism to force the user to click twice on the same stroke before removing it (safeguard)
 				stroke_was_removed = true;
 				//TODO: below will break if we remove a curve that has vertices that belong to multiple curves, these will then get unmarked as boundary vertices. Replace vertex_boundary_markers either with a list per vertex or some bitwise operator (e.g. belonging to boundary 1 gives value 1, belonging to 1 and 2 gives value 3 etc)
-				stroke_collection[closest_stroke_idx].undo_stroke_add(vertex_boundary_markers); //Sets the vertex_boundary_markers for the vertices of this stroke to 0 again
+				stroke_collection[closest_stroke_idx].undo_stroke_add(vertex_boundary_markers, edge_boundary_markers, sharp_edge, vertex_is_fixed); //Sets the vertex_boundary_markers for the vertices of this stroke to 0 again
 			/*	for (int i = 0; i < (*base_mesh).patches.size(); i++) {
 					(*base_mesh).patches[i]->update_patch_boundary_markers(vertex_boundary_markers);
 				}*/
@@ -357,7 +357,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				return;
 			}
 
-			CurveDeformation::startPullCurve(closest_stroke_ID >= 0 ? stroke_collection[closest_stroke_ID] : *initial_stroke, handleID);
+			CurveDeformation::startPullCurve(closest_stroke_ID >= 0 ? stroke_collection[closest_stroke_ID] : *initial_stroke, handleID, V, F);
 			prev_tool_mode = PULL;
 		}
 		else if (prev_tool_mode == PULL) {
@@ -535,11 +535,11 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			(*base_mesh).face_patch_map.clear();
 			(*base_mesh).patches = Patch::init_patches(*base_mesh);
 
-			initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers); //Don't test if the initial one dies
+			initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers, edge_boundary_markers, sharp_edge, vertex_is_fixed); //Don't test if the initial one dies
 
 			int nr_removed = 0, original_collection_size = stroke_collection.size();
 			for (int i = 0; i < original_collection_size - 1; i++) { //Don't update the added stroke, as this is done inside the remeshing already
-				if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, vertex_boundary_markers)) {
+				if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, vertex_boundary_markers, edge_boundary_markers, sharp_edge, vertex_is_fixed)) {
 					//Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist
 					stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
 					nr_removed++;
@@ -637,11 +637,11 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 				stroke_collection.push_back(*added_stroke);
 
-				initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers); //Don't test if the initial one dies
+				initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers, edge_boundary_markers, sharp_edge, vertex_is_fixed); //Don't test if the initial one dies
 
 				int nr_removed = 0, original_collection_size = stroke_collection.size();
 				for (int i = 0; i < original_collection_size; i++) {
-					if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, vertex_boundary_markers)) {
+					if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, vertex_boundary_markers, edge_boundary_markers, sharp_edge, vertex_is_fixed)) {
 						//Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist
 						stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
 						nr_removed++;
@@ -718,11 +718,11 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				stroke_collection.push_back(*extrusion_base);
 				stroke_collection.push_back(*added_stroke);
 
-				initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers);
+				initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers, edge_boundary_markers, sharp_edge, vertex_is_fixed);
 
 				int nr_removed = 0, original_collection_size = stroke_collection.size();
 				for (int i = 0; i < original_collection_size - 1; i++) { //Skip the newly added stroke since it is already updated inside extrude_main()
-					if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, vertex_boundary_markers)) {
+					if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, vertex_boundary_markers, edge_boundary_markers, sharp_edge, vertex_is_fixed)) {
 						//Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist (or in case of non-loop strokes that have a middle portion removed, the undo_stroke_add is done inside of the update_vert_bindings
 						stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
 						nr_removed++;
@@ -1047,7 +1047,7 @@ int main(int argc, char *argv[]) {
 		style.ItemInnerSpacing = ImVec2(0, 0);
 		style.Colors[ImGuiCol_WindowBg] = ImVec4(0.00f, 0.00f, 0.00f, 1.0f);
 		ImGui::Begin("Current Tool", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar);
-		ImGui::SameLine(0.5*(200-178)); //Take distance around image and offset by half of it
+		ImGui::SameLine(0.5*(200-178)); //Take distance_to_vert around image and offset by half of it
 		ImGui::Image(im_texID_cur, ImVec2(178.0f, 178.0f), ImVec2(0,0), ImVec2(1,1), ImColor(255, 255, 255, 255), ImColor(0,0,0,0));
 		ImGui::End();
 	};

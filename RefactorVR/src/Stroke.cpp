@@ -95,7 +95,7 @@ bool Stroke::addSegment(Eigen::Vector3f& pos) {
 		if (timePast < 300000) {
 			return false;
 		}
-		else { //If enough time has passed, check if controller moved a large enough distance
+		else { //If enough time has passed, check if controller moved a large enough distance_to_vert
 			if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < 0.00005625) {
 				return false;
 			}
@@ -516,7 +516,7 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	mean_squared_sample_dist /= stroke2DPoints.rows();
 
 
-	//Set a sample-distance dependent maximum triangle area. Setting this too small will result in inflation in the wrong direction.
+	//Set a sample-distance_to_vert dependent maximum triangle area. Setting this too small will result in inflation in the wrong direction.
 	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq25a" + to_string((int)(mean_squared_sample_dist)), V2_tmp, F2, vertex_markers, edge_markers);
 	double mean_Z = stroke3DPoints.col(2).mean();
 	V2 = Eigen::MatrixXd::Constant(V2_tmp.rows(), V2_tmp.cols() + 1, mean_Z);
@@ -663,7 +663,7 @@ void Stroke::generate_backfaces(Eigen::MatrixXi &faces, Eigen::MatrixXi &back_fa
 	back_faces = faces.rowwise().reverse().eval();
 }
 
-/** Returns the ID of the stroke's 3D point that is closest to where the user clicked. Stores the distance to this point in closest_distance. If the user clicked too far away from any of the stroke's points, it will return -1. **/
+/** Returns the ID of the stroke's 3D point that is closest to where the user clicked. Stores the distance_to_vert to this point in closest_distance. If the user clicked too far away from any of the stroke's points, it will return -1. **/
 int Stroke::selectClosestVertex(Eigen::Vector3f pos, double& closest_distance) {
 	//Loop over all stroke points and find the closest one to the hand position. Compare all distances and keep the closest.
 
@@ -708,7 +708,7 @@ void Stroke::update_Positions(Eigen::MatrixXd V) {
 
 /** Remaps the stroke's vertex bindings after the mesh topology has changed. If a stroke becomes non-continous (can only happen to strokes that were non-looped at the start and that did not have their first and/or last point removed) the stroke will be removed and its boundary_vertex_markers unset. Looped strokes always stay continuous, since we can ony remove one continuous piece of them.
 	Note that this method does not update the stroke3DPoints, use update_Positions() for that. **/
-bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi& vertex_boundary_markers) {
+bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi& vertex_boundary_markers, Eigen::VectorXi& edge_boundary_markers, Eigen::VectorXi& sharp_edge, Eigen::VectorXi& vertex_is_fixed) {
 	vector<int> new_bindings;
 	int first_included_after_remove = -1;
 	bool points_were_removed = false, no_tracked_point_yet = true, stays_continuous = false, originally_is_loop = is_loop;
@@ -742,7 +742,7 @@ bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::V
 	set_closest_vert_bindings(new_bindings);
 
 	if (!originally_is_loop && points_were_removed && !stays_continuous) { //For non-looped strokes that have a middle chunk removed (but not everything), unset their markers because we will remove the entire stroke
-		undo_stroke_add(vertex_boundary_markers);
+		undo_stroke_add(vertex_boundary_markers, edge_boundary_markers, sharp_edge, vertex_is_fixed);
 		return false;
 	}
 

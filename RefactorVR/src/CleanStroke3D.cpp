@@ -76,7 +76,7 @@ Eigen::MatrixXd CleanStroke3D::resample_by_length_sub(std::vector<PathElement> p
 	while (true) {
 		next = path_vertices[index].get_vertex();
 		total += (prev - next).norm();
-		while (total >= next_spot) { //The along-path distance to the next path_vertex is bigger than where we would want the next sample, so we create an interpolated sample
+		while (total >= next_spot) { //The along-path distance_to_vert to the next path_vertex is bigger than where we would want the next sample, so we create an interpolated sample
 			double t = (next_spot - prev_total) / (total - prev_total);
 			resampled_points.conservativeResize(resampled_points.rows() + 1, Eigen::NoChange);
 			resampled_points.row(resampled_points.rows() - 1) = prev*(1 - t) + next*t;
@@ -126,7 +126,7 @@ Eigen::MatrixXd CleanStroke3D::resample_by_length_sub(Eigen::MatrixXd path_verti
 	while (true) {
 		next = path_vertices.row(index);
 		total += (prev - next).norm();
-		while (total >= next_spot) { //The along-path distance to the next path_vertex is bigger than where we would want the next sample, so we create an interpolated sample
+		while (total >= next_spot) { //The along-path distance_to_vert to the next path_vertex is bigger than where we would want the next sample, so we create an interpolated sample
 			double t = (next_spot - prev_total) / (total - prev_total);
 			resampled_points.conservativeResize(resampled_points.rows() + 1, Eigen::NoChange);
 			resampled_points.row(resampled_points.rows() - 1) = prev*(1 - t) + next*t;

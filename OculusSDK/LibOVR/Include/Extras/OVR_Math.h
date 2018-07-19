@@ -612,12 +612,12 @@ class Vector2 {
     return sqrt(LengthSq());
   }
 
-  // Returns squared distance between two points represented by vectors.
+  // Returns squared distance_to_vert between two points represented by vectors.
   T DistanceSq(const Vector2& b) const {
     return (*this - b).LengthSq();
   }
 
-  // Returns distance between two points represented by vectors.
+  // Returns distance_to_vert between two points represented by vectors.
   T Distance(const Vector2& b) const {
     return (*this - b).Length();
   }
@@ -843,12 +843,12 @@ class Vector3 {
     return (T)sqrt(LengthSq());
   }
 
-  // Returns squared distance between two points represented by vectors.
+  // Returns squared distance_to_vert between two points represented by vectors.
   T DistanceSq(Vector3 const& b) const {
     return (*this - b).LengthSq();
   }
 
-  // Returns distance between two points represented by vectors.
+  // Returns distance_to_vert between two points represented by vectors.
   T Distance(Vector3 const& b) const {
     return (*this - b).Length();
   }
@@ -1691,7 +1691,7 @@ class Quat {
     return (x * x + y * y + z * z + w * w);
   }
 
-  // Simple Euclidean distance in R^4 (not SLERP distance, but at least respects Haar measure)
+  // Simple Euclidean distance_to_vert in R^4 (not SLERP distance_to_vert, but at least respects Haar measure)
   T Distance(const Quat& q) const {
     T d1 = (*this - q).Length();
     T d2 = (*this + q).Length(); // Antipodal point check
@@ -2827,7 +2827,7 @@ class Matrix4 {
     return t;
   }
 
-  // Simple L1 distance in R^12
+  // Simple L1 distance_to_vert in R^12
   T Distance(const Matrix4& m2) const {
     T d = fabs(M[0][0] - m2.M[0][0]) + fabs(M[0][1] - m2.M[0][1]);
     d += fabs(M[0][2] - m2.M[0][2]) + fabs(M[0][3] - m2.M[0][3]);
@@ -4026,7 +4026,7 @@ typedef Angle<double> Angled;
 //-------------------------------------------------------------------------------------
 // ***** Plane
 
-// Consists of a normal vector and distance from the origin where the plane is located.
+// Consists of a normal vector and distance_to_vert from the origin where the plane is located.
 
 template <class T>
 class Plane {
@@ -4043,7 +4043,7 @@ class Plane {
   // construct from a point on the plane and the normal
   Plane(const Vector3<T>& p, const Vector3<T>& n) : N(n), D(-(p.Dot(n))) {}
 
-  // Find the point to plane distance. The sign indicates what side of the plane the point is on (0
+  // Find the point to plane distance_to_vert. The sign indicates what side of the plane the point is on (0
   // = point on plane).
   T TestSide(const Vector3<T>& p) const {
     return (N.Dot(p)) + D;

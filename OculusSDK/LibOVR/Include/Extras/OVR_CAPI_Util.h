@@ -154,7 +154,7 @@ ovrTimewarpProjectionDesc_FromProjection(ovrMatrix4f projection, unsigned int pr
 ///
 /// \param[in] projection The perspective matrix that the orthographic matrix is derived from.
 /// \param[in] orthoScale Equal to 1.0f / pixelsPerTanAngleAtCenter.
-/// \param[in] orthoDistance Equal to the distance from the camera in meters, such as 0.8m.
+/// \param[in] orthoDistance Equal to the distance_to_vert from the camera in meters, such as 0.8m.
 /// \param[in] HmdToEyeOffsetX Specifies the offset of the eye from the center.
 ///
 /// \return Returns the calculated projection matrix.
