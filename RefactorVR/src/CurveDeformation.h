@@ -41,20 +41,21 @@ private:
 	static bool distance_sorter(int a, int b);
 	static bool create_pulled_curve_by_propagation(int vert, Eigen::VectorXi & edge_consumed, PulledCurve & curve, Eigen::VectorXi& edge_boundary_markers);
 	static std::vector<int> get_adjacent_seam_vertices(int vert, PulledCurve & curve);
-	static void compute_ROI_boundaries(int & ROI_1, int & ROI_2);
-	static void setup_fixed_indices(int ROI_1, int ROI_2);
-	static void setup_for_update_curve(Eigen::MatrixXd& V);
+	static int get_adjacent_seam_edge(int vert, int edge, std::vector<int> edges, Eigen::VectorXi & edge_boundary_markers);
+	//static void compute_ROI_boundaries(int & ROI_1, int & ROI_2);
+	//static void setup_fixed_indices(int ROI_1, int ROI_2);
+	//static void setup_for_update_curve(Eigen::MatrixXd& V);
 	static void setup_for_update_curve_test(PulledCurve & curve, Eigen::MatrixXd& V);
 	static void setup_for_L1_position_step_test(PulledCurve & curve, Eigen::MatrixXd& V);
-	static void setup_for_L1_position_step(Eigen::MatrixXd& V);
-	static void update_curve(Eigen::MatrixXd & V);
+	//static void setup_for_L1_position_step(Eigen::MatrixXd& V);
+	//static void update_curve(Eigen::MatrixXd & V);
 	static void update_curve_test(PulledCurve & curve, Eigen::MatrixXd & V);
 	static void solve_for_pos_and_rot_test(Eigen::MatrixXd & V, PulledCurve & curve);
-	static void solve_for_pos_and_rot(Eigen::MatrixXd& V);
-	static void update_rot();
+	//static void solve_for_pos_and_rot(Eigen::MatrixXd& V);
+	//static void update_rot();
 	static void update_rot_test(PulledCurve & curve);
 	static Eigen::Matrix3d compute_orthonormal(Eigen::Matrix3d & rot);
-	static void final_L1_pos(Eigen::MatrixXd & V);
+	//static void final_L1_pos(Eigen::MatrixXd & V);
 
 	static void final_L1_pos_test(Eigen::MatrixXd & V, PulledCurve & curve);
 
