@@ -80,6 +80,7 @@ void CurveDeformation::pullCurveTest(const Eigen::RowVector3d& pos, Eigen::Matri
 		for (int i = 0; i < curves.size(); i++) {
 			update_curve_test(curves[i], V);
 		}
+
 	}
 }
 
@@ -307,6 +308,9 @@ void CurveDeformation::setup_for_update_curve_test(PulledCurve& curve, Eigen::Ma
 	B.resize(curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + curve.fixed_vertices.size() * 3 + curve.fixed_edges.size() * 3);
 	Rot.resize(curve.edges.size());
 	original_L0.resize(curve.edges.size(), 3);
+	vertex_global_to_local.clear();
+	edge_global_to_local.clear();
+
 	for (int i = 0; i < curve.edges.size(); i++) {
 		original_L0.row(i) = V.row(EV(curve.edges[i], 0)) - V.row(EV(curve.edges[i], 1));
 	}
@@ -327,20 +331,17 @@ void CurveDeformation::setup_for_update_curve_test(PulledCurve& curve, Eigen::Ma
 		is_fixed[idx] = 1;
 	}
 
-	std::cout << curve.edges.size() <<"   Curve fixed edges before: " << std::endl;
+	std::cout  <<"   Curve fixed edges before: " << std::endl;
 	for (int i = 0; i < curve.fixed_edges.size(); i++) { //Create local indexing for fixed_edges
-		std::cout << curve.fixed_edges[i] << "  ";
+		std::cout << EV(curve.fixed_edges[i],0) << "  " << EV(curve.fixed_edges[i], 1) << std::endl;
 		auto loc = std::find(curve.edges.begin(), curve.edges.end(), curve.fixed_edges[i]);
 		idx = distance(curve.edges.begin(), loc);
 		curve.fixed_edges[i] = idx;
 	}
-	std::cout << "After: " << std::endl;
-	for (int i = 0; i < curve.fixed_edges.size(); i++) {
-		std::cout << curve.fixed_edges[i] << " ";
-	}
-	cout << std::endl;
 
+	std::cout << "Curve edges before: " << std::endl;
 	for (int i = 0; i < curve.edges.size(); i++) {
+		std::cout << curve.edges[i] << ": " << EV(curve.edges[i], 0) << "   " << EV(curve.edges[i], 1) << std::endl;
 		edge_global_to_local.insert({ curve.edges[i], i });
 	}
 
@@ -397,9 +398,10 @@ void CurveDeformation::solve_for_pos_and_rot_test(Eigen::MatrixXd& V, PulledCurv
 
 	int v0, v1;
 	for (int i = 0; i < curve.edges.size(); i++) { //Laplacian of the position: v1' - v0' = dR * R * L(v1 - v0)
+		std::cout << "edge: " << curve.edges[i] << "  " << EV(curve.edges[i], 0) << "  " << EV(curve.edges[i], 1);
 		v0 = vertex_global_to_local.find(EV(curve.edges[i], 0))->second;
 		v1 = vertex_global_to_local.find(EV(curve.edges[i], 1))->second;
-		
+		std::cout << "   " << v0 << "  " << v1 << std::endl;
 		tripletList.push_back(T(i * 3 + 0, v0 * 3, -1)); //L0
 		tripletList.push_back(T(i * 3 + 0, v1 * 3, 1)); //L0
 		tripletList.push_back(T(i * 3 + 0, curve.vertices.size() * 3 + i * 3, 0));
@@ -463,8 +465,9 @@ void CurveDeformation::solve_for_pos_and_rot_test(Eigen::MatrixXd& V, PulledCurv
 			B[curve.edges.size() * 3 + i * 9 + 6 + j] = 0.5 * Rot[e0](2, j) - 1 * Rot[e1](2, j) + 0.5 * Rot[e2](2, j);
 		}
 	}
-
+	std::cout << "Fixed vertices local: ";
 	for (int i = 0; i < fixed_vertices_local.size(); i++) { //Position of fixed vertices: v_i - v_i' = 0
+		std::cout << fixed_vertices_local[i] << "  ";
 		tripletList.push_back(T(curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + i * 3, fixed_vertices_local[i] * 3, CONSTRAINT_WEIGHT));
 		tripletList.push_back(T(curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + i * 3 + 1, fixed_vertices_local[i] * 3 + 1, CONSTRAINT_WEIGHT));
 		tripletList.push_back(T(curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + i * 3 + 2, fixed_vertices_local[i] * 3 + 2, CONSTRAINT_WEIGHT));
@@ -473,10 +476,8 @@ void CurveDeformation::solve_for_pos_and_rot_test(Eigen::MatrixXd& V, PulledCurv
 		B[curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + i * 3 + 1] = CONSTRAINT_WEIGHT * V(curve.fixed_vertices[i], 1);
 		B[curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + i * 3 + 2] = CONSTRAINT_WEIGHT * V(curve.fixed_vertices[i], 2);
 	}
-
-	std::cout << "Check that fixed_edges are still same as after updating them to local:" << std::endl;
+	std::cout << std::endl;
 	for (int i = 0; i < curve.fixed_edges.size(); i++) {
-		std::cout << curve.fixed_edges[i] << "   ";
 		tripletList.push_back(T(curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 0, curve.vertices.size() * 3 + curve.fixed_edges[i] * 3, CONSTRAINT_WEIGHT));
 		tripletList.push_back(T(curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 1, curve.vertices.size() * 3 + curve.fixed_edges[i] * 3 + 1, CONSTRAINT_WEIGHT));
 		tripletList.push_back(T(curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 2, curve.vertices.size() * 3 + curve.fixed_edges[i] * 3 + 2, CONSTRAINT_WEIGHT));
@@ -489,6 +490,7 @@ void CurveDeformation::solve_for_pos_and_rot_test(Eigen::MatrixXd& V, PulledCurv
 	A.setFromTriplets(tripletList.begin(), tripletList.end());
 	A.prune(0.0);
 	Eigen::SparseMatrix<double> AT = A.transpose();
+	std::cout << AT*A << std::endl;
 	solverPosRot.compute(AT*A);
 	PosRot = solverPosRot.solve(AT*B);
 }
