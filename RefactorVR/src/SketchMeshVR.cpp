@@ -362,7 +362,9 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		}
 		else if (prev_tool_mode == PULL) {
 			if (turnNr == 0) { 
-				CurveDeformation::pullCurve(pos.transpose().cast<double>(), (*base_mesh).V);
+				CurveDeformation::pullCurveTest(pos.transpose().cast<double>(), (*base_mesh).V, (*base_mesh).edge_boundary_markers);
+
+				//CurveDeformation::pullCurve(pos.transpose().cast<double>(), (*base_mesh).V);
 				for (int i = 0; i < (*base_mesh).patches.size(); i++) {
 					(*base_mesh).patches[i]->update_patch_vertex_positions((*base_mesh).V);
 				}
@@ -951,7 +953,7 @@ int main(int argc, char *argv[]) {
 	viewer.selected_data_index = 1;
 	viewer.plugins.push_back(&menu);
 
-	CurveDeformation::smooth_deform_mode = true;
+	//CurveDeformation::smooth_deform_mode = true;
 	viewer.init_oculus();
 
 	GLuint img_texture = 0, img_texture1 = 0, img_texture2 = 0, img_texture3 = 0, img_texture4 = 0, img_texture5 = 0, img_texture6 = 0;

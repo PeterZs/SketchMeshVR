@@ -6,9 +6,10 @@ class CurveDeformation {
 
 public:
 	static void startPullCurve(Stroke & _stroke, int _handle_ID, Eigen::MatrixXd & V, Eigen::MatrixXi & F);
-	static void pullCurve(const Eigen::RowVector3d& pos, Eigen::MatrixXd& V);
+	//static void pullCurve(const Eigen::RowVector3d& pos, Eigen::MatrixXd& V);
+	static void pullCurveTest(const Eigen::RowVector3d & pos, Eigen::MatrixXd & V, Eigen::VectorXi& edge_boundary_markers);
 
-	static bool smooth_deform_mode; //Used in the viewer menu to decide on smooth/sharp deformation
+	//static bool smooth_deform_mode; //Used in the viewer menu to decide on smooth/sharp deformation
 	static Eigen::MatrixXi EF, EV, FE;
 	static std::vector<std::vector<int>> neighbors;
 
@@ -30,14 +31,13 @@ private:
 
 	static double compute_curve_diag_length(Stroke & _stroke);
 	static bool update_ROI(double drag_size);
-	static void pullCurveTest(const Eigen::RowVector3d & pos, Eigen::MatrixXd & V, Eigen::VectorXi& edge_boundary_markers);
 	static bool update_ROI_test(double drag_size, Eigen::MatrixXd & V, Eigen::VectorXi& edge_boundary_markers);
 	static std::vector<int> collect_vertices_within_drag_length(double drag_size, Eigen::MatrixXd & V, Eigen::VectorXi& edge_boundary_markers);
 	static void propagate(int prev_edge, int vert, double remaining_distance, std::vector<int>& vertices_in_range, Eigen::MatrixXd & V, Eigen::VectorXi& edge_boundary_markers);
 	static void propagate(PulledCurve & curve, int prev_edge, int vert, int edge_marker, Eigen::VectorXi & edge_consumed, Eigen::VectorXi & edge_boundary_markers);
 	static int find_next_edge(int vert, int prev_edge, int edge_marker, Eigen::VectorXi & edge_boundary_markers);
 	static int find_edge(int start, int end);
-	static void sort_by_distance(std::vector<int> vertices_in_range);
+	static void sort_by_distance(std::vector<int>& vertices_in_range);
 	static bool distance_sorter(int a, int b);
 	static bool create_pulled_curve_by_propagation(int vert, Eigen::VectorXi & edge_consumed, PulledCurve & curve, Eigen::VectorXi& edge_boundary_markers);
 	static std::vector<int> get_adjacent_seam_vertices(int vert, PulledCurve & curve);

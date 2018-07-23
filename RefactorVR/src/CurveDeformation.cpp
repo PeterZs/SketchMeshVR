@@ -28,10 +28,17 @@ vector<vector<int>> CurveDeformation::neighbors;
 Eigen::MatrixXi CurveDeformation::EV, CurveDeformation::FE, CurveDeformation::EF;
 
 int prev_range_size = -1;
-Eigen::VectorXi visited, distance_to_vert;
+double DRAG_SCALE = 1.5;
+Eigen::VectorXi visited;
+Eigen::VectorXd distance_to_vert;
 vector<CurveDeformation::PulledCurve> curves;
 vector<vector<int>> vertex_triplet_to_rot_idx;
 Eigen::VectorXi is_fixed;
+Eigen::MatrixXd original_positions;
+
+std::vector<int> fixed_vertices_local;
+std::unordered_map<int, int> vertex_global_to_local;
+std::unordered_map<int, int> edge_global_to_local;
 
 void CurveDeformation::startPullCurve(Stroke& _stroke, int _moving_vertex_ID, Eigen::MatrixXd& V, Eigen::MatrixXi& F) {
 	moving_vertex_ID = _moving_vertex_ID;
@@ -46,33 +53,15 @@ void CurveDeformation::startPullCurve(Stroke& _stroke, int _moving_vertex_ID, Ei
 	//handle_ID = _handle_ID;
 	//Rot.resize(no_vertices);
 	//no_ROI_vert = -1;
+	prev_range_size = -1;
 	current_ROI_size = 0.0;
+	original_positions = V;
 	adjacency_list(F, neighbors);
 	igl::edge_topology(V, F, EV, FE, EF);
 	visited.resize(V.rows());
 	distance_to_vert.resize(V.rows());
 }
 
-//pos is the position to where the user dragged the vertex
-/*void CurveDeformation::pullCurve(const Eigen::RowVector3d& pos, Eigen::MatrixXd& V) {
-	double drag_size = (pos - start_pos).norm();
-	drag_size /= curve_diag_length; //TODO: Not sure if this is neccessary? pUllmesh2 doesn't do it
-	bool ROI_is_updated = false;
-	if (!current_ROI_size || (fabs(drag_size - current_ROI_size) > 0.01)) { //Take the current drag_size and current_ROI_size relative to the size of the stroke we're pulling on. //TODO: test if we want to take it relative to the size of the whole mesh instead (we have access to V after all)?
-		ROI_is_updated = update_ROI(drag_size);
-	}
-
-	if (no_ROI_vert == 0 || current_ROI_size == 0) { //If we have no other "free" vertices other than the handle vertex, we simply move it to the target position
-		V.row(moving_vertex_ID) = pos;
-	}
-	else {
-		if (ROI_is_updated) {
-			setup_for_update_curve(V);
-		}
-		V.row(moving_vertex_ID) = pos;
-		update_curve(V);
-	}
-}*/
 
 double CurveDeformation::compute_curve_diag_length(Stroke& _stroke) {
 	Eigen::Vector3d maxBB = _stroke.get3DPoints().colwise().maxCoeff();
@@ -80,34 +69,13 @@ double CurveDeformation::compute_curve_diag_length(Stroke& _stroke) {
 	return (maxBB - minBB).norm();
 }
 
-/*bool CurveDeformation::update_ROI(double drag_size) {
-	int no_ROI_vert_tmp;
-	if (smooth_deform_mode && no_vertices > 1) {
-		no_ROI_vert_tmp = max(round(0.17*no_vertices) + 1, min(round(drag_size * no_vertices) + 1, ceil(((no_vertices - 1) / 2) - 1))); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side, always at least 1/6th of the number of vertices + 1 vertex fixed, to take care of thin meshes with many vertices)
-	}
-	else {
-		no_ROI_vert_tmp = max(0.0, min(round(drag_size / 4.0 * no_vertices), ceil(((no_vertices - 1) / 2) - 1))); //Determine how many vertices to the left and to the right to have free (at most half-1 of all vertices on each side)
-	}
-
-	if (((no_ROI_vert == no_ROI_vert_tmp) && prev_loop_type == stroke_is_loop) || no_ROI_vert_tmp == 0) { //number of vertices in ROI didn't change
-		return false;
-	}
-
-	current_ROI_size = drag_size;
-	no_ROI_vert = no_ROI_vert_tmp;
-	prev_loop_type = stroke_is_loop;
-
-	int ROI_1, ROI_2;
-	compute_ROI_boundaries(ROI_1, ROI_2);
-	setup_fixed_indices(ROI_1, ROI_2);
-	return true;
-}*/
-
 void CurveDeformation::pullCurveTest(const Eigen::RowVector3d& pos, Eigen::MatrixXd& V, Eigen::VectorXi& edge_boundary_markers) {
 	double drag_size = (pos - start_pos).norm();
-	drag_size /= curve_diag_length; //TODO: Not sure if this is neccessary? pUllmesh2 doesn't do it
+	drag_size *= DRAG_SCALE;
+	//drag_size /= curve_diag_length; //TODO: Not sure if this is neccessary? pUllmesh2 doesn't do it
 	bool ROI_is_updated = false;
 	if (!current_ROI_size || (fabs(drag_size - current_ROI_size) > 0.01)) { //Take the current drag_size and current_ROI_size relative to the size of the stroke we're pulling on. //TODO: test if we want to take it relative to the size of the whole mesh instead (we have access to V after all)?
+		std::cout << "updating ROI?" << std::endl;
 		ROI_is_updated = update_ROI_test(drag_size, V, edge_boundary_markers);
 	}
 
@@ -131,21 +99,27 @@ void CurveDeformation::pullCurveTest(const Eigen::RowVector3d& pos, Eigen::Matri
 
 bool CurveDeformation::update_ROI_test(double drag_size, Eigen::MatrixXd& V, Eigen::VectorXi& edge_boundary_markers) {
 	current_ROI_size = drag_size;
+
+
 	//TODO: PullMesh2 returns all vertices to the positions that they had at the time of being added to the last ROI (so e.g. the handle will have a new "original" position everytime new vertices get added to the ROI
 	vector<int> vertices_in_range = collect_vertices_within_drag_length(drag_size, V, edge_boundary_markers);
 	if (vertices_in_range.size() == prev_range_size) {
+		std::cout << "No change in range size" << std::endl;
 		return false;
 	}
 	prev_range_size = vertices_in_range.size();
-
+	std::cout << "vertices in range: " << prev_range_size << std::endl;
 	sort_by_distance(vertices_in_range);
 
 	//Collect vertices in each each curve and construct cuve hierarchy
 	Eigen::VectorXi edge_consumed(EV.rows()), fixed(V.rows());
-	for (int i = 0; i < V.rows(); i++) {
+	edge_consumed.setZero();
+	fixed.setZero();
+	curves.clear();
+	for (int i = 0; i < vertices_in_range.size(); i++) {
 		while (true) {
 			PulledCurve curve;
-			bool success = create_pulled_curve_by_propagation(i, edge_consumed, curve, edge_boundary_markers);
+			bool success = create_pulled_curve_by_propagation(vertices_in_range[i], edge_consumed, curve, edge_boundary_markers);
 			if (!success) {
 				break;
 			}
@@ -163,13 +137,18 @@ bool CurveDeformation::update_ROI_test(double drag_size, Eigen::MatrixXd& V, Eig
 }
 
 std::vector<int> CurveDeformation::collect_vertices_within_drag_length(double drag_size, Eigen::MatrixXd& V, Eigen::VectorXi& edge_boundary_markers) {
+	visited.setZero();
+	distance_to_vert.setZero();
 	visited[moving_vertex_ID] = 1;
 	distance_to_vert[moving_vertex_ID] = drag_size;
-
+	std::cout << "moving vertex id" << moving_vertex_ID << std::endl;
 	vector<int> vertices_in_range;
 	vertices_in_range.push_back(moving_vertex_ID);
 	propagate(-1, moving_vertex_ID, drag_size, vertices_in_range, V, edge_boundary_markers);
-
+	std::cout << "Vertices in range: ";
+	for (int i = 0; i < vertices_in_range.size(); i++) {
+		std::cout << vertices_in_range[i] << "   ";
+	}
 	return vertices_in_range;
 }
 
@@ -180,14 +159,15 @@ void CurveDeformation::propagate(int prev_edge, int vert, double remaining_dista
 		if (edge == prev_edge) {
 			continue;
 		}
-		double edge_length = (V.row(vert) - V.row(neighbors[vert][i])).norm();
+		double edge_length = (original_positions.row(vert) - original_positions.row(neighbors[vert][i])).norm();
+		//double edge_length = (V.row(vert) - V.row(neighbors[vert][i])).norm();
 		if (edge_boundary_markers[edge]) {
 			if (remaining_distance - edge_length > 0) {
 				next_vert = neighbors[vert][i];
 				if (visited[next_vert]) {
 					continue;
 				}
-				visited[next_vert] = true;
+				visited[next_vert] = 1;
 				distance_to_vert[next_vert] = remaining_distance - edge_length;
 				vertices_in_range.push_back(next_vert);
 				propagate(edge, next_vert, remaining_distance - edge_length, vertices_in_range, V, edge_boundary_markers);
@@ -206,12 +186,12 @@ int CurveDeformation::find_edge(int start, int end) {
 	return equal_pos;
 }
 
-void CurveDeformation::sort_by_distance(std::vector<int> vertices_in_range) {
+void CurveDeformation::sort_by_distance(std::vector<int>& vertices_in_range) {
 	sort(vertices_in_range.begin(), vertices_in_range.end(), distance_sorter);
 }
 
 bool CurveDeformation::distance_sorter(int a, int b) {
-	return distance_to_vert[a] < distance_to_vert[b];
+	return distance_to_vert[a] > distance_to_vert[b];
 }
 
 bool CurveDeformation::create_pulled_curve_by_propagation(int vert, Eigen::VectorXi& edge_consumed, PulledCurve& curve, Eigen::VectorXi& edge_boundary_markers) {
@@ -337,69 +317,6 @@ int CurveDeformation::find_next_edge(int vert, int prev_edge, int edge_marker, E
 	return -1;
 }
 
-/*void CurveDeformation::compute_ROI_boundaries(int& ROI_1, int& ROI_2) {
-	if (stroke_is_loop) {
-		ROI_1 = (((handle_ID - no_ROI_vert) + no_vertices) % no_vertices);
-		ROI_2 = (((handle_ID + no_ROI_vert) + no_vertices) % no_vertices);
-	}
-	else {
-		ROI_1 = max(0, handle_ID - no_ROI_vert); //For non-loop strokes (e.g. added strokes), don't wrap around but instead cap at the first and last vertex of the stroke
-		ROI_2 = min(no_vertices - 1, handle_ID + no_ROI_vert);
-	}
-}*/
-
-/*void CurveDeformation::setup_fixed_indices(int ROI_1, int ROI_2) {
-	vector<int> fixed, fixed_local;
-	is_fixed = Eigen::VectorXi::Zero(no_vertices);
-
-	if (ROI_1 < ROI_2) {
-		for (int i = 0; i < ROI_1; i++) {
-			is_fixed[i] = 1;
-			fixed.push_back(vert_bindings[i]);
-			fixed_local.push_back(i);
-		}
-		for (int i = ROI_2 + 1; i < no_vertices; i++) {
-			is_fixed[i] = 1;
-			fixed.push_back(vert_bindings[i]);
-			fixed_local.push_back(i);
-		}
-	}
-	else {
-		for (int i = ROI_2 + 1; i < ROI_1; i++) {
-			is_fixed[i] = 1;
-			fixed.push_back(vert_bindings[i]);
-			fixed_local.push_back(i);
-		}
-	}
-
-	fixed.push_back(moving_vertex_ID);
-	fixed_local.push_back(handle_ID);
-	is_fixed[handle_ID] = 1;
-
-	fixed_indices = Eigen::VectorXi::Map(fixed.data(), fixed.size());
-	fixed_indices_local = Eigen::VectorXi::Map(fixed_local.data(), fixed_local.size());
-}*/
-
-/*void CurveDeformation::setup_for_update_curve(Eigen::MatrixXd& V) {
-	A.resize(no_vertices * 3 + no_vertices * 9 + fixed_indices.size() * 3 + fixed_indices.size() * 3, no_vertices * 3 + no_vertices * 3); //Solve for x,y,z simultaneously since we cannot reuse A anyway
-	B.resize(no_vertices * 3 + no_vertices * 9 + fixed_indices.size() * 3 + fixed_indices.size() * 3);
-	original_L0.resize(no_vertices, 3);
-
-	if (stroke_is_loop) {
-		for (int i = 0; i < no_vertices; i++) {
-			original_L0.row(i) = V.row(vert_bindings[i]) - V.row(((vert_bindings[((i - 1) + no_vertices) % no_vertices]))); //This assumes that the stroke is looped, which might not always be true for added control strokes.
-		}
-	}
-	else {
-		original_L0.row(0) = V.row(vert_bindings[0]) - V.row(vert_bindings[1]);
-		for (int i = 1; i < no_vertices; i++) {
-			original_L0.row(i) = V.row(vert_bindings[i]) - V.row(vert_bindings[i - 1]);
-		}
-
-	}
-	setup_for_L1_position_step(V);
-}*/
-
 void CurveDeformation::setup_for_update_curve_test(PulledCurve& curve, Eigen::MatrixXd& V) {
 	A.resize(curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + curve.fixed_vertices.size() * 3 + curve.fixed_edges.size() * 3, curve.vertices.size() * 3 + curve.edges.size() * 3);
 	B.resize(curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + curve.fixed_vertices.size() * 3 + curve.fixed_edges.size() * 3);
@@ -409,9 +326,39 @@ void CurveDeformation::setup_for_update_curve_test(PulledCurve& curve, Eigen::Ma
 		original_L0.row(i) = V.row(EV(curve.edges[i],0)) - V.row(EV(curve.edges[i],1));
 	}
 
+	for (int i = 0; i < curve.vertices.size(); i++) {
+		vertex_global_to_local.insert({ curve.vertices[i], i });
+	}
+
+	int idx;
+	fixed_vertices_local.resize(curve.fixed_vertices.size());
+	for (int i = 0; i < curve.fixed_vertices.size(); i++) { //Create a copy with local indexing for fixed_vertices, and also keep the global indexing
+		auto loc = std::find(curve.vertices.begin(), curve.vertices.end(), curve.fixed_vertices[i]);
+		idx = distance(curve.vertices.begin(), loc);
+		fixed_vertices_local[i] = idx;
+	}
+
+	std::cout << curve.edges.size() <<"   Curve fixed edges before: " << std::endl;
+	for (int i = 0; i < curve.fixed_edges.size(); i++) { //Create local indexing for fixed_edges
+		std::cout << curve.fixed_edges[i] << "  ";
+		auto loc = std::find(curve.edges.begin(), curve.edges.end(), curve.fixed_edges[i]);
+		idx = distance(curve.edges.begin(), loc);
+		curve.fixed_edges[i] = idx;
+	}
+	std::cout << "After: " << std::endl;
+	for (int i = 0; i < curve.fixed_edges.size(); i++) {
+		std::cout << curve.fixed_edges[i] << " ";
+	}
+	cout << std::endl;
+
+	for (int i = 0; i < curve.edges.size(); i++) {
+		edge_global_to_local.insert({ curve.edges[i], i });
+	}
+
 	is_fixed.resize(curve.vertices.size());
-	for (int i = 0; i < curve.fixed_vertices.size(); i++) {
-		is_fixed[i] = 1;
+	is_fixed.setZero();
+	for (int i = 0; i < fixed_vertices_local.size(); i++) {
+		is_fixed[fixed_vertices_local[i]] = 1;
 	}
 
 	setup_for_L1_position_step_test(curve, V);
@@ -429,88 +376,23 @@ void CurveDeformation::setup_for_L1_position_step_test(PulledCurve& curve, Eigen
 		int v2 = curve.vertex_triplets(i, 2);
 
 		original_L1.row(i) = V.row(v1) - (0.5*V.row(v0) + 0.5*V.row(v2));
-		vertex_triplet_to_rot_idx[i][0] = find_edge(v0, v1);
-		vertex_triplet_to_rot_idx[i][1] = find_edge(v1, v2);
+		vertex_triplet_to_rot_idx[i][0] = edge_global_to_local.find(find_edge(v0, v1))->second;
+		vertex_triplet_to_rot_idx[i][1] = edge_global_to_local.find(find_edge(v1, v2))->second;
 
-		tripletList.push_back(T(i, v0, -0.5));
-		tripletList.push_back(T(i, v0, 1.0));
-		tripletList.push_back(T(i, v0, -0.5));
+		tripletList.push_back(T(i, vertex_global_to_local.find(v0)->second, -0.5));
+		tripletList.push_back(T(i, vertex_global_to_local.find(v1)->second, 1.0));
+		tripletList.push_back(T(i, vertex_global_to_local.find(v2)->second, -0.5));
 	}
 
-	for (int i = 0; i < curve.fixed_vertices.size(); i++) {
-		tripletList.push_back(T(curve.vertex_triplets.rows() + i, curve.fixed_vertices[i], CONSTRAINT_WEIGHT));
+	for (int i = 0; i < fixed_vertices_local.size(); i++) {
+		tripletList.push_back(T(curve.vertex_triplets.rows() + i, fixed_vertices_local[i], CONSTRAINT_WEIGHT));
 	}
-	Eigen::SparseMatrix<double> A_L1(curve.vertex_triplets.rows() + curve.fixed_vertices.size(), curve.vertices.size());
+	Eigen::SparseMatrix<double> A_L1(curve.vertex_triplets.rows() + fixed_vertices_local.size(), curve.vertices.size());
 	A_L1.setFromTriplets(tripletList.begin(), tripletList.end());
 
 	A_L1_T = A_L1.transpose();
 	solverL1.compute(A_L1_T*A_L1);
 }
-
-/*void CurveDeformation::setup_for_L1_position_step(Eigen::MatrixXd& V) {
-	Eigen::SparseMatrix<double> A_L1(no_vertices + fixed_indices.size(), no_vertices);
-	std::vector<T> tripletList;
-	tripletList.reserve(no_vertices * 3);
-
-	original_L1.resize(no_vertices, 3);
-	int cur, next, prev;
-	if (stroke_is_loop) {
-		for (int i = 0; i < no_vertices; i++) {
-			cur = vert_bindings[i];
-			next = vert_bindings[(i + 1) % no_vertices];
-			prev = vert_bindings[(((i - 1) + no_vertices) % no_vertices)];
-
-			tripletList.push_back(T(i, (((i - 1) + no_vertices) % no_vertices), -0.5));
-			tripletList.push_back(T(i, i, 1));
-			tripletList.push_back(T(i, (i + 1) % no_vertices, -0.5));
-
-			original_L1.row(i) = V.row(cur) - (0.5*V.row(next) + 0.5*V.row(prev));
-		}
-	}
-	else {
-		tripletList.push_back(T(0, 0, 1));
-		tripletList.push_back(T(0, 1, -1));
-		original_L1.row(0) = V.row(vert_bindings[0]) - V.row(vert_bindings[1]);
-
-		tripletList.push_back(T(no_vertices - 1, no_vertices - 1, 1));
-		tripletList.push_back(T(no_vertices - 1, no_vertices - 2, -1));
-
-		original_L1.row(no_vertices - 1) = V.row(vert_bindings[no_vertices - 1]) - V.row(vert_bindings[no_vertices - 2]);
-
-		for (int i = 1; i < no_vertices - 1; i++) {
-			cur = vert_bindings[i];
-			next = vert_bindings[(i + 1) % no_vertices];
-			prev = vert_bindings[(((i - 1) + no_vertices) % no_vertices)];
-
-			tripletList.push_back(T(i, i - 1, -0.5));
-			tripletList.push_back(T(i, i, 1));
-			tripletList.push_back(T(i, i + 1, -0.5));
-
-			original_L1.row(i) = V.row(cur) - (0.5*V.row(next) + 0.5*V.row(prev));
-		}
-	}
-
-	for (int i = 0; i < fixed_indices.size(); i++) {
-		tripletList.push_back(T(no_vertices + i, fixed_indices_local[i], CONSTRAINT_WEIGHT));
-	}
-
-	A_L1.setFromTriplets(tripletList.begin(), tripletList.end());
-
-	A_L1_T = A_L1.transpose();
-	solverL1.compute(A_L1_T*A_L1);
-}*/
-
-/*void CurveDeformation::update_curve(Eigen::MatrixXd& V) {
-	for (int i = 0; i < no_vertices; i++) {
-		Rot[i] = Eigen::Matrix3d::Identity();
-	}
-
-	for (int i = 0; i < 2; i++) {
-		solve_for_pos_and_rot(V);
-		update_rot();
-	}
-	final_L1_pos(V);
-}*/
 
 void CurveDeformation::update_curve_test(PulledCurve& curve, Eigen::MatrixXd& V) {
 	for (int i = 0; i < curve.edges.size(); i++) {
@@ -528,12 +410,12 @@ void CurveDeformation::solve_for_pos_and_rot_test(Eigen::MatrixXd& V, PulledCurv
 	A.setZero();
 	B.setZero();
 	std::vector<T> tripletList;
-	tripletList.reserve(curve.edges.size()*15 + curve.edge_triplets.rows()*3*27 + curve.fixed_vertices.size()*3 + curve.fixed_edges.size() * 3);
+	tripletList.reserve(curve.edges.size()*15 + curve.edge_triplets.rows()*3*27 + fixed_vertices_local.size()*3 + curve.fixed_edges.size() * 3);
 
 	int v0, v1;
 	for (int i = 0; i < curve.edges.size(); i++) { //Laplacian of the position: v1' - v0' = dR * R * L(v1 - v0)
-		v0 = EV(curve.edges[i], 0);
-		v1 = EV(curve.edges[i], 1);
+		v0 = vertex_global_to_local.find(EV(curve.edges[i], 0))->second;
+		v1 = vertex_global_to_local.find(EV(curve.edges[i], 1))->second;
 		
 		tripletList.push_back(T(i * 3 + 0, v0 * 3, -1)); //L0
 		tripletList.push_back(T(i * 3 + 0, v1 * 3, 1)); //L0
@@ -559,9 +441,9 @@ void CurveDeformation::solve_for_pos_and_rot_test(Eigen::MatrixXd& V, PulledCurv
 
 	int e0, e1, e2;
 	for (int i = 0; i < curve.edge_triplets.rows(); i++) { //Laplacian of the rotation matrix: L dR*R = 0 (r_i*R_i - r_j*R_j = 0 for i,j in Edges)
-		e0 = curve.edge_triplets(i, 0);
-		e1 = curve.edge_triplets(i, 1); 
-		e2 = curve.edge_triplets(i, 2);
+		e0 = edge_global_to_local.find(curve.edge_triplets(i, 0))->second;
+		e1 = edge_global_to_local.find(curve.edge_triplets(i, 1))->second;
+		e2 = edge_global_to_local.find(curve.edge_triplets(i, 2))->second;
 
 		for (int j = 0; j < 3; j++) {
 			tripletList.push_back(T(curve.edges.size() * 3 + i * 9 + j, curve.vertices.size() * 3 + e0 * 3 + 0, 0));
@@ -599,10 +481,10 @@ void CurveDeformation::solve_for_pos_and_rot_test(Eigen::MatrixXd& V, PulledCurv
 		}
 	}
 
-	for (int i = 0; i < curve.fixed_vertices.size(); i++) { //Position of fixed vertices: v_i - v_i' = 0
-		tripletList.push_back(T(curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + i * 3, curve.fixed_vertices[i] * 3, CONSTRAINT_WEIGHT));
-		tripletList.push_back(T(curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + i * 3 + 1, curve.fixed_vertices[i] * 3 + 1, CONSTRAINT_WEIGHT));
-		tripletList.push_back(T(curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + i * 3 + 2, curve.fixed_vertices[i] * 3 + 2, CONSTRAINT_WEIGHT));
+	for (int i = 0; i < fixed_vertices_local.size(); i++) { //Position of fixed vertices: v_i - v_i' = 0
+		tripletList.push_back(T(curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + i * 3, fixed_vertices_local[i] * 3, CONSTRAINT_WEIGHT));
+		tripletList.push_back(T(curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + i * 3 + 1, fixed_vertices_local[i] * 3 + 1, CONSTRAINT_WEIGHT));
+		tripletList.push_back(T(curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + i * 3 + 2, fixed_vertices_local[i] * 3 + 2, CONSTRAINT_WEIGHT));
 
 		B[curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + i * 3] = CONSTRAINT_WEIGHT * V(curve.fixed_vertices[i], 0);
 		B[curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + i * 3 + 1] = CONSTRAINT_WEIGHT * V(curve.fixed_vertices[i], 1);
@@ -610,13 +492,13 @@ void CurveDeformation::solve_for_pos_and_rot_test(Eigen::MatrixXd& V, PulledCurv
 	}
 
 	for (int i = 0; i < curve.fixed_edges.size(); i++) {
-		tripletList.push_back(T(curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + curve.fixed_vertices.size() * 3 + i * 3 + 0, curve.vertices.size() * 3 + curve.fixed_edges[i] * 3, CONSTRAINT_WEIGHT));
-		tripletList.push_back(T(curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + curve.fixed_vertices.size() * 3 + i * 3 + 1, curve.vertices.size() * 3 + curve.fixed_edges[i] * 3 + 1, CONSTRAINT_WEIGHT));
-		tripletList.push_back(T(curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + curve.fixed_vertices.size() * 3 + i * 3 + 2, curve.vertices.size() * 3 + curve.fixed_edges[i] * 3 + 2, CONSTRAINT_WEIGHT));
+		tripletList.push_back(T(curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 0, curve.vertices.size() * 3 + curve.fixed_edges[i] * 3, CONSTRAINT_WEIGHT));
+		tripletList.push_back(T(curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 1, curve.vertices.size() * 3 + curve.fixed_edges[i] * 3 + 1, CONSTRAINT_WEIGHT));
+		tripletList.push_back(T(curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 2, curve.vertices.size() * 3 + curve.fixed_edges[i] * 3 + 2, CONSTRAINT_WEIGHT));
 
-		B[curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + curve.fixed_vertices.size() * 3 + i * 3 + 0, curve.vertices.size() * 3 + curve.fixed_edges[i] * 3] = 0;
-		B[curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + curve.fixed_vertices.size() * 3 + i * 3 + 0, curve.vertices.size() * 3 + curve.fixed_edges[i] * 3 + 1] = 0;
-		B[curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + curve.fixed_vertices.size() * 3 + i * 3 + 0, curve.vertices.size() * 3 + curve.fixed_edges[i] * 3 + 2] = 0;
+		B[curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 0] = 0;
+		B[curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 1] = 0;
+		B[curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 2] = 0;
 	}
 
 	A.setFromTriplets(tripletList.begin(), tripletList.end());
@@ -811,7 +693,7 @@ Eigen::Matrix3d CurveDeformation::compute_orthonormal(Eigen::Matrix3d& rot) {
 }*/
 
 void CurveDeformation::final_L1_pos_test(Eigen::MatrixXd &V, PulledCurve& curve) {
-	Eigen::VectorXd Bx(curve.vertex_triplets.rows() + curve.fixed_vertices.size()), By(curve.vertex_triplets.rows() + curve.fixed_vertices.size()), Bz(curve.vertex_triplets.rows() + curve.fixed_vertices.size());
+	Eigen::VectorXd Bx(curve.vertex_triplets.rows() + fixed_vertices_local.size()), By(curve.vertex_triplets.rows() + fixed_vertices_local.size()), Bz(curve.vertex_triplets.rows() + fixed_vertices_local.size());
 	Eigen::Vector3d Rl;
 	Eigen::Matrix3d r0, r1;
 	for (int i = 0; i < curve.vertex_triplets.rows(); i++) {
