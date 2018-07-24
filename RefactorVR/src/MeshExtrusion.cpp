@@ -26,7 +26,7 @@ bool MeshExtrusion::extrude_prepare(Stroke& base, SurfacePath& surface_path) {
 bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke, Stroke& base, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport) {
 	Eigen::MatrixXi start_F = m.F;
 	Eigen::MatrixXd start_V = m.V;
-	Eigen::VectorXi start_vertex_boundary_markers = m.vertex_boundary_markers;
+	//Eigen::VectorXi start_vertex_boundary_markers = m.vertex_boundary_markers;
 	Eigen::VectorXi start_edge_boundary_markers = m.edge_boundary_markers;
 	Eigen::VectorXi start_vertex_is_fixed = m.vertex_is_fixed;
 	Eigen::VectorXi start_sharp_edge = m.sharp_edge;
@@ -184,7 +184,7 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 			m.F = start_F;
 			m.V = start_V;
 			m.new_mapped_indices = start_new_mapped_indices;
-			m.vertex_boundary_markers = start_vertex_boundary_markers;
+		//	m.vertex_boundary_markers = start_vertex_boundary_markers;
 			m.edge_boundary_markers = start_edge_boundary_markers;
 			m.vertex_is_fixed = start_vertex_is_fixed;
 			m.sharp_edge = start_sharp_edge;
@@ -253,9 +253,9 @@ void MeshExtrusion::generate_mesh(Mesh& m, Eigen::MatrixXd loop3D, Eigen::Vector
 			vert += offset.transpose();
 			m.V.conservativeResize(m.V.rows() + 1, Eigen::NoChange);
 			m.V.row(m.V.rows() - 1) = vert;
-			m.vertex_boundary_markers.conservativeResize(m.vertex_boundary_markers.rows() + 1);
+			//m.vertex_boundary_markers.conservativeResize(m.vertex_boundary_markers.rows() + 1);
 			m.vertex_is_fixed.conservativeResize(m.vertex_is_fixed.rows() + 1);
-			m.vertex_boundary_markers(m.vertex_boundary_markers.rows() - 1) = 0; //Interior mesh vertex, so non-boundary
+			//m.vertex_boundary_markers(m.vertex_boundary_markers.rows() - 1) = 0; //Interior mesh vertex, so non-boundary
 			m.vertex_is_fixed(m.vertex_is_fixed.rows() - 1) = 0; //Interior mesh vertex, so non-fixed
 		}
 	}
@@ -306,12 +306,12 @@ vector<int> MeshExtrusion::add_silhouette_vertices(Mesh& m, int stroke_ID, Eigen
 	vector<int> sil_original_indices;
 	int size_before_silhouette = m.V.rows();
 	m.V.conservativeResize(m.V.rows() + silhouette_vertices.rows(), Eigen::NoChange);
-	m.vertex_boundary_markers.conservativeResize(m.vertex_boundary_markers.rows() + silhouette_vertices.rows());
+	//m.vertex_boundary_markers.conservativeResize(m.vertex_boundary_markers.rows() + silhouette_vertices.rows());
 	m.vertex_is_fixed.conservativeResize(m.vertex_is_fixed.rows() + silhouette_vertices.rows());
 
 	for (int i = 0; i < silhouette_vertices.rows(); i++) {
 		m.V.row(size_before_silhouette + i) = silhouette_vertices.row(i);
-		m.vertex_boundary_markers[size_before_silhouette + i] = stroke_ID;
+		//m.vertex_boundary_markers[size_before_silhouette + i] = stroke_ID;
 		m.vertex_is_fixed[size_before_silhouette + i] = 1;
 		sil_original_indices.push_back(size_before_silhouette + i);
 	}
@@ -383,9 +383,7 @@ void MeshExtrusion::update_added_edges_indicators(Mesh& m, Eigen::MatrixXi& edge
 	Eigen::MatrixXi EV, FE, EF;
 	igl::edge_topology(m.V, m.F, EV, FE, EF);
 	m.sharp_edge.conservativeResize(EV.rows());
-//	m.sharp_edge.setZero();
 	m.edge_boundary_markers.conservativeResize(EV.rows());
-	//m.edge_boundary_markers.setZero();
 
 	int start, end, equal_pos;
 	Eigen::VectorXi col1Equals, col2Equals;

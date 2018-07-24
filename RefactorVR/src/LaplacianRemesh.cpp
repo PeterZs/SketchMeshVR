@@ -37,7 +37,7 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
 
 	Eigen::MatrixXi start_F = m.F;
 	Eigen::MatrixXd start_V = m.V;
-	Eigen::VectorXi start_vertex_boundary_markers = m.vertex_boundary_markers;
+	//Eigen::VectorXi start_vertex_boundary_markers = m.vertex_boundary_markers;
 	Eigen::VectorXi start_edge_boundary_markers = m.edge_boundary_markers;
 	Eigen::VectorXi start_vertex_is_fixed = m.vertex_is_fixed;
 	Eigen::VectorXi start_sharp_edge = m.sharp_edge;
@@ -209,8 +209,7 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
 			m.F = start_F;
 			m.V = start_V;
 			m.new_mapped_indices = start_new_mapped_indices;
-			//m.part_of_original_stroke = start_part_of_original_stroke;
-			m.vertex_boundary_markers = start_vertex_boundary_markers;
+			//m.vertex_boundary_markers = start_vertex_boundary_markers;
 			m.edge_boundary_markers = start_edge_boundary_markers;
 			m.vertex_is_fixed = start_vertex_is_fixed;
 			m.sharp_edge = start_sharp_edge;
@@ -241,7 +240,7 @@ bool LaplacianRemesh::remesh_cutting_path(Mesh& m, Stroke& cut_path_stroke) {
 Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success, int cut_clicked_face) {
 	Eigen::MatrixXi start_F = m.F;
 	Eigen::MatrixXd start_V = m.V;
-	Eigen::VectorXi start_vertex_boundary_markers = m.vertex_boundary_markers;
+	//Eigen::VectorXi start_vertex_boundary_markers = m.vertex_boundary_markers;
 	Eigen::VectorXi start_edge_boundary_markers = m.edge_boundary_markers;
 	Eigen::VectorXi start_vertex_is_fixed = m.vertex_is_fixed;
 	Eigen::VectorXi start_sharp_edge = m.sharp_edge;
@@ -426,7 +425,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	Eigen::RowVector3d mean_viewpoint_outer = compute_mean_viewpoint(m, outer_boundary_vertices);
 
 	Eigen::MatrixXd tmp_V;
-	Eigen::VectorXi tmp_part_of, tmp_markers, tmp_fixed;
+	Eigen::VectorXi tmp_markers, tmp_fixed;
 	int size_before_removing = m.V.rows();
 	row_idx = Eigen::VectorXi::Map(clean_vertices.data(), clean_vertices.size());
 	col_idx.col(0) << 0, 1, 2;
@@ -435,9 +434,9 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 
 	col_idx.resize(1);
 	col_idx.col(0) << 0;
-	igl::slice(m.vertex_boundary_markers, row_idx, col_idx, tmp_markers);
+	//igl::slice(m.vertex_boundary_markers, row_idx, col_idx, tmp_markers);
 	igl::slice(m.vertex_is_fixed, row_idx, col_idx, tmp_fixed);
-	m.vertex_boundary_markers = tmp_markers; //Compact vertex_boundary_markers by removing the values for vertices that are now removed
+	//m.vertex_boundary_markers = tmp_markers; //Compact vertex_boundary_markers by removing the values for vertices that are now removed
 	m.vertex_is_fixed = tmp_fixed; //Compact vertex_is_fixed by removing the values for vertices that are now removed
 
 	//Map indices in m.V at the start of remeshing to indices in m.V after remeshing
@@ -551,7 +550,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 			m.F = start_F;
 			m.V = start_V;
 			m.new_mapped_indices = start_new_mapped_indices;
-			m.vertex_boundary_markers = start_vertex_boundary_markers;
+			//m.vertex_boundary_markers = start_vertex_boundary_markers;
 			m.edge_boundary_markers = start_edge_boundary_markers;
 			m.vertex_is_fixed = start_vertex_is_fixed;
 			m.sharp_edge = start_sharp_edge;
@@ -588,13 +587,13 @@ void LaplacianRemesh::update_face_indices(Mesh &m) {
 void LaplacianRemesh::update_mesh_values(Mesh& m, Eigen::MatrixXd path, int stroke_ID, int new_mapped_start, bool hold_back_due_to_loop, Eigen::MatrixXi& added_edges) {
 	int size_before = m.V.rows();
 	m.V.conservativeResize(m.V.rows() + path.rows() - hold_back_due_to_loop, Eigen::NoChange);
-	m.vertex_boundary_markers.conservativeResize(m.vertex_boundary_markers.rows() + path.rows() - hold_back_due_to_loop);
+	//m.vertex_boundary_markers.conservativeResize(m.vertex_boundary_markers.rows() + path.rows() - hold_back_due_to_loop);
 	m.vertex_is_fixed.conservativeResize(m.vertex_is_fixed.rows() + path.rows() - hold_back_due_to_loop);
 
 	m.new_mapped_indices.conservativeResize(m.new_mapped_indices.rows() + path.rows() - hold_back_due_to_loop, Eigen::NoChange);
 	for (int i = 0; i < path.rows() - hold_back_due_to_loop; i++) {
 		m.V.row(size_before + i) << path.row(i);
-		m.vertex_boundary_markers[size_before + i] = stroke_ID;
+	//	m.vertex_boundary_markers[size_before + i] = stroke_ID;
 		m.vertex_is_fixed[size_before + i] = 1;
 		m.new_mapped_indices(new_mapped_start + i) = size_before + i;
 	}

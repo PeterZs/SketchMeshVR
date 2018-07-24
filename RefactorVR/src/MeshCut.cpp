@@ -30,14 +30,16 @@ bool MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke, int c
 	if (!remesh_success) {
 		return false;
 	}
+	std::cout << "TODO: check that below edge boundary markers are set for the boundary edges that are created due to cut" << std::endl;
+	std::cout << m.edge_boundary_markers << std::endl;
+
 	return mesh_open_hole(boundary_vertices, m);
 }
 
 bool MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 	Eigen::MatrixXi start_F = m.F;
 	Eigen::MatrixXd start_V = m.V;
-	//Eigen::VectorXi start_part_of_original_stroke = m.part_of_original_stroke;
-	Eigen::VectorXi start_vertex_boundary_markers = m.vertex_boundary_markers;
+	//Eigen::VectorXi start_vertex_boundary_markers = m.vertex_boundary_markers;
 	Eigen::VectorXi start_edge_boundary_markers = m.edge_boundary_markers;
 	Eigen::VectorXi start_vertex_is_fixed = m.vertex_is_fixed;
 
@@ -69,8 +71,7 @@ bool MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 
 	int original_v_size = m.V.rows() - boundary_vertices.rows();
 	m.V.conservativeResize(original_v_size + V2.rows(), Eigen::NoChange);
-	//m.part_of_original_stroke.conservativeResize(original_v_size + V2.rows());
-	m.vertex_boundary_markers.conservativeResize(original_v_size + V2.rows());	
+	//m.vertex_boundary_markers.conservativeResize(original_v_size + V2.rows());	
 	m.vertex_is_fixed.conservativeResize(original_v_size + V2.rows());
 
 
@@ -81,8 +82,7 @@ bool MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 			v_tmp += x_vec*V2(i, 0);
 			v_tmp += y_vec*V2(i, 1);
 			m.V.row(original_v_size + i) << v_tmp.transpose();
-			//m.part_of_original_stroke[original_v_size + i] = 0;
-			m.vertex_boundary_markers[original_v_size + i] = 0;
+		//	m.vertex_boundary_markers[original_v_size + i] = 0;
 			m.vertex_is_fixed[original_v_size + i] = 0;
 		}
 	}
@@ -96,8 +96,7 @@ bool MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 			std::cerr << "Cut resulted in a non edge-manifold mesh, which is not allowed. Please try again. " << std::endl;
 			m.F = start_F;
 			m.V = start_V;
-			//m.part_of_original_stroke = start_part_of_original_stroke;
-			m.vertex_boundary_markers = start_vertex_boundary_markers;
+			//m.vertex_boundary_markers = start_vertex_boundary_markers;
 			m.edge_boundary_markers = start_edge_boundary_markers;
 			m.vertex_is_fixed = start_vertex_is_fixed;
 			return false;

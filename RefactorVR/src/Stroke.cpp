@@ -473,7 +473,7 @@ bool Stroke::toLoop() {
 	return false;
 }
 
-unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex_boundary_markers, Eigen::VectorXi &edge_boundary_markers, Eigen::VectorXi& vertex_is_fixed, Eigen::MatrixXd& mesh_V, Eigen::MatrixXi& mesh_F) {
+unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Eigen::VectorXi& vertex_is_fixed, Eigen::MatrixXd& mesh_V, Eigen::MatrixXi& mesh_F) {
 	double mean_sample_dist = 0.0;
 	for (int i = 0; i < stroke3DPoints.rows() - 1; i++) {
 		mean_sample_dist += (stroke3DPoints.row(i) - stroke3DPoints.row((i + 1) % stroke3DPoints.rows())).norm();
@@ -554,29 +554,25 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &vertex
 	Eigen::MatrixXd N_Faces, N_Vertices;
 	igl::per_vertex_normals(V2, F2, PER_VERTEX_NORMALS_WEIGHTING_TYPE_UNIFORM, N_Vertices);
 
-	vertex_boundary_markers.resize(V2.rows());
+	//vertex_boundary_markers.resize(V2.rows());
 	vertex_is_fixed.resize(V2.rows());
-	//part_of_original_stroke.resize(V2.rows());
 	for (int i = 0; i < V2.rows(); i++) {
 		if (i >= vertex_markers.rows()) { //vertex can't be boundary (it's on backside)
 			V2.row(i) = V2.row(i) + 0.1*N_Vertices.row(i);
-			vertex_boundary_markers[i] = 0;
+			//vertex_boundary_markers[i] = 0;
 			vertex_is_fixed[i] = 0;
-		//	part_of_original_stroke[i] = 0;
 		}
 		else {
 			if (vertex_markers(i) == 1) { //Don't change boundary vertices
-				vertex_boundary_markers[i] = 1;
+			//	vertex_boundary_markers[i] = 1;
 				vertex_is_fixed[i] = 1;
-			//	part_of_original_stroke[i] = 1;
 				//Don't need to change stroke3DPoints here because they're the same as V2's points.
 
 				continue;
 			}
 			V2.row(i) = V2.row(i) + 0.1*N_Vertices.row(i);
-			vertex_boundary_markers[i] = 0;
+			//vertex_boundary_markers[i] = 0;
 			vertex_is_fixed[i] = 0;
-			//part_of_original_stroke[i] = 0;
 		}
 	}
 
@@ -708,7 +704,7 @@ void Stroke::update_Positions(Eigen::MatrixXd V) {
 
 /** Remaps the stroke's vertex bindings after the mesh topology has changed. If a stroke becomes non-continous (can only happen to strokes that were non-looped at the start and that did not have their first and/or last point removed) the stroke will be removed and its boundary_vertex_markers unset. Looped strokes always stay continuous, since we can ony remove one continuous piece of them.
 	Note that this method does not update the stroke3DPoints, use update_Positions() for that. **/
-bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi& vertex_boundary_markers, Eigen::VectorXi& edge_boundary_markers, Eigen::VectorXi& sharp_edge, Eigen::VectorXi& vertex_is_fixed) {
+bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi& edge_boundary_markers, Eigen::VectorXi& sharp_edge, Eigen::VectorXi& vertex_is_fixed) {
 	vector<int> new_bindings;
 	int first_included_after_remove = -1;
 	bool points_were_removed = false, no_tracked_point_yet = true, stays_continuous = false, originally_is_loop = is_loop;
@@ -742,7 +738,7 @@ bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::V
 	set_closest_vert_bindings(new_bindings);
 
 	if (!originally_is_loop && points_were_removed && !stays_continuous) { //For non-looped strokes that have a middle chunk removed (but not everything), unset their markers because we will remove the entire stroke
-		undo_stroke_add(vertex_boundary_markers, edge_boundary_markers, sharp_edge, vertex_is_fixed);
+		undo_stroke_add(edge_boundary_markers, sharp_edge, vertex_is_fixed);
 		return false;
 	}
 
@@ -750,10 +746,7 @@ bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::V
 	return true;
 }
 
-void Stroke::undo_stroke_add(Eigen::VectorXi& vertex_boundary_markers, Eigen::VectorXi& edge_boundary_markers, Eigen::VectorXi& sharp_edge, Eigen::VectorXi& vertex_is_fixed) {
-	for (int i = 0; i < closest_vert_bindings.size(); i++) {
-		vertex_boundary_markers[closest_vert_bindings[i]] = 0;
-	}
+void Stroke::undo_stroke_add(Eigen::VectorXi& edge_boundary_markers, Eigen::VectorXi& sharp_edge, Eigen::VectorXi& vertex_is_fixed) {	
 
 	//TODO: check that closest_vert_bindings is actually in stroke order (so 2 bindings in a row form an edge of the stroke)
 	Eigen::MatrixXi EV, FE, EF;

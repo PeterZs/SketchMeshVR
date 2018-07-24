@@ -130,39 +130,6 @@ Eigen::MatrixXd SurfaceSmoothing::compute_laplacian_matrix(Mesh &m) {
 	return (Eigen::MatrixXd) -U;
 }
 
-/*Eigen::VectorXd SurfaceSmoothing::compute_initial_curvature(Mesh &m) {
-	Eigen::VectorXd initial_curvatures(m.V.rows());
-	initial_curvatures.setZero();
-//	int original_stroke_no_vertices = (m.part_of_original_stroke.array() > 0).count();
-
-	for(int i = 0; i < m.V.rows(); i++) { //TODO: the 2 if-statements below perform the same action
-		if((m.part_of_original_stroke[i]) && (m.vertex_boundary_markers[i] > 0)) { //Boundary vertex on original stroke
-			Eigen::RowVector3d vec(0, 0, 0);
-			int count = 0;
-			for (int j = 0; j < neighbors[i].size(); j++) {
-				if (m.vertex_boundary_markers[neighbors[i][j]] == m.vertex_boundary_markers[i]) {//the neighbor is a boundary vertex on the same stroke
-					vec += m.V.row(neighbors[i][j]);
-					count++;
-				}
-			}
-			initial_curvatures[i] = (m.V.row(i) - (1.0 / count)*vec).norm(); //TEST: SMOOTH AFTER PULL. maybe revert this change?
-			//initial_curvatures[i] = (m.V.row(i) - 0.5 * (m.V.row((i - 1 + original_stroke_no_vertices) % original_stroke_no_vertices) + m.V.row((i + 1 + original_stroke_no_vertices) % original_stroke_no_vertices))).norm(); //Take modulo of the number of original stroke vertices to avoid wrapping the first and last of the original stroke to the interior of the mesh
-		} else if(m.vertex_boundary_markers[i] > 0) { //Boundary vertex on an added stroke
-			Eigen::RowVector3d vec(0, 0, 0);
-			int count = 0;
-			for(int j = 0; j < neighbors[i].size(); j++) {
-				if(m.vertex_boundary_markers[neighbors[i][j]] == m.vertex_boundary_markers[i]) {//the neighbor is a boundary vertex on the same stroke
-					vec += m.V.row(neighbors[i][j]);
-					count++;
-				}
-			}
-			initial_curvatures[i] = (m.V.row(i) - (1.0 / count)*vec).norm();
-		}
-	}
-
-	return initial_curvatures;
-}*/
-
 Eigen::VectorXd SurfaceSmoothing::compute_initial_curvature_test(Mesh& m) {
 	Eigen::VectorXd initial_curvatures(m.V.rows());
 	initial_curvatures.setZero();

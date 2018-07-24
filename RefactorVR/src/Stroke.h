@@ -23,18 +23,14 @@ public:
 	void append_final_point();
     void counter_clockwise();
     void strokeReset();
-   // void undo_stroke_add(Eigen::VectorXi & vertex_boundary_markers);
     void update_Positions(Eigen::MatrixXd V);
-   // bool update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi & vertex_boundary_markers);
-	bool update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi & vertex_boundary_markers, Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & sharp_edge, Eigen::VectorXi & vertex_is_fixed);
-	void undo_stroke_add(Eigen::VectorXi & vertex_boundary_markers, Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & sharp_edge, Eigen::VectorXi & vertex_is_fixed);
+	bool update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & sharp_edge, Eigen::VectorXi & vertex_is_fixed);
+	void undo_stroke_add(Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & sharp_edge, Eigen::VectorXi & vertex_is_fixed);
     bool empty2D() const { return stroke2DPoints.isZero(); }
 	bool toLoop();
-	std::unordered_map<int, int> generate3DMeshFromStroke(Eigen::VectorXi & vertex_boundary_markers, Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & vertex_is_fixed, Eigen::MatrixXd & mesh_V, Eigen::MatrixXi & mesh_F);
-//	std::unordered_map<int, int> generate3DMeshFromStroke(Eigen::VectorXi & vertex_boundary_markers, Eigen::VectorXi & vertex_is_fixed, Eigen::VectorXi & part_of_original_stroke, Eigen::MatrixXd & mesh_V, Eigen::MatrixXi & mesh_F);
+	std::unordered_map<int, int> generate3DMeshFromStroke(Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & vertex_is_fixed, Eigen::MatrixXd & mesh_V, Eigen::MatrixXi & mesh_F);
 	bool has_self_intersection();
 	bool line_segments_intersect(Eigen::RowVector2d& p1, Eigen::RowVector2d& p2, Eigen::RowVector2d& p3, Eigen::RowVector2d& p4);
-	//std::unordered_map<int, int> generate3DMeshFromStroke(Eigen::VectorXi & vertex_boundary_markers, Eigen::VectorXi & part_of_original_stroke, Eigen::MatrixXd & mesh_V, Eigen::MatrixXi & mesh_F);
 	int selectClosestVertex(Eigen::Vector3f pos, double & closest_distance);
 	double compute_stroke_diag();
     

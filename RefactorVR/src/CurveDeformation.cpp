@@ -17,7 +17,7 @@ Eigen::VectorXd distance_to_vert;
 Eigen::MatrixXd original_positions;
 vector<CurveDeformation::PulledCurve> curves;
 
-void CurveDeformation::startPullCurve(Stroke& _stroke, int _moving_vertex_ID, Eigen::MatrixXd& V, Eigen::MatrixXi& F) {
+void CurveDeformation::startPullCurve(int _moving_vertex_ID, Eigen::MatrixXd& V, Eigen::MatrixXi& F) {
 	moving_vertex_ID = _moving_vertex_ID;
 	start_pos = V.row(moving_vertex_ID);
 	prev_range_size = -1;
@@ -33,7 +33,7 @@ void CurveDeformation::pullCurveTest(const Eigen::RowVector3d& pos, Eigen::Matri
 	double drag_size = (pos - start_pos).norm();
 	drag_size *= DRAG_SCALE;
 	bool ROI_is_updated = false;
-	if (!current_ROI_size || (fabs(drag_size - current_ROI_size) > 0.01)) { //Take the current drag_size and current_ROI_size relative to the size of the stroke we're pulling on. //TODO: test if we want to take it relative to the size of the whole mesh instead (we have access to V after all)?
+	if (current_ROI_size < drag_size) { //Take the current drag_size and current_ROI_size relative to the size of the stroke we're pulling on. //TODO: test if we want to take it relative to the size of the whole mesh instead (we have access to V after all)?
 		ROI_is_updated = update_ROI_test(drag_size, V, edge_boundary_markers);
 	}
 	V = original_positions; //TODO: see if we need this/whether it makes any difference in stability
@@ -42,7 +42,7 @@ void CurveDeformation::pullCurveTest(const Eigen::RowVector3d& pos, Eigen::Matri
 		V.row(moving_vertex_ID) = pos;
 	}
 	else {
-		//original_positions = V; //Vertex positions might have changed during pulling (due to smoothing)
+
 		if (ROI_is_updated) {
 			for (int i = 0; i < curves.size(); i++) {
 				curves[i].laplacian_curve_edit.setup_for_update_curve(curves[i].vertices, curves[i].fixed_vertices, curves[i].edges, curves[i].fixed_edges, curves[i].vertex_triplets, curves[i].edge_triplets, V, EV);
@@ -119,6 +119,7 @@ std::vector<int> CurveDeformation::collect_vertices_within_drag_length(double dr
 	distance_to_vert.setZero();
 	visited[moving_vertex_ID] = 1;
 	distance_to_vert[moving_vertex_ID] = drag_size;
+
 	std::cout << "moving vertex id: " << moving_vertex_ID << std::endl;
 	vector<int> vertices_in_range;
 	vertices_in_range.push_back(moving_vertex_ID);
@@ -129,12 +130,14 @@ std::vector<int> CurveDeformation::collect_vertices_within_drag_length(double dr
 
 void CurveDeformation::propagate(int prev_edge, int vert, double remaining_distance, std::vector<int>& vertices_in_range, Eigen::MatrixXd& V, Eigen::VectorXi& edge_boundary_markers) {
 	int next_vert;
+	double edge_length;
 	for (int i = 0; i < neighbors[vert].size(); i++) {
 		int edge = find_edge(vert, neighbors[vert][i]);
 		if (edge == prev_edge) {
 			continue;
 		}
-		double edge_length = (original_positions.row(vert) - original_positions.row(neighbors[vert][i])).norm();
+		edge_length = (original_positions.row(vert) - original_positions.row(neighbors[vert][i])).norm();
+		std::cout << "Edge length (test for why cutting strokes don't have in-range vertices when being pulled on: " << edge_length << "   "<< remaining_distance << std::endl;
 		if (edge_boundary_markers[edge]) {
 			if (remaining_distance - edge_length > 0) {
 				next_vert = neighbors[vert][i];
@@ -172,9 +175,9 @@ bool CurveDeformation::create_pulled_curve_by_propagation(int vert, Eigen::Vecto
 	curve.vertices.push_back(vert);
 	curve.fixed_vertices.push_back(vert);
 
-	int edge_marker = 0;
+	int edge_marker = 0, edge;
 	for (int i = 0; i < neighbors[vert].size(); i++) {
-		int edge = find_edge(vert, neighbors[vert][i]);
+		edge = find_edge(vert, neighbors[vert][i]);
 		if (edge_boundary_markers[edge] && !edge_consumed[edge] && visited[neighbors[vert][i]]) {
 			edge_marker = edge_boundary_markers[edge];
 		}
@@ -186,9 +189,10 @@ bool CurveDeformation::create_pulled_curve_by_propagation(int vert, Eigen::Vecto
 
 	propagate(curve, -1, vert, edge_marker, edge_consumed, edge_boundary_markers);
 
+	int prev_edge, next_edge;
 	for (int i = 0; i < curve.edges.size(); i++) {
-		int prev_edge = get_adjacent_seam_edge(EV(curve.edges[i], 0), curve.edges[i], curve.edges, edge_boundary_markers);
-		int next_edge = get_adjacent_seam_edge(EV(curve.edges[i], 1), curve.edges[i], curve.edges, edge_boundary_markers);
+		prev_edge = get_adjacent_seam_edge(EV(curve.edges[i], 0), curve.edges[i], curve.edges, edge_boundary_markers);
+		next_edge = get_adjacent_seam_edge(EV(curve.edges[i], 1), curve.edges[i], curve.edges, edge_boundary_markers);
 		if (prev_edge != -1 && next_edge != -1) {
 			curve.edge_triplets.conservativeResize(curve.edge_triplets.rows() + 1, Eigen::NoChange);
 			curve.edge_triplets.bottomRows(1) << prev_edge, curve.edges[i], next_edge;
@@ -207,8 +211,9 @@ bool CurveDeformation::create_pulled_curve_by_propagation(int vert, Eigen::Vecto
 
 vector<int> CurveDeformation::get_adjacent_seam_vertices(int vert, PulledCurve& curve) {
 	vector<int> adjacent_vertices;
+	int edge;
 	for (int i = 0; i < neighbors[vert].size(); i++) {
-		int edge = find_edge(vert, neighbors[vert][i]);
+		edge = find_edge(vert, neighbors[vert][i]);
 		if (std::find(curve.edges.begin(), curve.edges.end(), edge) != curve.edges.end()) {
 			adjacent_vertices.push_back(EV(edge, 0) == vert ? EV(edge, 1) : EV(edge, 0));
 			if (adjacent_vertices.size() == 2) {
@@ -220,8 +225,9 @@ vector<int> CurveDeformation::get_adjacent_seam_vertices(int vert, PulledCurve& 
 }
 
 int CurveDeformation::get_adjacent_seam_edge(int vert, int edge, std::vector<int> edges, Eigen::VectorXi & edge_boundary_markers) {
+	int edge2;
 	for (int i = 0; i < neighbors[vert].size(); i++) {
-		int edge2 = find_edge(vert, neighbors[vert][i]);
+		edge2 = find_edge(vert, neighbors[vert][i]);
 		if (edge2 != edge && edge_boundary_markers[edge] == edge_boundary_markers[edge2]) {
 			if (std::find(edges.begin(), edges.end(), edge2) != edges.end()) {
 				return edge2;
@@ -233,8 +239,9 @@ int CurveDeformation::get_adjacent_seam_edge(int vert, int edge, std::vector<int
 
 void CurveDeformation::propagate(PulledCurve& curve, int prev_edge, int vert, int edge_marker, Eigen::VectorXi& edge_consumed, Eigen::VectorXi& edge_boundary_markers) {
 	bool is_terminal = true;
+	int edge;
 	for (int i = 0; i < neighbors[vert].size(); i++) {
-		int edge = find_edge(vert, neighbors[vert][i]);
+		edge = find_edge(vert, neighbors[vert][i]);
 		if (edge != prev_edge && edge_boundary_markers[edge] == edge_marker && !edge_consumed[edge]) {
 			if (visited[neighbors[vert][i]]) {
 				curve.edges.push_back(edge);

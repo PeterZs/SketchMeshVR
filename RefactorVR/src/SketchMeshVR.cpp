@@ -35,15 +35,13 @@ using Viewer = igl::opengl::glfw::Viewer;
 using OculusVR = igl::opengl::OculusVR;
 
 OculusVR tmp;
-Viewer viewer(tmp); 
+Viewer viewer(tmp);
 igl::opengl::glfw::imgui::ImGuiMenu menu;
 
 // Vertex array, #V x3
-Eigen::MatrixXd V(0,3);
+Eigen::MatrixXd V(0, 3);
 // Face array, #F x3
-Eigen::MatrixXi F(0,3);
-//Per vertex indicator of whether vertex is on boundary (on boundary if == 1)
-Eigen::VectorXi vertex_boundary_markers;
+Eigen::MatrixXi F(0, 3);;
 //Per vertex indicator of whether vertex position is fixed
 Eigen::VectorXi vertex_is_fixed;
 //Per edge indicator of what curve (or none if == 0) each edge belongs to
@@ -75,7 +73,6 @@ int initial_smooth_iter = 30;
 int handleID = -1;
 
 //Variables for pulling a curve (and removing added control curves)
-int turnNr = 0;
 bool dirty_boundary = false;
 int closest_stroke_ID, prev_closest_stroke_ID, prev_closest_stroke_idx = -1;
 
@@ -106,9 +103,9 @@ Eigen::RowVector3d black(0, 0, 0);
 Eigen::RowVector3d laser_end_point;
 bool prev_laser_show;
 
-void draw_all_strokes(){
+void draw_all_strokes() {
 	Eigen::MatrixXd added_points = initial_stroke->get3DPoints();
-	int nr_edges = added_points.rows()-1;
+	int nr_edges = added_points.rows() - 1;
 	viewer.data().set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), red); //Clear the non-original stroke edges
 
 	if (initial_stroke->is_loop) {
@@ -130,7 +127,7 @@ void draw_all_strokes(){
 	}
 }
 
-void draw_extrusion_base(){
+void draw_extrusion_base() {
 	Eigen::MatrixXd added_points = extrusion_base->get3DPoints();
 	int points_to_hold_back = 1 + extrusion_base->is_loop;
 	viewer.data().add_edges(added_points.topRows(added_points.rows() - points_to_hold_back), added_points.middleRows(1, added_points.rows() - points_to_hold_back), extrusion_base->stroke_color);
@@ -183,7 +180,7 @@ void reset_before_draw() {
 	extrusion_base_already_drawn = false;
 	(*base_mesh).V.resize(0, 3);
 	(*base_mesh).F.resize(0, 3);
-	(*base_mesh).vertex_boundary_markers.resize(0);
+	//(*base_mesh).vertex_boundary_markers.resize(0);
 	(*base_mesh).vertex_is_fixed.resize(0);
 	(*base_mesh).edge_boundary_markers.resize(0);
 	(*base_mesh).new_mapped_indices.resize(0);
@@ -202,7 +199,7 @@ void sound_error_beep() {
 #endif		
 }
 
-void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
+void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 	set_laser_points(pos);
 	if (pressed == OculusVR::ButtonCombo::TRIG && (selected_tool_mode == ADD || selected_tool_mode == REMOVE || selected_tool_mode == CUT || selected_tool_mode == EXTRUDE)) {
 		if (initial_stroke->empty2D()) { //Don't go into these modes when there is no mesh yet
@@ -227,7 +224,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 	}
 
 	if (pressed == OculusVR::ButtonCombo::TRIG) {
-		tool_mode = selected_tool_mode;	
+		tool_mode = selected_tool_mode;
 	}
 	else if (pressed == OculusVR::ButtonCombo::NONE) {
 		tool_mode = NONE;
@@ -236,7 +233,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		tool_mode = SMOOTH;
 	}
 
-	
+
 	if (tool_mode == DRAW) {
 		if (draw_should_block) { //User has been too close to first sample point (closing the stroke too much), so we're in blocked state till the buttons are released again
 			return;
@@ -274,7 +271,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		}
 	}
 	else if (tool_mode == REMOVE) {
-		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) {	
+		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) {
 			Eigen::Vector3f hit_pos;
 			vector<igl::Hit> hits;
 
@@ -283,7 +280,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			}
 			else { //Hand ray did not intersect mesh
 				prev_tool_mode = FAIL;
-				return; 
+				return;
 			}
 
 			double closest_dist = INFINITY;
@@ -324,7 +321,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			if (remove_stroke_clicked == 2) { //Mechanism to force the user to click twice on the same stroke before removing it (safeguard)
 				stroke_was_removed = true;
 				//TODO: below will break if we remove a curve that has vertices that belong to multiple curves, these will then get unmarked as boundary vertices. Replace vertex_boundary_markers either with a list per vertex or some bitwise operator (e.g. belonging to boundary 1 gives value 1, belonging to 1 and 2 gives value 3 etc)
-				stroke_collection[closest_stroke_idx].undo_stroke_add(vertex_boundary_markers, edge_boundary_markers, sharp_edge, vertex_is_fixed); //Sets the vertex_boundary_markers for the vertices of this stroke to 0 again
+				stroke_collection[closest_stroke_idx].undo_stroke_add(edge_boundary_markers, sharp_edge, vertex_is_fixed); //Sets the vertex_boundary_markers for the vertices of this stroke to 0 again
 			/*	for (int i = 0; i < (*base_mesh).patches.size(); i++) {
 					(*base_mesh).patches[i]->update_patch_boundary_markers(vertex_boundary_markers);
 				}*/
@@ -355,38 +352,29 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				prev_tool_mode = FAIL;
 				return;
 			}
-			CurveDeformation::startPullCurve(closest_stroke_ID >= 0 ? stroke_collection[closest_stroke_ID] : *initial_stroke, handleID, V, F);
+			CurveDeformation::startPullCurve(handleID, (*base_mesh).V, (*base_mesh).F);
 			prev_tool_mode = PULL;
 		}
 		else if (prev_tool_mode == PULL) {
-			if (turnNr == 0) { 
-				CurveDeformation::pullCurveTest(pos.transpose().cast<double>(), (*base_mesh).V, (*base_mesh).edge_boundary_markers);
-				for (int i = 0; i < (*base_mesh).patches.size(); i++) {
-					(*base_mesh).patches[i]->update_patch_vertex_positions((*base_mesh).V);
-				}
-
-				for (int i = 0; i < 8; i++) {
-					SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
-				}
-				//turnNr++;
-
-				initial_stroke->update_Positions(V);
-				for (int i = 0; i < stroke_collection.size(); i++) {
-					stroke_collection[i].update_Positions(V);
-				}
-
-				viewer.data().set_mesh(V, F);
-				Eigen::MatrixXd N_corners;
-				igl::per_corner_normals(V, F, 50, N_corners);
-				viewer.data().set_normals(N_corners);
-				draw_all_strokes();
+			CurveDeformation::pullCurveTest(pos.transpose().cast<double>(), (*base_mesh).V, (*base_mesh).edge_boundary_markers);
+			for (int i = 0; i < (*base_mesh).patches.size(); i++) {
+				(*base_mesh).patches[i]->update_patch_vertex_positions((*base_mesh).V);
 			}
-			/*else {
-				turnNr++;
-				if (turnNr == 2) {//increase this number to smooth less often
-					turnNr = 0;
-				}
-			}*/
+
+			for (int i = 0; i < 8; i++) {
+				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
+			}
+
+			initial_stroke->update_Positions(V);
+			for (int i = 0; i < stroke_collection.size(); i++) {
+				stroke_collection[i].update_Positions(V);
+			}
+
+			viewer.data().set_mesh(V, F);
+			Eigen::MatrixXd N_corners;
+			igl::per_corner_normals(V, F, 50, N_corners);
+			viewer.data().set_normals(N_corners);
+			draw_all_strokes();
 		}
 	}
 	else if (tool_mode == CUT) {
@@ -441,19 +429,18 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 		}
 		else if (prev_tool_mode == DRAW) {
 			prev_tool_mode = NONE;
-			draw_should_block = false; 
-		
+			draw_should_block = false;
+
 			if (initial_stroke->toLoop()) { //Returns false if the stroke only consists of 1 point (user just clicked)
-				initial_stroke->generate3DMeshFromStroke(vertex_boundary_markers, edge_boundary_markers, vertex_is_fixed, V, F);
-		
+				initial_stroke->generate3DMeshFromStroke(edge_boundary_markers, vertex_is_fixed, V, F);
+
 				if (!igl::is_edge_manifold(F)) { //Check if the drawn stroke results in an edge-manifold mesh, otherwise sound a beep and revert
 					sound_error_beep();
 					Eigen::MatrixXd drawn_points = initial_stroke->get3DPoints();
 					initial_stroke->strokeReset();
-					vertex_boundary_markers.resize(0);
+					//vertex_boundary_markers.resize(0);
 					vertex_is_fixed.resize(0);
 					edge_boundary_markers.resize(0);
-					//part_of_original_stroke.resize(0);
 					dirty_boundary = true;
 
 					viewer.data().add_edges(drawn_points.block(0, 0, drawn_points.rows() - 1, 3), drawn_points.block(1, 0, drawn_points.rows() - 1, 3), black); //Display the stroke in black to show that it went wrong
@@ -483,11 +470,10 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				viewer.data().set_normals(N_corners);
 
 				//Overlay the drawn stroke
-				//int strokeSize = (vertex_boundary_markers.array() > 0).count();
 				int strokeSize = (vertex_is_fixed.array() > 0).count();
 				Eigen::MatrixXd strokePoints = V.block(0, 0, strokeSize, 3);
 				viewer.data().set_stroke_points(igl::cat(1, strokePoints, (Eigen::MatrixXd) V.row(0)));
-			}	
+			}
 		}
 		else if (prev_tool_mode == ADD) {
 			dirty_boundary = true;
@@ -498,8 +484,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				return;
 			}
 
-				
-			//TODO: Work in progress
 			bool success;
 			if (added_stroke->starts_on_mesh && added_stroke->ends_on_mesh) {
 				success = LaplacianRemesh::remesh_open_path(*base_mesh, *added_stroke);
@@ -535,11 +519,11 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			(*base_mesh).face_patch_map.clear();
 			(*base_mesh).patches = Patch::init_patches(*base_mesh);
 
-			initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers, edge_boundary_markers, sharp_edge, vertex_is_fixed); //Don't test if the initial one dies
+			initial_stroke->update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed); //Don't test if the initial one dies
 
 			int nr_removed = 0, original_collection_size = stroke_collection.size();
 			for (int i = 0; i < original_collection_size - 1; i++) { //Don't update the added stroke, as this is done inside the remeshing already
-				if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, vertex_boundary_markers, edge_boundary_markers, sharp_edge, vertex_is_fixed)) {
+				if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed)) {
 					//Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist
 					stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
 					nr_removed++;
@@ -617,7 +601,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				added_stroke->prepend_first_point();
 				added_stroke->append_final_point();
 				added_stroke->toLoop();
-			
+
 				bool cut_success = MeshCut::cut(*base_mesh, *added_stroke, clicked_face);
 				if (!cut_success) { //Catches the following cases: when the cut removes all mesh vertices/faces, when the first/last cut point aren't correct (face -1 in SurfacePath) or when sorting takes "infinite" time
 					cut_stroke_already_drawn = false;
@@ -625,7 +609,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 					prev_tool_mode = NONE;
 					sound_error_beep();
 					viewer.data().set_points(Eigen::MatrixXd(), black); //Will remove the pink cut stroke
-					draw_all_strokes(); 
+					draw_all_strokes();
 					Eigen::MatrixXd drawn_points = added_stroke->get3DPoints();
 					int nr_edges = drawn_points.rows() - 1;
 					viewer.data().add_edges(drawn_points.topRows(nr_edges), drawn_points.middleRows(1, nr_edges), black); //Display the stroke in black to show that it went wrong
@@ -638,11 +622,11 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 
 				stroke_collection.push_back(*added_stroke);
 
-				initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers, edge_boundary_markers, sharp_edge, vertex_is_fixed); //Don't test if the initial one dies
+				initial_stroke->update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed); //Don't test if the initial one dies
 
 				int nr_removed = 0, original_collection_size = stroke_collection.size();
 				for (int i = 0; i < original_collection_size; i++) {
-					if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, vertex_boundary_markers, edge_boundary_markers, sharp_edge, vertex_is_fixed)) {
+					if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed)) {
 						//Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist
 						stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
 						nr_removed++;
@@ -703,10 +687,10 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 					draw_all_strokes(); //Will remove the drawn base & silhouette strokes
 					Eigen::MatrixXd drawn_points = extrusion_base->get3DPoints();
 					int nr_edges = drawn_points.rows() - 1;
-					viewer.data().add_edges(drawn_points.topRows(nr_edges), drawn_points.middleRows(1,nr_edges), black); //Display the stroke in black to show that it went wrong
+					viewer.data().add_edges(drawn_points.topRows(nr_edges), drawn_points.middleRows(1, nr_edges), black); //Display the stroke in black to show that it went wrong
 					drawn_points = added_stroke->get3DPoints();
 					nr_edges = drawn_points.rows() - 1;
-					viewer.data().add_edges(drawn_points.topRows(nr_edges-1), drawn_points.middleRows(1,nr_edges-1), black); //Display the stroke in black to show that it went wrong
+					viewer.data().add_edges(drawn_points.topRows(nr_edges - 1), drawn_points.middleRows(1, nr_edges - 1), black); //Display the stroke in black to show that it went wrong
 					viewer.selected_data_index = 2;
 					viewer.data().show_laser = true;
 					viewer.selected_data_index = 1;
@@ -719,11 +703,11 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				stroke_collection.push_back(*extrusion_base);
 				stroke_collection.push_back(*added_stroke);
 
-				initial_stroke->update_vert_bindings(new_mapped_indices, vertex_boundary_markers, edge_boundary_markers, sharp_edge, vertex_is_fixed);
+				initial_stroke->update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed);
 
 				int nr_removed = 0, original_collection_size = stroke_collection.size();
 				for (int i = 0; i < original_collection_size - 1; i++) { //Skip the newly added stroke since it is already updated inside extrude_main()
-					if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, vertex_boundary_markers, edge_boundary_markers, sharp_edge, vertex_is_fixed)) {
+					if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed)) {
 						//Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist (or in case of non-loop strokes that have a middle portion removed, the undo_stroke_add is done inside of the update_vert_bindings
 						stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
 						nr_removed++;
@@ -733,7 +717,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				}
 
 				for (int i = 0; i < 10; i++) {
-				//	SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
+					//	SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
 				}
 
 				//Update the stroke positions after smoothing, in case their positions have changed (although they really shouldn't)
@@ -821,11 +805,11 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			for (int i = 0; i < stroke_collection.size(); i++) {
 				stroke_collection[i].update_Positions(V);
 			}
-		//	viewer.data().clear();
+			//	viewer.data().clear();
 			viewer.data().set_mesh(V, F);
 			Eigen::MatrixXd N_corners;
 			igl::per_corner_normals(V, F, 50, N_corners);
-			viewer.data().set_normals(N_corners); 
+			viewer.data().set_normals(N_corners);
 
 			draw_all_strokes();
 		}
@@ -847,16 +831,16 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 }
 
 bool callback_load_mesh(Viewer& viewer, string filename, Eigen::MatrixXd& V_floor, Eigen::MatrixXi& F_floor) {
-		igl::readOFF(filename, V, F);
-		viewer.data().clear();
-		viewer.data().set_mesh(V_floor, F_floor);
-		viewer.append_mesh();
-		viewer.data().set_mesh(V, F);
-		Eigen::MatrixXd N_corners;
-		igl::per_corner_normals(V, F, 50, N_corners);
-		viewer.data().set_normals(N_corners);
+	igl::readOFF(filename, V, F);
+	viewer.data().clear();
+	viewer.data().set_mesh(V_floor, F_floor);
+	viewer.append_mesh();
+	viewer.data().set_mesh(V, F);
+	Eigen::MatrixXd N_corners;
+	igl::per_corner_normals(V, F, 50, N_corners);
+	viewer.data().set_normals(N_corners);
 
-		std::cout << filename.substr(filename.find_last_of("/") + 1) << endl;
+	std::cout << filename.substr(filename.find_last_of("/") + 1) << endl;
 	return true;
 }
 
@@ -882,7 +866,7 @@ void menu_closed() {
 int main(int argc, char *argv[]) {
 	//Init stroke selector
 	initial_stroke = new Stroke(V, F, viewer, 0);
-	base_mesh = new Mesh(V, F, vertex_boundary_markers, edge_boundary_markers, vertex_is_fixed, new_mapped_indices, sharp_edge, 0);
+	base_mesh = new Mesh(V, F, edge_boundary_markers, vertex_is_fixed, new_mapped_indices, sharp_edge, 0);
 
 	Eigen::MatrixXd V_floor(4, 3);
 	V_floor.row(0) << -10, 0, -10;
@@ -911,8 +895,8 @@ int main(int argc, char *argv[]) {
 		V_uv.col(0) = V_uv.col(0).array() / V_uv.col(0).maxCoeff();
 		V_uv.col(1) = V_uv.col(1).array() - V_uv.col(1).minCoeff();
 		V_uv.col(1) = V_uv.col(1).array() / V_uv.col(1).maxCoeff();
-		V_uv = V_uv.array() *2;
-		
+		V_uv = V_uv.array() * 2;
+
 		Eigen::Matrix<unsigned char, Dynamic, Dynamic> texR, texG, texB;
 		std::string texture_file = std::string(cur_dir) + "\\..\\data\\free\\floor.png";
 		int width, height, n;
@@ -925,8 +909,8 @@ int main(int argc, char *argv[]) {
 		texG.resize(height, width);
 		texB.resize(height, width);
 
-		for (unsigned j = 0; j<height; ++j) {
-			for (unsigned i = 0; i<width; ++i) {
+		for (unsigned j = 0; j < height; ++j) {
+			for (unsigned i = 0; i < width; ++i) {
 				// used to flip with libPNG, but I'm not sure if
 				// simply j*width + i wouldn't be better
 				// stb_image uses horizontal scanline an starts top-left corner
@@ -937,7 +921,7 @@ int main(int argc, char *argv[]) {
 		}
 		stbi_image_free(data);
 
-		viewer.data().set_uv(V_uv); 
+		viewer.data().set_uv(V_uv);
 		viewer.data().show_texture = true;
 		viewer.data().set_texture(texR, texG, texB);
 	}
@@ -946,7 +930,7 @@ int main(int argc, char *argv[]) {
 	viewer.data().set_mesh(V, F);
 	Eigen::MatrixXd N_corners;
 	igl::per_corner_normals(V, F, 50, N_corners);
-	viewer.data().set_normals(N_corners); 
+	viewer.data().set_normals(N_corners);
 	viewer.append_mesh(); //For laser ray/point
 	viewer.data().show_laser = false;
 	viewer.selected_data_index = 1;
@@ -1048,8 +1032,8 @@ int main(int argc, char *argv[]) {
 		style.ItemInnerSpacing = ImVec2(0, 0);
 		style.Colors[ImGuiCol_WindowBg] = ImVec4(0.00f, 0.00f, 0.00f, 1.0f);
 		ImGui::Begin("Current Tool", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar);
-		ImGui::SameLine(0.5*(200-178)); //Take distance_to_vert around image and offset by half of it
-		ImGui::Image(im_texID_cur, ImVec2(178.0f, 178.0f), ImVec2(0,0), ImVec2(1,1), ImColor(255, 255, 255, 255), ImColor(0,0,0,0));
+		ImGui::SameLine(0.5*(200 - 178)); //Take distance_to_vert around image and offset by half of it
+		ImGui::Image(im_texID_cur, ImVec2(178.0f, 178.0f), ImVec2(0, 0), ImVec2(1, 1), ImColor(255, 255, 255, 255), ImColor(0, 0, 0, 0));
 		ImGui::End();
 	};
 
