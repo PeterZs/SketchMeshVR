@@ -100,9 +100,9 @@ bool CurveDeformation::update_ROI_test(double drag_size, Eigen::MatrixXd& V, Eig
 					curves.back().fixed_vertices.push_back(vertices_in_range[vertices_in_range.size() - 2]);
 					count++;
 				}
-				if (count == 2) {
+				/*if (count == 2) {
 					curves.back().fixed_edges.push_back(find_edge(curves.back().fixed_vertices[curves.back().fixed_vertices.size() - 1], curves.back().fixed_vertices[curves.back().fixed_vertices.size() - 2]));
-				}
+				}*/
 			}
 
 			std::cout << "TEST" << std::endl;
@@ -137,7 +137,6 @@ void CurveDeformation::propagate(int prev_edge, int vert, double remaining_dista
 			continue;
 		}
 		edge_length = (original_positions.row(vert) - original_positions.row(neighbors[vert][i])).norm();
-		std::cout << "Edge length (test for why cutting strokes don't have in-range vertices when being pulled on: " << edge_length << "   "<< remaining_distance << std::endl;
 		if (edge_boundary_markers[edge]) {
 			if (remaining_distance - edge_length > 0) {
 				next_vert = neighbors[vert][i];

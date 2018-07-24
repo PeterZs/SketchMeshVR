@@ -30,8 +30,6 @@ bool MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke, int c
 	if (!remesh_success) {
 		return false;
 	}
-	std::cout << "TODO: check that below edge boundary markers are set for the boundary edges that are created due to cut" << std::endl;
-	std::cout << m.edge_boundary_markers << std::endl;
 
 	return mesh_open_hole(boundary_vertices, m);
 }
@@ -121,11 +119,13 @@ void MeshCut::update_edge_indicators(Mesh& m, Eigen::MatrixXi& edges_to_update) 
 	int start, end, equal_pos;
 	Eigen::VectorXi col1Equals, col2Equals;
 	for (int i = 0; i < edges_to_update.rows(); i++) {
-		start = m.new_mapped_indices(edges_to_update(i, 0));
+		/*start = m.new_mapped_indices(edges_to_update(i, 0));
 		end = m.new_mapped_indices(edges_to_update(i, 1));
 		if (start == -1 || end == -1) { //Edge no longer exists
 			continue;
-		}
+		}*/
+		start = edges_to_update(i, 0);
+		end = edges_to_update(i, 1);
 
 		col1Equals = EV.col(0).cwiseEqual(min(start, end)).cast<int>();
 		col2Equals = EV.col(1).cwiseEqual(max(start, end)).cast<int>();
