@@ -11,15 +11,15 @@ typedef Eigen::Triplet<double> T;
 int moving_vertex_ID, CONSTRAINT_WEIGHT = 10000;
 double current_ROI_size, curve_diag_length;
 
-vector<Eigen::Matrix3d> Rot;
+//vector<Eigen::Matrix3d> Rot;
 
 Eigen::RowVector3d start_pos;
-Eigen::VectorXd B, PosRot;
-Eigen::MatrixXd original_L0, original_L1;
+//Eigen::VectorXd B, PosRot;
+//Eigen::MatrixXd original_L0, original_L1;
 
-Eigen::SparseMatrix<double> A, A_L1_T;
-Eigen::SparseLU<Eigen::SparseMatrix<double>> solverL1; //Solver for final vertex positions (with L1)
-Eigen::SparseLU<Eigen::SparseMatrix<double>> solverPosRot;
+//Eigen::SparseMatrix<double> A, A_L1_T;
+//Eigen::SparseLU<Eigen::SparseMatrix<double>> solverL1; //Solver for final vertex positions (with L1)
+//Eigen::SparseLU<Eigen::SparseMatrix<double>> solverPosRot;
 
 vector<vector<int>> CurveDeformation::neighbors;
 Eigen::MatrixXi CurveDeformation::EV, CurveDeformation::FE, CurveDeformation::EF;
@@ -29,13 +29,13 @@ double DRAG_SCALE = 1.5;
 Eigen::VectorXi visited;
 Eigen::VectorXd distance_to_vert;
 vector<CurveDeformation::PulledCurve> curves;
-vector<vector<int>> vertex_triplet_to_rot_idx;
-Eigen::VectorXi is_fixed;
+//vector<vector<int>> vertex_triplet_to_rot_idx;
+//Eigen::VectorXi is_fixed;
 Eigen::MatrixXd original_positions;
 
-std::vector<int> fixed_vertices_local;
-std::unordered_map<int, int> vertex_global_to_local;
-std::unordered_map<int, int> edge_global_to_local;
+//std::vector<int> fixed_vertices_local;
+//std::unordered_map<int, int> vertex_global_to_local;
+//std::unordered_map<int, int> edge_global_to_local;
 
 void CurveDeformation::startPullCurve(Stroke& _stroke, int _moving_vertex_ID, Eigen::MatrixXd& V, Eigen::MatrixXi& F) {
 	moving_vertex_ID = _moving_vertex_ID;
@@ -73,12 +73,14 @@ void CurveDeformation::pullCurveTest(const Eigen::RowVector3d& pos, Eigen::Matri
 	else {
 		if (ROI_is_updated) {
 			for (int i = 0; i < curves.size(); i++) {
-				setup_for_update_curve_test(curves[i], V);
+				curves[i].laplacian_curve_edit.setup_for_update_curve(curves[i].vertices, curves[i].fixed_vertices, curves[i].edges, curves[i].fixed_edges, curves[i].vertex_triplets, curves[i].edge_triplets, V, EV);
+				//setup_for_update_curve_test(curves[i], V);
 			}
 		}
 		V.row(moving_vertex_ID) = pos;
 		for (int i = 0; i < curves.size(); i++) {
-			update_curve_test(curves[i], V);
+		//	update_curve_test(curves[i], V);
+			curves[i].laplacian_curve_edit.update_curve(V);
 		}
 
 	}
@@ -303,7 +305,7 @@ int CurveDeformation::find_next_edge(int vert, int prev_edge, int edge_marker, E
 	return -1;
 }
 
-void CurveDeformation::setup_for_update_curve_test(PulledCurve& curve, Eigen::MatrixXd& V) {
+/*void CurveDeformation::setup_for_update_curve_test(PulledCurve& curve, Eigen::MatrixXd& V) {
 	A.resize(curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + curve.fixed_vertices.size() * 3 + curve.fixed_edges.size() * 3, curve.vertices.size() * 3 + curve.edges.size() * 3);
 	B.resize(curve.edges.size() * 3 + curve.edge_triplets.rows() * 9 + curve.fixed_vertices.size() * 3 + curve.fixed_edges.size() * 3);
 	Rot.resize(curve.edges.size());
@@ -561,4 +563,4 @@ Eigen::Matrix3d CurveDeformation::average_rot(Eigen::Matrix3d& r0, Eigen::Matrix
 		}
 	}
 	return rnew;
-}
+}*/
