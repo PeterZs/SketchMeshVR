@@ -689,7 +689,7 @@ int Stroke::selectClosestVertex(Eigen::Vector3f pos, double& closest_distance) {
 	else if (stroke3DPoints.rows() == 2 && closest_dist > 0.08 * (stroke3DPoints.row(0).norm() * 2)) { //The stroke consist of a single point (that's "looped") so the diag will be 0. Use the point's norm instead
 		return -1;
 	}
-	return closest_ID;
+	return closest_vert_bindings[closest_ID];
 }
 
 double Stroke::compute_stroke_diag() {

@@ -186,7 +186,6 @@ void reset_before_draw() {
 	(*base_mesh).vertex_boundary_markers.resize(0);
 	(*base_mesh).vertex_is_fixed.resize(0);
 	(*base_mesh).edge_boundary_markers.resize(0);
-	//(*base_mesh).part_of_original_stroke.resize(0);
 	(*base_mesh).new_mapped_indices.resize(0);
 	(*base_mesh).sharp_edge.resize(0);
 	(*base_mesh).mesh_to_patch_indices.resize(0);
@@ -356,21 +355,20 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				prev_tool_mode = FAIL;
 				return;
 			}
-
 			CurveDeformation::startPullCurve(closest_stroke_ID >= 0 ? stroke_collection[closest_stroke_ID] : *initial_stroke, handleID, V, F);
 			prev_tool_mode = PULL;
 		}
 		else if (prev_tool_mode == PULL) {
 			if (turnNr == 0) { 
 				CurveDeformation::pullCurveTest(pos.transpose().cast<double>(), (*base_mesh).V, (*base_mesh).edge_boundary_markers);
-
-				//CurveDeformation::pullCurve(pos.transpose().cast<double>(), (*base_mesh).V);
 				for (int i = 0; i < (*base_mesh).patches.size(); i++) {
 					(*base_mesh).patches[i]->update_patch_vertex_positions((*base_mesh).V);
 				}
 
-				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
-				turnNr++;
+				for (int i = 0; i < 8; i++) {
+					SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
+				}
+				//turnNr++;
 
 				initial_stroke->update_Positions(V);
 				for (int i = 0; i < stroke_collection.size(); i++) {
@@ -383,12 +381,12 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 				viewer.data().set_normals(N_corners);
 				draw_all_strokes();
 			}
-			else {
+			/*else {
 				turnNr++;
-				if (turnNr == 4) {//increase this number to smooth less often
+				if (turnNr == 2) {//increase this number to smooth less often
 					turnNr = 0;
 				}
-			}
+			}*/
 		}
 	}
 	else if (tool_mode == CUT) {
@@ -586,15 +584,16 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			draw_all_strokes();
 		}
 		else if (prev_tool_mode == PULL && handleID != -1) {
-			for (int i = 0; i < 6; i++) {
+			for (int i = 0; i < 20; i++) {
 				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
 			}
 
+			initial_stroke->update_Positions(V);
 			for (int i = 0; i < stroke_collection.size(); i++) {
 				stroke_collection[i].update_Positions(V);
 			}
 
-			viewer.data().clear();
+			//viewer.data().clear();
 			viewer.data().set_mesh(V, F);
 			Eigen::MatrixXd N_corners;
 			igl::per_corner_normals(V, F, 50, N_corners);
@@ -822,7 +821,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos){
 			for (int i = 0; i < stroke_collection.size(); i++) {
 				stroke_collection[i].update_Positions(V);
 			}
-			viewer.data().clear();
+		//	viewer.data().clear();
 			viewer.data().set_mesh(V, F);
 			Eigen::MatrixXd N_corners;
 			igl::per_corner_normals(V, F, 50, N_corners);
@@ -1160,7 +1159,7 @@ int main(int argc, char *argv[]) {
 	viewer.oculusVR.callback_menu_opened = menu_opened;
 	viewer.oculusVR.callback_menu_closed = menu_closed;
 	viewer.data().point_size = 15;
-	viewer.data().show_lines = false; //TODO change
+	viewer.data().show_lines = true; //TODO change
 	viewer.launch_oculus();
 }
 

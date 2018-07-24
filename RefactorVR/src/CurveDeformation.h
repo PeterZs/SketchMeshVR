@@ -18,14 +18,14 @@ public:
 
 		LaplacianCurveEdit laplacian_curve_edit;
 
-		 PulledCurve() {
+		PulledCurve() {
 			edge_triplets.resize(0, 3);
 			vertex_triplets.resize(0, 3);
 		}
 	};
 private:
 
-	static double compute_curve_diag_length(Stroke & _stroke);
+	//static double compute_curve_diag_length(Stroke & _stroke);
 	static bool update_ROI_test(double drag_size, Eigen::MatrixXd & V, Eigen::VectorXi& edge_boundary_markers);
 	static std::vector<int> collect_vertices_within_drag_length(double drag_size, Eigen::MatrixXd & V, Eigen::VectorXi& edge_boundary_markers);
 	static void propagate(int prev_edge, int vert, double remaining_distance, std::vector<int>& vertices_in_range, Eigen::MatrixXd & V, Eigen::VectorXi& edge_boundary_markers);

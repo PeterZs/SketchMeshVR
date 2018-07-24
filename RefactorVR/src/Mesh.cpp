@@ -9,7 +9,6 @@ Mesh::Mesh() :
 	vertex_boundary_markers(Eigen::VectorXi()),
 	edge_boundary_markers(Eigen::VectorXi()),
 	vertex_is_fixed(Eigen::VectorXi()),
-	//part_of_original_stroke(Eigen::VectorXi()),
 	new_mapped_indices(Eigen::VectorXi()),
 	sharp_edge(Eigen::VectorXi()),
 	ID(-1),
@@ -24,7 +23,6 @@ Mesh & Mesh::operator=(Mesh other){
 	vertex_boundary_markers = other.vertex_boundary_markers;
 	edge_boundary_markers = other.edge_boundary_markers;
 	vertex_is_fixed = other.vertex_is_fixed;
-	//part_of_original_stroke = other.part_of_original_stroke;
 	new_mapped_indices = other.new_mapped_indices;
 	sharp_edge = other.sharp_edge;
 	ID = other.ID;

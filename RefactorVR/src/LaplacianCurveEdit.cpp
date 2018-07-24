@@ -4,6 +4,9 @@
 
 typedef Eigen::Triplet<double> T;
 
+LaplacianCurveEdit::LaplacianCurveEdit() {}
+LaplacianCurveEdit::LaplacianCurveEdit(const LaplacianCurveEdit& other) {}
+LaplacianCurveEdit& LaplacianCurveEdit::operator=(LaplacianCurveEdit other) { return *this; }
 
 void LaplacianCurveEdit::setup_for_update_curve(std::vector<int> vertices_, std::vector<int> fixed_vertices_, std::vector<int> edges_, std::vector<int> fixed_edges_, Eigen::MatrixXi vertex_triplets_, Eigen::MatrixXi edge_triplets_, Eigen::MatrixXd& V_, Eigen::MatrixXi& EV_) {
 	V = V_;
@@ -36,29 +39,31 @@ void LaplacianCurveEdit::setup_for_update_curve(std::vector<int> vertices_, std:
 	is_fixed.setZero();
 	for (int i = 0; i < fixed_vertices.size(); i++) { //Create a copy with local indexing for fixed_vertices, and also keep the global indexing
 		auto loc = std::find(vertices.begin(), vertices.end(), fixed_vertices[i]);
+		if (loc == vertices.end()) {
+			std::cout << "Something wrong" << std::endl;
+		}
 		idx = distance(vertices.begin(), loc);
 		fixed_vertices_local[i] = idx;
 		is_fixed[idx] = 1;
 	}
 
-	std::cout << "   Curve fixed edges before: " << std::endl;
 	for (int i = 0; i < fixed_edges.size(); i++) { //Create local indexing for fixed_edges
-		std::cout << EV(fixed_edges[i], 0) << "  " << EV(fixed_edges[i], 1) << std::endl;
 		auto loc = std::find(edges.begin(), edges.end(), fixed_edges[i]);
+		if (loc == edges.end()) {
+			std::cout << "Something wrong 2" << std::endl;
+		}
 		idx = distance(edges.begin(), loc);
 		fixed_edges[i] = idx;
 	}
 
-	std::cout << "Curve edges before: " << std::endl;
 	for (int i = 0; i < edges.size(); i++) {
-		std::cout << edges[i] << ": " << EV(edges[i], 0) << "   " << EV(edges[i], 1) << std::endl;
 		edge_global_to_local.insert({ edges[i], i });
 	}
 
-	setup_for_L1_position_step(V);
+	setup_for_L1_position_step();
 }
 
-void LaplacianCurveEdit::setup_for_L1_position_step(Eigen::MatrixXd& V) {
+void LaplacianCurveEdit::setup_for_L1_position_step() {
 	std::vector<T> tripletList;
 	tripletList.reserve(vertex_triplets.rows() * 3 + fixed_vertices.size());
 	original_L1.resize(vertex_triplets.rows(), 3);
@@ -108,10 +113,8 @@ void LaplacianCurveEdit::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
 
 	int v0, v1;
 	for (int i = 0; i < edges.size(); i++) { //Laplacian of the position: v1' - v0' = dR * R * L(v1 - v0)
-		std::cout << "edge: " << edges[i] << "  " << EV(edges[i], 0) << "  " << EV(edges[i], 1);
 		v0 = vertex_global_to_local.find(EV(edges[i], 0))->second;
 		v1 = vertex_global_to_local.find(EV(edges[i], 1))->second;
-		std::cout << "   " << v0 << "  " << v1 << std::endl;
 		tripletList.push_back(T(i * 3 + 0, v0 * 3, -1)); //L0
 		tripletList.push_back(T(i * 3 + 0, v1 * 3, 1)); //L0
 		tripletList.push_back(T(i * 3 + 0, vertices.size() * 3 + i * 3, 0));
@@ -175,9 +178,7 @@ void LaplacianCurveEdit::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
 			B[edges.size() * 3 + i * 9 + 6 + j] = 0.5 * Rot[e0](2, j) - 1 * Rot[e1](2, j) + 0.5 * Rot[e2](2, j);
 		}
 	}
-	std::cout << "Fixed vertices local: ";
 	for (int i = 0; i < fixed_vertices_local.size(); i++) { //Position of fixed vertices: v_i - v_i' = 0
-		std::cout << fixed_vertices_local[i] << "  ";
 		tripletList.push_back(T(edges.size() * 3 + edge_triplets.rows() * 9 + i * 3, fixed_vertices_local[i] * 3, CONSTRAINT_WEIGHT));
 		tripletList.push_back(T(edges.size() * 3 + edge_triplets.rows() * 9 + i * 3 + 1, fixed_vertices_local[i] * 3 + 1, CONSTRAINT_WEIGHT));
 		tripletList.push_back(T(edges.size() * 3 + edge_triplets.rows() * 9 + i * 3 + 2, fixed_vertices_local[i] * 3 + 2, CONSTRAINT_WEIGHT));
@@ -186,7 +187,7 @@ void LaplacianCurveEdit::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
 		B[edges.size() * 3 + edge_triplets.rows() * 9 + i * 3 + 1] = CONSTRAINT_WEIGHT * V(fixed_vertices[i], 1);
 		B[edges.size() * 3 + edge_triplets.rows() * 9 + i * 3 + 2] = CONSTRAINT_WEIGHT * V(fixed_vertices[i], 2);
 	}
-	std::cout << std::endl;
+
 	for (int i = 0; i < fixed_edges.size(); i++) {
 		tripletList.push_back(T(edges.size() * 3 + edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 0, vertices.size() * 3 + fixed_edges[i] * 3, CONSTRAINT_WEIGHT));
 		tripletList.push_back(T(edges.size() * 3 + edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 1, vertices.size() * 3 + fixed_edges[i] * 3 + 1, CONSTRAINT_WEIGHT));
@@ -200,7 +201,6 @@ void LaplacianCurveEdit::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
 	A.setFromTriplets(tripletList.begin(), tripletList.end());
 	A.prune(0.0);
 	Eigen::SparseMatrix<double> AT = A.transpose();
-	std::cout << AT * A << std::endl;
 	solverPosRot.compute(AT*A);
 	PosRot = solverPosRot.solve(AT*B);
 }

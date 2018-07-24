@@ -9,7 +9,9 @@ class LaplacianCurveEdit {
 public:
 	void setup_for_update_curve(std::vector<int> vertices, std::vector<int> fixed_vertices, std::vector<int> edges, std::vector<int> fixed_edges, Eigen::MatrixXi vertex_triplets, Eigen::MatrixXi edge_triplets, Eigen::MatrixXd& V, Eigen::MatrixXi& EV_);
 	void update_curve(Eigen::MatrixXd & V);
-	LaplacianCurveEdit() {};
+	LaplacianCurveEdit();
+	LaplacianCurveEdit(const LaplacianCurveEdit &);
+	LaplacianCurveEdit& operator=(LaplacianCurveEdit other);
 
 private:
 	int CONSTRAINT_WEIGHT = 10000;
@@ -31,7 +33,7 @@ private:
 	Eigen::MatrixXi edge_triplets, vertex_triplets;
 	Eigen::MatrixXd V;
 
-	void setup_for_L1_position_step(Eigen::MatrixXd& V);
+	void setup_for_L1_position_step();
 	void solve_for_pos_and_rot(Eigen::MatrixXd & V);
 	void update_rot();
 	Eigen::Matrix3d compute_orthonormal(Eigen::Matrix3d & rot);

@@ -17,7 +17,6 @@ public:
 	Eigen::VectorXi &vertex_boundary_markers;
 	Eigen::VectorXi &edge_boundary_markers;
 	Eigen::VectorXi &vertex_is_fixed;
-    //Eigen::VectorXi &part_of_original_stroke;
 	Eigen::VectorXi &new_mapped_indices;
 	Eigen::VectorXi &sharp_edge;
 	std::vector<Patch*> patches;
