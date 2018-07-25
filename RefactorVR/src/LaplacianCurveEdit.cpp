@@ -8,7 +8,7 @@ LaplacianCurveEdit::LaplacianCurveEdit() {}
 LaplacianCurveEdit::LaplacianCurveEdit(const LaplacianCurveEdit& other) {}
 LaplacianCurveEdit& LaplacianCurveEdit::operator=(LaplacianCurveEdit other) { return *this; }
 
-void LaplacianCurveEdit::setup_for_update_curve(std::vector<int> vertices_, std::vector<int> fixed_vertices_, std::vector<int> edges_, std::vector<int> fixed_edges_, Eigen::MatrixXi vertex_triplets_, Eigen::MatrixXi edge_triplets_, Eigen::MatrixXd& V_, Eigen::MatrixXi& EV_) {
+void LaplacianCurveEdit::setup_for_update_curve(std::vector<int> vertices_, std::vector<int> fixed_vertices_, Eigen::MatrixXi& edges_, std::vector<int> fixed_edges_, Eigen::MatrixXi vertex_triplets_, Eigen::MatrixXi edge_triplets_, Eigen::MatrixXd& V_, Eigen::MatrixXi& EV_) {
 	V = V_;
 	EV = EV_;
 	vertices = vertices_;
@@ -17,15 +17,16 @@ void LaplacianCurveEdit::setup_for_update_curve(std::vector<int> vertices_, std:
 	fixed_edges = fixed_edges_;
 	vertex_triplets = vertex_triplets_;
 	edge_triplets = edge_triplets_;
-	A.resize(edges.size() * 3 + edge_triplets.rows() * 9 + fixed_vertices.size() * 3 + fixed_edges.size() * 3, vertices.size() * 3 + edges.size() * 3);
-	B.resize(edges.size() * 3 + edge_triplets.rows() * 9 + fixed_vertices.size() * 3 + fixed_edges.size() * 3);
-	Rot.resize(edges.size());
-	original_L0.resize(edges.size(), 3);
+	A.resize(edges.rows() * 3 + edge_triplets.rows() * 9 + fixed_vertices.size() * 3 + fixed_edges.size() * 3, vertices.size() * 3 + edges.rows() * 3);
+	B.resize(edges.rows() * 3 + edge_triplets.rows() * 9 + fixed_vertices.size() * 3 + fixed_edges.size() * 3);
+	Rot.resize(edges.rows());
+	original_L0.resize(edges.rows(), 3);
 	vertex_global_to_local.clear();
-	edge_global_to_local.clear();
+//	edge_global_to_local.clear();
 
-	for (int i = 0; i < edges.size(); i++) {
-		original_L0.row(i) = V.row(EV(edges[i], 0)) - V.row(EV(edges[i], 1)); //TODO: Maybe this needs to be the other way around?
+	for (int i = 0; i < edges.rows(); i++) {
+		original_L0.row(i) = V.row(edges(i, 1)) - V.row(edges(i, 0));
+	//	original_L0.row(i) = V.row(EV(edges[i], 1)) - V.row(EV(edges[i], 0));
 	}
 
 	for (int i = 0; i < vertices.size(); i++) {
@@ -47,18 +48,20 @@ void LaplacianCurveEdit::setup_for_update_curve(std::vector<int> vertices_, std:
 		is_fixed[idx] = 1;
 	}
 
-	for (int i = 0; i < fixed_edges.size(); i++) { //Create local indexing for fixed_edges
+	/*for (int i = 0; i < fixed_edges.size(); i++) { //Create local indexing for fixed_edges
 		auto loc = std::find(edges.begin(), edges.end(), fixed_edges[i]);
 		if (loc == edges.end()) {
 			std::cout << "Something wrong 2" << std::endl;
 		}
 		idx = distance(edges.begin(), loc);
 		fixed_edges[i] = idx;
-	}
+	}*/
+	//Fixed_edges already has local indexing into edges
 
-	for (int i = 0; i < edges.size(); i++) {
+
+	/*for (int i = 0; i < edges.size(); i++) {
 		edge_global_to_local.insert({ edges[i], i });
-	}
+	}*/
 
 	setup_for_L1_position_step();
 }
@@ -75,8 +78,10 @@ void LaplacianCurveEdit::setup_for_L1_position_step() {
 		int v2 = vertex_triplets(i, 2);
 
 		original_L1.row(i) = V.row(v1) - (0.5*V.row(v0) + 0.5*V.row(v2));
-		vertex_triplet_to_rot_idx[i][0] = edge_global_to_local.find(find_edge(v0, v1))->second;
-		vertex_triplet_to_rot_idx[i][1] = edge_global_to_local.find(find_edge(v1, v2))->second;
+		vertex_triplet_to_rot_idx[i][0] = find_edge(v0, v1);
+		vertex_triplet_to_rot_idx[i][1] = find_edge(v1, v2);
+		/*vertex_triplet_to_rot_idx[i][0] = edge_global_to_local.find(find_edge(v0, v1))->second;
+		vertex_triplet_to_rot_idx[i][1] = edge_global_to_local.find(find_edge(v1, v2))->second;*/
 
 		tripletList.push_back(T(i, vertex_global_to_local.find(v0)->second, -0.5));
 		tripletList.push_back(T(i, vertex_global_to_local.find(v1)->second, 1.0));
@@ -94,7 +99,7 @@ void LaplacianCurveEdit::setup_for_L1_position_step() {
 }
 
 void LaplacianCurveEdit::update_curve(Eigen::MatrixXd& V) {
-	for (int i = 0; i < edges.size(); i++) {
+	for (int i = 0; i < edges.rows(); i++) {
 		Rot[i] = Eigen::Matrix3d::Identity();
 	}
 
@@ -109,12 +114,14 @@ void LaplacianCurveEdit::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
 	A.setZero();
 	B.setZero();
 	std::vector<T> tripletList;
-	tripletList.reserve(edges.size() * 15 + edge_triplets.rows() * 3 * 27 + fixed_vertices_local.size() * 3 + fixed_edges.size() * 3);
+	tripletList.reserve(edges.rows() * 15 + edge_triplets.rows() * 3 * 27 + fixed_vertices_local.size() * 3 + fixed_edges.size() * 3);
 
 	int v0, v1;
-	for (int i = 0; i < edges.size(); i++) { //Laplacian of the position: v1' - v0' = dR * R * L(v1 - v0)
-		v0 = vertex_global_to_local.find(EV(edges[i], 0))->second;
-		v1 = vertex_global_to_local.find(EV(edges[i], 1))->second;
+	for (int i = 0; i < edges.rows(); i++) { //Laplacian of the position: v1' - v0' = dR * R * L(v1 - v0)
+		v0 = vertex_global_to_local.at(edges(i, 0));
+		v1 = vertex_global_to_local.at(edges(i, 1));
+	//	v0 = vertex_global_to_local.find(EV(edges[i], 0))->second;
+	//	v1 = vertex_global_to_local.find(EV(edges[i], 1))->second;
 		tripletList.push_back(T(i * 3 + 0, v0 * 3, -1)); //L0
 		tripletList.push_back(T(i * 3 + 0, v1 * 3, 1)); //L0
 		tripletList.push_back(T(i * 3 + 0, vertices.size() * 3 + i * 3, 0));
@@ -139,69 +146,100 @@ void LaplacianCurveEdit::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
 
 	int e0, e1, e2;
 	for (int i = 0; i < edge_triplets.rows(); i++) { //Laplacian of the rotation matrix: L dR*R = 0 (r_i*R_i - r_j*R_j = 0 for i,j in Edges)
-		e0 = edge_global_to_local.find(edge_triplets(i, 0))->second;
+		/*e0 = edge_global_to_local.find(edge_triplets(i, 0))->second;
 		e1 = edge_global_to_local.find(edge_triplets(i, 1))->second;
-		e2 = edge_global_to_local.find(edge_triplets(i, 2))->second;
+		e2 = edge_global_to_local.find(edge_triplets(i, 2))->second;*/
+		e0 = edge_triplets(i, 0);
+		e1 = edge_triplets(i, 1);
+		e2 = edge_triplets(i, 2);
 
 		for (int j = 0; j < 3; j++) {
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + j, vertices.size() * 3 + e0 * 3 + 0, 0));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + j, vertices.size() * 3 + e0 * 3 + 1, -0.5 * Rot[e0](2, j)));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + j, vertices.size() * 3 + e0 * 3 + 2, -0.5 * -Rot[e0](1, j)));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + j, vertices.size() * 3 + e1 * 3 + 0, 0));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + j, vertices.size() * 3 + e1 * 3 + 1, Rot[e1](2, j)));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + j, vertices.size() * 3 + e1 * 3 + 2, -Rot[e1](1, j)));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + j, vertices.size() * 3 + e2 * 3 + 0, 0));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + j, vertices.size() * 3 + e2 * 3 + 1, -0.5 * Rot[e2](2, j)));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + j, vertices.size() * 3 + e2 * 3 + 2, -0.5 * -Rot[e2](1, j)));
-			B[edges.size() * 3 + i * 9 + j] = 0.5 * Rot[e0](0, j) - 1 * Rot[e1](0, j) + 0.5 * Rot[e2](0, j);
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + j, vertices.size() * 3 + e0 * 3 + 0, 0));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + j, vertices.size() * 3 + e0 * 3 + 1, -0.5 * Rot[e0](2, j)));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + j, vertices.size() * 3 + e0 * 3 + 2, -0.5 * -Rot[e0](1, j)));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + j, vertices.size() * 3 + e1 * 3 + 0, 0));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + j, vertices.size() * 3 + e1 * 3 + 1, Rot[e1](2, j)));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + j, vertices.size() * 3 + e1 * 3 + 2, -Rot[e1](1, j)));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + j, vertices.size() * 3 + e2 * 3 + 0, 0));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + j, vertices.size() * 3 + e2 * 3 + 1, -0.5 * Rot[e2](2, j)));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + j, vertices.size() * 3 + e2 * 3 + 2, -0.5 * -Rot[e2](1, j)));
+			B[edges.rows() * 3 + i * 9 + j] = 0.5 * Rot[e0](0, j) - 1 * Rot[e1](0, j) + 0.5 * Rot[e2](0, j);
 
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + 3 + j, vertices.size() * 3 + e0 * 3 + 0, -0.5 * -Rot[e0](2, j)));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + 3 + j, vertices.size() * 3 + e0 * 3 + 1, 0));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + 3 + j, vertices.size() * 3 + e0 * 3 + 2, -0.5 * Rot[e0](0, j)));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + 3 + j, vertices.size() * 3 + e1 * 3 + 0, -Rot[e1](2, j)));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + 3 + j, vertices.size() * 3 + e1 * 3 + 1, 0));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + 3 + j, vertices.size() * 3 + e1 * 3 + 2, Rot[e1](0, j)));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + 3 + j, vertices.size() * 3 + e2 * 3 + 0, -0.5 * -Rot[e2](2, j)));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + 3 + j, vertices.size() * 3 + e2 * 3 + 1, 0));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + 3 + j, vertices.size() * 3 + e2 * 3 + 2, -0.5 * Rot[e2](0, j)));
-			B[edges.size() * 3 + i * 9 + 3 + j] = 0.5 * Rot[e0](1, j) - 1 * Rot[e1](1, j) + 0.5 * Rot[e2](1, j);
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + 3 + j, vertices.size() * 3 + e0 * 3 + 0, -0.5 * -Rot[e0](2, j)));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + 3 + j, vertices.size() * 3 + e0 * 3 + 1, 0));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + 3 + j, vertices.size() * 3 + e0 * 3 + 2, -0.5 * Rot[e0](0, j)));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + 3 + j, vertices.size() * 3 + e1 * 3 + 0, -Rot[e1](2, j)));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + 3 + j, vertices.size() * 3 + e1 * 3 + 1, 0));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + 3 + j, vertices.size() * 3 + e1 * 3 + 2, Rot[e1](0, j)));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + 3 + j, vertices.size() * 3 + e2 * 3 + 0, -0.5 * -Rot[e2](2, j)));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + 3 + j, vertices.size() * 3 + e2 * 3 + 1, 0));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + 3 + j, vertices.size() * 3 + e2 * 3 + 2, -0.5 * Rot[e2](0, j)));
+			B[edges.rows() * 3 + i * 9 + 3 + j] = 0.5 * Rot[e0](1, j) - 1 * Rot[e1](1, j) + 0.5 * Rot[e2](1, j);
 
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + 6 + j, vertices.size() * 3 + e0 * 3 + 0, -0.5*Rot[e0](1, j)));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + 6 + j, vertices.size() * 3 + e0 * 3 + 1, -0.5 * -Rot[e0](0, j)));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + 6 + j, vertices.size() * 3 + e0 * 3 + 2, 0));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + 6 + j, vertices.size() * 3 + e1 * 3 + 0, Rot[e1](1, j)));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + 6 + j, vertices.size() * 3 + e1 * 3 + 1, -Rot[e1](0, j)));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + 6 + j, vertices.size() * 3 + e1 * 3 + 2, 0));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + 6 + j, vertices.size() * 3 + e2 * 3 + 0, -0.5*Rot[e2](1, j)));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + 6 + j, vertices.size() * 3 + e2 * 3 + 1, -0.5 * -Rot[e2](0, j)));
-			tripletList.push_back(T(edges.size() * 3 + i * 9 + 6 + j, vertices.size() * 3 + e2 * 3 + 2, 0));
-			B[edges.size() * 3 + i * 9 + 6 + j] = 0.5 * Rot[e0](2, j) - 1 * Rot[e1](2, j) + 0.5 * Rot[e2](2, j);
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + 6 + j, vertices.size() * 3 + e0 * 3 + 0, -0.5*Rot[e0](1, j)));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + 6 + j, vertices.size() * 3 + e0 * 3 + 1, -0.5 * -Rot[e0](0, j)));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + 6 + j, vertices.size() * 3 + e0 * 3 + 2, 0));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + 6 + j, vertices.size() * 3 + e1 * 3 + 0, Rot[e1](1, j)));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + 6 + j, vertices.size() * 3 + e1 * 3 + 1, -Rot[e1](0, j)));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + 6 + j, vertices.size() * 3 + e1 * 3 + 2, 0));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + 6 + j, vertices.size() * 3 + e2 * 3 + 0, -0.5*Rot[e2](1, j)));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + 6 + j, vertices.size() * 3 + e2 * 3 + 1, -0.5 * -Rot[e2](0, j)));
+			tripletList.push_back(T(edges.rows() * 3 + i * 9 + 6 + j, vertices.size() * 3 + e2 * 3 + 2, 0));
+			B[edges.rows() * 3 + i * 9 + 6 + j] = 0.5 * Rot[e0](2, j) - 1 * Rot[e1](2, j) + 0.5 * Rot[e2](2, j);
 		}
 	}
-	for (int i = 0; i < fixed_vertices_local.size(); i++) { //Position of fixed vertices: v_i - v_i' = 0
-		tripletList.push_back(T(edges.size() * 3 + edge_triplets.rows() * 9 + i * 3, fixed_vertices_local[i] * 3, CONSTRAINT_WEIGHT));
-		tripletList.push_back(T(edges.size() * 3 + edge_triplets.rows() * 9 + i * 3 + 1, fixed_vertices_local[i] * 3 + 1, CONSTRAINT_WEIGHT));
-		tripletList.push_back(T(edges.size() * 3 + edge_triplets.rows() * 9 + i * 3 + 2, fixed_vertices_local[i] * 3 + 2, CONSTRAINT_WEIGHT));
 
-		B[edges.size() * 3 + edge_triplets.rows() * 9 + i * 3] = CONSTRAINT_WEIGHT * V(fixed_vertices[i], 0);
-		B[edges.size() * 3 + edge_triplets.rows() * 9 + i * 3 + 1] = CONSTRAINT_WEIGHT * V(fixed_vertices[i], 1);
-		B[edges.size() * 3 + edge_triplets.rows() * 9 + i * 3 + 2] = CONSTRAINT_WEIGHT * V(fixed_vertices[i], 2);
+	for (int i = 0; i < fixed_vertices_local.size(); i++) { //Position of fixed vertices: v_i - v_i' = 0
+		tripletList.push_back(T(edges.rows() * 3 + edge_triplets.rows() * 9 + i * 3, fixed_vertices_local[i] * 3, CONSTRAINT_WEIGHT));
+		tripletList.push_back(T(edges.rows() * 3 + edge_triplets.rows() * 9 + i * 3 + 1, fixed_vertices_local[i] * 3 + 1, CONSTRAINT_WEIGHT));
+		tripletList.push_back(T(edges.rows() * 3 + edge_triplets.rows() * 9 + i * 3 + 2, fixed_vertices_local[i] * 3 + 2, CONSTRAINT_WEIGHT));
+
+		B[edges.rows() * 3 + edge_triplets.rows() * 9 + i * 3] = CONSTRAINT_WEIGHT * V(fixed_vertices[i], 0);
+		B[edges.rows() * 3 + edge_triplets.rows() * 9 + i * 3 + 1] = CONSTRAINT_WEIGHT * V(fixed_vertices[i], 1);
+		B[edges.rows() * 3 + edge_triplets.rows() * 9 + i * 3 + 2] = CONSTRAINT_WEIGHT * V(fixed_vertices[i], 2);
 	}
 
 	for (int i = 0; i < fixed_edges.size(); i++) {
-		tripletList.push_back(T(edges.size() * 3 + edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 0, vertices.size() * 3 + fixed_edges[i] * 3, CONSTRAINT_WEIGHT));
-		tripletList.push_back(T(edges.size() * 3 + edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 1, vertices.size() * 3 + fixed_edges[i] * 3 + 1, CONSTRAINT_WEIGHT));
-		tripletList.push_back(T(edges.size() * 3 + edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 2, vertices.size() * 3 + fixed_edges[i] * 3 + 2, CONSTRAINT_WEIGHT));
+		tripletList.push_back(T(edges.rows() * 3 + edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 0, vertices.size() * 3 + fixed_edges[i] * 3, CONSTRAINT_WEIGHT));
+		tripletList.push_back(T(edges.rows() * 3 + edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 1, vertices.size() * 3 + fixed_edges[i] * 3 + 1, CONSTRAINT_WEIGHT));
+		tripletList.push_back(T(edges.rows() * 3 + edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 2, vertices.size() * 3 + fixed_edges[i] * 3 + 2, CONSTRAINT_WEIGHT));
 
-		B[edges.size() * 3 + edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 0] = 0;
-		B[edges.size() * 3 + edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 1] = 0;
-		B[edges.size() * 3 + edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 2] = 0;
+		B[edges.rows() * 3 + edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 0] = 0;
+		B[edges.rows() * 3 + edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 1] = 0;
+		B[edges.rows() * 3 + edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 2] = 0;
 	}
 
 	A.setFromTriplets(tripletList.begin(), tripletList.end());
 	A.prune(0.0);
 	Eigen::SparseMatrix<double> AT = A.transpose();
-	solverPosRot.compute(AT*A);
+//	solverPosRot.compute(AT*A);
+	solverPosRot.analyzePattern(AT*A);
+	solverPosRot.factorize(AT*A);
+	if (solverPosRot.info() != Eigen::Success) {
+		std::cout << "vertices: ";
+		for (int i = 0; i < vertices.size(); i++) {
+			std::cout << vertices[i] << "  ";
+		}
+		std::cout << std::endl << "fixed vert: " << std::endl;
+		for (int i = 0; i < fixed_vertices.size(); i++) {
+			std::cout << fixed_vertices[i] << "   " << fixed_vertices_local[i] << std::endl;
+		}
+		std::cout << std::endl << "edges: "<< std::endl;
+		for (int i = 0; i < edges.rows(); i++) {
+			std::cout << edges.row(i) << std::endl;
+		}
+		std::cout << "Fixed edges: ";
+		for (int i = 0; i < fixed_edges.size(); i++) {
+			std::cout << fixed_edges[i] << "   ";
+		}
+		std::cout << std::endl;
+		std::cout << solverPosRot.info() << std::endl;
+		std::cout << solverPosRot.lastErrorMessage() << std::endl;
+
+		std::cout << "AT*A: " << std::endl << AT*A << std::endl << std::endl << std::endl << std::endl;
+		std::cout << "AT: " << std::endl << AT << std::endl << std::endl << std::endl << std::endl;
+		std::cout << "A: " << std::endl << A << std::endl << std::endl << std::endl << std::endl;
+	}
 	PosRot = solverPosRot.solve(AT*B);
 }
 
@@ -273,7 +311,7 @@ Eigen::Matrix3d LaplacianCurveEdit::average_rot(Eigen::Matrix3d& r0, Eigen::Matr
 	return rnew;
 }
 
-int LaplacianCurveEdit::find_edge(int start, int end) {
+/*int LaplacianCurveEdit::find_edge(int start, int end) {
 	Eigen::VectorXi col1Equals, col2Equals;
 	int equal_pos;
 	col1Equals = EV.col(0).cwiseEqual(std::min(start, end)).cast<int>();
@@ -281,4 +319,20 @@ int LaplacianCurveEdit::find_edge(int start, int end) {
 	(col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
 
 	return equal_pos;
+}*/
+
+int LaplacianCurveEdit::find_edge(int start, int end) {
+	for (int i = 0; i < edges.rows(); i++) {
+		if (edges(i, 0) == start) {
+			if (edges(i, 1) == end) {
+				return i;
+			}
+		}
+		else if (edges(i, 0) == end) {
+			if (edges(i, 1) == start) {
+				return i;
+			}
+		}
+	}
+	return -1;
 }

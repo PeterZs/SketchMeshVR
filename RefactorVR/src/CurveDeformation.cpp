@@ -7,7 +7,7 @@ using namespace std;
 using namespace igl;
 
 int moving_vertex_ID, prev_range_size = -1;
-double prev_drag_size, DRAG_SCALE = 2.5;
+double prev_drag_size, DRAG_SCALE = 3.5;
 Eigen::RowVector3d start_pos;
 vector<vector<int>> CurveDeformation::neighbors;
 Eigen::MatrixXi CurveDeformation::EV, CurveDeformation::FE, CurveDeformation::EF;
@@ -16,6 +16,7 @@ Eigen::VectorXi visited;
 Eigen::VectorXd distance_to_vert;
 Eigen::MatrixXd original_positions;
 vector<CurveDeformation::PulledCurve> curves;
+std::unordered_map<int, int> local_to_global_edge_ID, global_to_local_edge_ID;
 
 void CurveDeformation::startPullCurve(int _moving_vertex_ID, Eigen::MatrixXd& V, Eigen::MatrixXi& F) {
 	moving_vertex_ID = _moving_vertex_ID;
@@ -36,7 +37,7 @@ void CurveDeformation::pullCurveTest(const Eigen::RowVector3d& pos, Eigen::Matri
 	if (prev_drag_size < drag_size) { //Take the current drag_size and current_ROI_size relative to the size of the stroke we're pulling on. //TODO: test if we want to take it relative to the size of the whole mesh instead (we have access to V after all)?
 		ROI_is_updated = update_ROI_test(drag_size, V, edge_boundary_markers);
 	}
-	V = original_positions; //TODO: see if we need this/whether it makes any difference in stability
+//	V = original_positions; //TODO: see if we need this/whether it makes any difference in stability
 
 	if (prev_range_size <= 1) {
 		V.row(moving_vertex_ID) = pos;
@@ -76,6 +77,8 @@ bool CurveDeformation::update_ROI_test(double drag_size, Eigen::MatrixXd& V, Eig
 	curves.clear();
 	for (int i = 0; i < vertices_in_range.size(); i++) {
 		while (true) {
+			local_to_global_edge_ID.clear();	
+			global_to_local_edge_ID.clear();
 			PulledCurve curve;
 			bool success = create_pulled_curve_by_propagation(vertices_in_range[i], edge_consumed, curve, edge_boundary_markers);
 			if (!success) {
@@ -90,7 +93,7 @@ bool CurveDeformation::update_ROI_test(double drag_size, Eigen::MatrixXd& V, Eig
 				fixed[curve.vertices[j]] = 1;
 			}
 
-			if (curves.back().fixed_vertices.size() == 1 && curves.back().vertices.size()>=3) { //Means that there is only 1 fixed vertex, which is the handle. All other vertices are free (so we'll end up dragging the mesh around instead of pulling on it)
+			/*if (curves.back().fixed_vertices.size() == 1 && curves.back().vertices.size()>=3) { //Means that there is only 1 fixed vertex, which is the handle. All other vertices are free (so we'll end up dragging the mesh around instead of pulling on it)
 				int count = 0;
 				if (std::find(curves.back().vertices.begin(), curves.back().vertices.end(), vertices_in_range[vertices_in_range.size() - 1]) != curves.back().vertices.end() && std::find(curves.back().fixed_vertices.begin(), curves.back().fixed_vertices.end(), vertices_in_range[vertices_in_range.size()-1]) == curves.back().fixed_vertices.end()) { //If the last available vertex (furthest away) is part of this curve, but it is not fixed (means we have a loop?)
 					curves.back().fixed_vertices.push_back(vertices_in_range[vertices_in_range.size() - 1]);
@@ -102,12 +105,39 @@ bool CurveDeformation::update_ROI_test(double drag_size, Eigen::MatrixXd& V, Eig
 				}
 				/*if (count == 2) {
 					curves.back().fixed_edges.push_back(find_edge(curves.back().fixed_vertices[curves.back().fixed_vertices.size() - 1], curves.back().fixed_vertices[curves.back().fixed_vertices.size() - 2]));
-				}*/
-			}
+				}
+			}*/
 
-			std::cout << "TEST" << std::endl;
+			if (curves.back().edges.rows() == (edge_boundary_markers.array() == edge_boundary_markers[local_to_global_edge_ID[0]]).count() && curves.back().fixed_vertices.size()==1 && curves.back().fixed_edges.size()==0){ //If this curve contains all edges that exist with that boundary marker, and the curve has only 1 fixed vertex and no fixed edges, it means that we have an entire loop in the ROI. This means there is too little constraints for deterministic behaviour
+				int edge = find_next_edge(curves.back().fixed_vertices[0], -1, edge_boundary_markers[local_to_global_edge_ID[0]], edge_boundary_markers);
+				int edge2 = get_adjacent_seam_edge(curves.back().fixed_vertices[0], edge, edge_boundary_markers);
+				curves.back().fixed_edges.push_back(global_to_local_edge_ID.at(edge));
+				curves.back().fixed_edges.push_back(global_to_local_edge_ID.at(edge2));
+
+				//add the vertex that is furthest away from the fixed vertex in this curve to the fixed_vertices
+
+			}
+			else if (curves.back().edges.rows() == (edge_boundary_markers.array() == edge_boundary_markers[local_to_global_edge_ID[0]]).count() && curves.back().fixed_vertices.size() == 2 && curves.back().fixed_edges.size() == 0) { //If this curve contains all edges that exist with that boundary markerk, and the curve has only 2 fixed vertices and no fix edges, it means that we have an entire non-looped curve in the ROI. This means there is too little constraints for deterministic behaviour
+				int edge = find_next_edge(curves.back().fixed_vertices[0], -1, edge_boundary_markers[local_to_global_edge_ID[0]], edge_boundary_markers);
+				int edge2 = find_next_edge(curves.back().fixed_vertices[1], -1, edge_boundary_markers[local_to_global_edge_ID[0]], edge_boundary_markers);
+				curves.back().fixed_edges.push_back(global_to_local_edge_ID.at(edge));
+				curves.back().fixed_edges.push_back(global_to_local_edge_ID.at(edge2));
+			}
+			std::cout << "vertices: ";
+			for (int i = 0; i < curves.back().vertices.size(); i++) {
+				std::cout << curves.back().vertices[i] << "  ";
+			}
+			std::cout << "Fixed vertices: " << std::endl;
 			for (int i = 0; i < curves.back().fixed_vertices.size(); i++) {
 				std::cout << curves.back().fixed_vertices[i] << std::endl;
+			}
+			std::cout << std::endl << "edges: " << std::endl;
+			for (int i = 0; i < curves.back().edges.rows(); i++) {
+				std::cout << curves.back().edges.row(i) << std::endl;
+			}
+			std::cout << "Fixed edges: ";
+			for (int i = 0; i < curves.back().fixed_edges.size(); i++) {
+				std::cout << curves.back().fixed_edges[i] << "   ";
 			}
 		}
 	}
@@ -189,12 +219,12 @@ bool CurveDeformation::create_pulled_curve_by_propagation(int vert, Eigen::Vecto
 	propagate(curve, -1, vert, edge_marker, edge_consumed, edge_boundary_markers);
 
 	int prev_edge, next_edge;
-	for (int i = 0; i < curve.edges.size(); i++) {
-		prev_edge = get_adjacent_seam_edge(EV(curve.edges[i], 0), curve.edges[i], curve.edges, edge_boundary_markers);
-		next_edge = get_adjacent_seam_edge(EV(curve.edges[i], 1), curve.edges[i], curve.edges, edge_boundary_markers);
+	for (int i = 0; i < curve.edges.rows(); i++) {
+		prev_edge = get_adjacent_seam_edge(curve.edges(i, 0), local_to_global_edge_ID.at(i), edge_boundary_markers);
+		next_edge = get_adjacent_seam_edge(curve.edges(i, 1), local_to_global_edge_ID.at(i), edge_boundary_markers);
 		if (prev_edge != -1 && next_edge != -1) {
 			curve.edge_triplets.conservativeResize(curve.edge_triplets.rows() + 1, Eigen::NoChange);
-			curve.edge_triplets.bottomRows(1) << prev_edge, curve.edges[i], next_edge;
+			curve.edge_triplets.bottomRows(1) << global_to_local_edge_ID.at(prev_edge), i, global_to_local_edge_ID.at(next_edge);
 		}
 	}
 
@@ -213,24 +243,35 @@ vector<int> CurveDeformation::get_adjacent_seam_vertices(int vert, PulledCurve& 
 	int edge;
 	for (int i = 0; i < neighbors[vert].size(); i++) {
 		edge = find_edge(vert, neighbors[vert][i]);
-		if (std::find(curve.edges.begin(), curve.edges.end(), edge) != curve.edges.end()) {
+		auto pos = local_to_global_edge_ID.find(edge);
+		if (pos != local_to_global_edge_ID.end()) {
 			adjacent_vertices.push_back(EV(edge, 0) == vert ? EV(edge, 1) : EV(edge, 0));
 			if (adjacent_vertices.size() == 2) {
 				return adjacent_vertices;
 			}
 		}
+		/*if (std::find(curve.edges.begin(), curve.edges.end(), edge) != curve.edges.end()) {
+			adjacent_vertices.push_back(EV(edge, 0) == vert ? EV(edge, 1) : EV(edge, 0));
+			if (adjacent_vertices.size() == 2) {
+				return adjacent_vertices;
+			}
+		}*/
 	}
 	return adjacent_vertices;
 }
 
-int CurveDeformation::get_adjacent_seam_edge(int vert, int edge, std::vector<int> edges, Eigen::VectorXi & edge_boundary_markers) {
+int CurveDeformation::get_adjacent_seam_edge(int vert, int edge,  Eigen::VectorXi & edge_boundary_markers) {
 	int edge2;
 	for (int i = 0; i < neighbors[vert].size(); i++) {
 		edge2 = find_edge(vert, neighbors[vert][i]);
 		if (edge2 != edge && edge_boundary_markers[edge] == edge_boundary_markers[edge2]) {
-			if (std::find(edges.begin(), edges.end(), edge2) != edges.end()) {
+			auto pos = local_to_global_edge_ID.find(edge2);
+			if (pos != local_to_global_edge_ID.end()) {
 				return edge2;
 			}
+			/*if (std::find(edges.begin(), edges.end(), edge2) != edges.end()) {
+				return edge2;
+			}*/
 		}
 	}
 	return -1;
@@ -243,7 +284,11 @@ void CurveDeformation::propagate(PulledCurve& curve, int prev_edge, int vert, in
 		edge = find_edge(vert, neighbors[vert][i]);
 		if (edge != prev_edge && edge_boundary_markers[edge] == edge_marker && !edge_consumed[edge]) {
 			if (visited[neighbors[vert][i]]) {
-				curve.edges.push_back(edge);
+				curve.edges.conservativeResize(curve.edges.rows() + 1, Eigen::NoChange);
+				curve.edges.bottomRows(1) << vert, neighbors[vert][i];
+				local_to_global_edge_ID.insert({ curve.edges.rows() - 1, edge });
+				global_to_local_edge_ID.insert({ edge, curve.edges.rows() - 1 });
+			//	curve.edges.push_back(edge);
 				edge_consumed[edge] = 1;
 				if (std::find(curve.vertices.begin(), curve.vertices.end(), neighbors[vert][i]) != curve.vertices.end()) { //Curve vertices already contain the next vertex, so we've gotten a loop
 					return;
@@ -266,16 +311,22 @@ void CurveDeformation::propagate(PulledCurve& curve, int prev_edge, int vert, in
 		if (next_edge == -1) {
 			return;
 		}
-
+		
+		int next_vert = EV(next_edge, 0) == vert ? EV(next_edge, 1) : EV(next_edge, 0); //Get the vertex on the other side of the edge
 		if (!edge_consumed[next_edge]) {
-			curve.edges.push_back(next_edge);
+			curve.edges.conservativeResize(curve.edges.rows() + 1, Eigen::NoChange);
+			curve.edges.bottomRows(1) << vert, next_vert;
+			local_to_global_edge_ID.insert({ curve.edges.rows() - 1, next_edge });
+			global_to_local_edge_ID.insert({ next_edge, curve.edges.rows() - 1 });
+			//curve.edges.push_back(next_edge);
 			edge_consumed[next_edge] = 1;
 		}
+		
+		next_edge = global_to_local_edge_ID.at(next_edge);
 		if (std::find(curve.fixed_edges.begin(), curve.fixed_edges.end(), next_edge) == curve.fixed_edges.end()) {
 			curve.fixed_edges.push_back(next_edge);
 		}
 
-		int next_vert = EV(next_edge, 0) == vert ? EV(next_edge, 1) : EV(next_edge, 0); //Get the vertex on the other side of the edge
 		if (std::find(curve.vertices.begin(), curve.vertices.end(), next_vert) == curve.vertices.end()) {
 			curve.vertices.push_back(next_vert);
 		}

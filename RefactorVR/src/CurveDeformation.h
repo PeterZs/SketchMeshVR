@@ -12,12 +12,13 @@ public:
 	static std::vector<std::vector<int>> neighbors;
 
 	struct PulledCurve {
-		std::vector<int> vertices, fixed_vertices, edges, fixed_edges;
-		Eigen::MatrixXi edge_triplets, vertex_triplets;
+		std::vector<int> vertices, fixed_vertices, fixed_edges;
+		Eigen::MatrixXi edges, edge_triplets, vertex_triplets;
 
 		LaplacianCurveEdit laplacian_curve_edit;
 
 		PulledCurve() {
+			edges.resize(0, 2);
 			edge_triplets.resize(0, 3);
 			vertex_triplets.resize(0, 3);
 		}
@@ -34,7 +35,7 @@ private:
 	static bool distance_sorter(int a, int b);
 	static bool create_pulled_curve_by_propagation(int vert, Eigen::VectorXi & edge_consumed, PulledCurve & curve, Eigen::VectorXi& edge_boundary_markers);
 	static std::vector<int> get_adjacent_seam_vertices(int vert, PulledCurve & curve);
-	static int get_adjacent_seam_edge(int vert, int edge, std::vector<int> edges, Eigen::VectorXi & edge_boundary_markers);
+	static int get_adjacent_seam_edge(int vert, int edge, Eigen::VectorXi & edge_boundary_markers);
 	
 };
 #endif

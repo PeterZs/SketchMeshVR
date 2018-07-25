@@ -2,12 +2,14 @@
 #define _Laplacian_Curve_Edit_H_
 #include <Eigen/Sparse>
 #include <Eigen/SVD>
+#include <Eigen/OrderingMethods>
+
 #include <vector>
 #include <unordered_map>
 
 class LaplacianCurveEdit {
 public:
-	void setup_for_update_curve(std::vector<int> vertices, std::vector<int> fixed_vertices, std::vector<int> edges, std::vector<int> fixed_edges, Eigen::MatrixXi vertex_triplets, Eigen::MatrixXi edge_triplets, Eigen::MatrixXd& V, Eigen::MatrixXi& EV_);
+	void setup_for_update_curve(std::vector<int> vertices, std::vector<int> fixed_vertices, Eigen::MatrixXi&  edges, std::vector<int> fixed_edges, Eigen::MatrixXi vertex_triplets, Eigen::MatrixXi edge_triplets, Eigen::MatrixXd& V, Eigen::MatrixXi& EV_);
 	void update_curve(Eigen::MatrixXd & V);
 	LaplacianCurveEdit();
 	LaplacianCurveEdit(const LaplacianCurveEdit &);
@@ -29,8 +31,8 @@ private:
 	std::unordered_map<int, int> vertex_global_to_local;
 	std::unordered_map<int, int> edge_global_to_local;
 
-	std::vector<int> vertices, fixed_vertices, edges, fixed_edges;
-	Eigen::MatrixXi edge_triplets, vertex_triplets;
+	std::vector<int> vertices, fixed_vertices, fixed_edges;
+	Eigen::MatrixXi edges, edge_triplets, vertex_triplets;
 	Eigen::MatrixXd V;
 
 	void setup_for_L1_position_step();
