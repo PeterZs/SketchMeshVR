@@ -7,7 +7,7 @@ using namespace std;
 using namespace igl;
 
 int moving_vertex_ID, prev_range_size = -1;
-double prev_drag_size, DRAG_SCALE = 3.5;
+double prev_drag_size, DRAG_SCALE = 1.5;
 Eigen::RowVector3d start_pos;
 vector<vector<int>> CurveDeformation::neighbors;
 Eigen::MatrixXi CurveDeformation::EV, CurveDeformation::FE, CurveDeformation::EF;
@@ -37,7 +37,7 @@ void CurveDeformation::pullCurveTest(const Eigen::RowVector3d& pos, Eigen::Matri
 	if (prev_drag_size < drag_size) { //Take the current drag_size and current_ROI_size relative to the size of the stroke we're pulling on. //TODO: test if we want to take it relative to the size of the whole mesh instead (we have access to V after all)?
 		ROI_is_updated = update_ROI_test(drag_size, V, edge_boundary_markers);
 	}
-//	V = original_positions; //TODO: see if we need this/whether it makes any difference in stability
+	V = original_positions; //TODO: see if we need this/whether it makes any difference in stability
 
 	if (prev_range_size <= 1) {
 		V.row(moving_vertex_ID) = pos;
@@ -243,9 +243,9 @@ vector<int> CurveDeformation::get_adjacent_seam_vertices(int vert, PulledCurve& 
 	int edge;
 	for (int i = 0; i < neighbors[vert].size(); i++) {
 		edge = find_edge(vert, neighbors[vert][i]);
-		auto pos = local_to_global_edge_ID.find(edge);
-		if (pos != local_to_global_edge_ID.end()) {
-			adjacent_vertices.push_back(EV(edge, 0) == vert ? EV(edge, 1) : EV(edge, 0));
+		auto pos = global_to_local_edge_ID.find(edge);
+		if (pos != global_to_local_edge_ID.end()) {
+			adjacent_vertices.push_back(neighbors[vert][i]);// EV(edge, 0) == vert ? EV(edge, 1) : EV(edge, 0));
 			if (adjacent_vertices.size() == 2) {
 				return adjacent_vertices;
 			}
@@ -265,8 +265,8 @@ int CurveDeformation::get_adjacent_seam_edge(int vert, int edge,  Eigen::VectorX
 	for (int i = 0; i < neighbors[vert].size(); i++) {
 		edge2 = find_edge(vert, neighbors[vert][i]);
 		if (edge2 != edge && edge_boundary_markers[edge] == edge_boundary_markers[edge2]) {
-			auto pos = local_to_global_edge_ID.find(edge2);
-			if (pos != local_to_global_edge_ID.end()) {
+			auto pos = global_to_local_edge_ID.find(edge2);
+			if (pos != global_to_local_edge_ID.end()) {
 				return edge2;
 			}
 			/*if (std::find(edges.begin(), edges.end(), edge2) != edges.end()) {

@@ -31,6 +31,7 @@ void LaplacianCurveEdit::setup_for_update_curve(std::vector<int> vertices_, std:
 
 	for (int i = 0; i < vertices.size(); i++) {
 		vertex_global_to_local.insert({vertices[i], i });
+	//	std::cout << "Map " << vertices[i] << " to " << i << std::endl;
 	}
 
 	int idx;
@@ -83,9 +84,9 @@ void LaplacianCurveEdit::setup_for_L1_position_step() {
 		/*vertex_triplet_to_rot_idx[i][0] = edge_global_to_local.find(find_edge(v0, v1))->second;
 		vertex_triplet_to_rot_idx[i][1] = edge_global_to_local.find(find_edge(v1, v2))->second;*/
 
-		tripletList.push_back(T(i, vertex_global_to_local.find(v0)->second, -0.5));
-		tripletList.push_back(T(i, vertex_global_to_local.find(v1)->second, 1.0));
-		tripletList.push_back(T(i, vertex_global_to_local.find(v2)->second, -0.5));
+		tripletList.push_back(T(i, vertex_global_to_local.at(v0), -0.5));
+		tripletList.push_back(T(i, vertex_global_to_local.at(v1), 1.0));
+		tripletList.push_back(T(i, vertex_global_to_local.at(v2), -0.5));
 	}
 
 	for (int i = 0; i < fixed_vertices_local.size(); i++) {
@@ -212,14 +213,15 @@ void LaplacianCurveEdit::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
 	A = Eigen::SparseMatrix<double>(edges.rows() * 3 + edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + fixed_edges.size() * 3, vertices.size() *3 + edges.rows() * 3);
 	A.setFromTriplets(tripletList.begin(), tripletList.end());
 	Eigen::SparseMatrix<double> A_before = A;
-	A.prune(0.0);
+	//A.prune(0.0);
 //	A.prune([](int i, int j, double val) {return val != 0.0; });//Will prune everything that is 0 but keep the rest
 	Eigen::SparseMatrix<double> AT = A.transpose();
 //	solverPosRot.compute(AT*A);
 	solverPosRot.analyzePattern(AT*A);
 	solverPosRot.factorize(AT*A);
 	if (solverPosRot.info() != Eigen::Success) {
-		std::cout << "Check if any non-zero entries were removed" << std::endl << A_before - A << std::endl;
+		std::cout << "Check if any non-zero entries were removed" << std::endl << A_before << std::endl << std::endl << std::endl << A << std::endl;
+		std::cout << A.rows() << " " << A.cols() << std::endl;
 		std::cout << "vertices: ";
 		for (int i = 0; i < vertices.size(); i++) {
 			std::cout << vertices[i] << "  ";
@@ -237,12 +239,11 @@ void LaplacianCurveEdit::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
 			std::cout << fixed_edges[i] << "   ";
 		}
 		std::cout << std::endl;
-		std::cout << solverPosRot.info() << std::endl;
 		std::cout << solverPosRot.lastErrorMessage() << std::endl;
 
 		std::cout << "AT*A: " << std::endl << AT*A << std::endl << std::endl << std::endl << std::endl;
-		std::cout << "AT: " << std::endl << AT << std::endl << std::endl << std::endl << std::endl;
-		std::cout << "A: " << std::endl << A << std::endl << std::endl << std::endl << std::endl;
+		std::cout << "AT: " << std::endl << (Eigen::MatrixXd)AT << std::endl << std::endl << std::endl << std::endl;
+		std::cout << "A: " << std::endl << (Eigen::MatrixXd)A << std::endl << std::endl << std::endl << std::endl;
 	}
 	PosRot = solverPosRot.solve(AT*B);
 }
