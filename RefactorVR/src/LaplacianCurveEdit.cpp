@@ -17,7 +17,7 @@ void LaplacianCurveEdit::setup_for_update_curve(std::vector<int> vertices_, std:
 	fixed_edges = fixed_edges_;
 	vertex_triplets = vertex_triplets_;
 	edge_triplets = edge_triplets_;
-	A.resize(edges.rows() * 3 + edge_triplets.rows() * 9 + fixed_vertices.size() * 3 + fixed_edges.size() * 3, vertices.size() * 3 + edges.rows() * 3);
+	//A.resize(edges.rows() * 3 + edge_triplets.rows() * 9 + fixed_vertices.size() * 3 + fixed_edges.size() * 3, vertices.size() * 3 + edges.rows() * 3);
 	B.resize(edges.rows() * 3 + edge_triplets.rows() * 9 + fixed_vertices.size() * 3 + fixed_edges.size() * 3);
 	Rot.resize(edges.rows());
 	original_L0.resize(edges.rows(), 3);
@@ -209,13 +209,17 @@ void LaplacianCurveEdit::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
 		B[edges.rows() * 3 + edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + i * 3 + 2] = 0;
 	}
 
+	A = Eigen::SparseMatrix<double>(edges.rows() * 3 + edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + fixed_edges.size() * 3, vertices.size() *3 + edges.rows() * 3);
 	A.setFromTriplets(tripletList.begin(), tripletList.end());
+	Eigen::SparseMatrix<double> A_before = A;
 	A.prune(0.0);
+//	A.prune([](int i, int j, double val) {return val != 0.0; });//Will prune everything that is 0 but keep the rest
 	Eigen::SparseMatrix<double> AT = A.transpose();
 //	solverPosRot.compute(AT*A);
 	solverPosRot.analyzePattern(AT*A);
 	solverPosRot.factorize(AT*A);
 	if (solverPosRot.info() != Eigen::Success) {
+		std::cout << "Check if any non-zero entries were removed" << std::endl << A_before - A << std::endl;
 		std::cout << "vertices: ";
 		for (int i = 0; i < vertices.size(); i++) {
 			std::cout << vertices[i] << "  ";
