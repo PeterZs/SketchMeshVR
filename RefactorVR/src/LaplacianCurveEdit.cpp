@@ -25,7 +25,7 @@ void LaplacianCurveEdit::setup_for_update_curve(std::vector<int> vertices_, std:
 	edge_global_to_local.clear();
 
 	for (int i = 0; i < edges.size(); i++) {
-		original_L0.row(i) = V.row(EV(edges[i], 0)) - V.row(EV(edges[i], 1));
+		original_L0.row(i) = V.row(EV(edges[i], 0)) - V.row(EV(edges[i], 1)); //TODO: Maybe this needs to be the other way around?
 	}
 
 	for (int i = 0; i < vertices.size(); i++) {

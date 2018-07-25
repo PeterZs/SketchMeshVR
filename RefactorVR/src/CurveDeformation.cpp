@@ -7,7 +7,7 @@ using namespace std;
 using namespace igl;
 
 int moving_vertex_ID, prev_range_size = -1;
-double current_ROI_size, DRAG_SCALE = 2.5;
+double prev_drag_size, DRAG_SCALE = 2.5;
 Eigen::RowVector3d start_pos;
 vector<vector<int>> CurveDeformation::neighbors;
 Eigen::MatrixXi CurveDeformation::EV, CurveDeformation::FE, CurveDeformation::EF;
@@ -21,7 +21,7 @@ void CurveDeformation::startPullCurve(int _moving_vertex_ID, Eigen::MatrixXd& V,
 	moving_vertex_ID = _moving_vertex_ID;
 	start_pos = V.row(moving_vertex_ID);
 	prev_range_size = -1;
-	current_ROI_size = 0.0;
+	prev_drag_size = 0.0;
 	original_positions = V;
 	adjacency_list(F, neighbors);
 	igl::edge_topology(V, F, EV, FE, EF);
@@ -30,10 +30,10 @@ void CurveDeformation::startPullCurve(int _moving_vertex_ID, Eigen::MatrixXd& V,
 }
 
 void CurveDeformation::pullCurveTest(const Eigen::RowVector3d& pos, Eigen::MatrixXd& V, Eigen::VectorXi& edge_boundary_markers) {
-	double drag_size = (pos - start_pos).norm();
-	drag_size *= DRAG_SCALE;
+	double drag_size = (pos - start_pos).norm() * DRAG_SCALE;
 	bool ROI_is_updated = false;
-	if (current_ROI_size < drag_size) { //Take the current drag_size and current_ROI_size relative to the size of the stroke we're pulling on. //TODO: test if we want to take it relative to the size of the whole mesh instead (we have access to V after all)?
+
+	if (prev_drag_size < drag_size) { //Take the current drag_size and current_ROI_size relative to the size of the stroke we're pulling on. //TODO: test if we want to take it relative to the size of the whole mesh instead (we have access to V after all)?
 		ROI_is_updated = update_ROI_test(drag_size, V, edge_boundary_markers);
 	}
 	V = original_positions; //TODO: see if we need this/whether it makes any difference in stability
@@ -57,7 +57,7 @@ void CurveDeformation::pullCurveTest(const Eigen::RowVector3d& pos, Eigen::Matri
 }
 
 bool CurveDeformation::update_ROI_test(double drag_size, Eigen::MatrixXd& V, Eigen::VectorXi& edge_boundary_markers) {
-	current_ROI_size = drag_size;
+	prev_drag_size = drag_size;
 
 	vector<int> vertices_in_range = collect_vertices_within_drag_length(drag_size, V, edge_boundary_markers);
 	if (vertices_in_range.size() == prev_range_size) {
