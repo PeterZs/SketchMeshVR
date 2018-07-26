@@ -6,7 +6,7 @@ class CurveDeformation {
 
 public:
 	static void startPullCurve(int _handle_ID, Eigen::MatrixXd & V, Eigen::MatrixXi & F);
-	static void pullCurveTest(const Eigen::RowVector3d & pos, Eigen::MatrixXd & V, Eigen::VectorXi& edge_boundary_markers);
+	static void pullCurve(const Eigen::RowVector3d & pos, Eigen::MatrixXd & V, Eigen::VectorXi& edge_boundary_markers);
 
 	static Eigen::MatrixXi EF, EV, FE;
 	static std::vector<std::vector<int>> neighbors;

@@ -559,19 +559,16 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_b
 	for (int i = 0; i < V2.rows(); i++) {
 		if (i >= vertex_markers.rows()) { //vertex can't be boundary (it's on backside)
 			V2.row(i) = V2.row(i) + 0.1*N_Vertices.row(i);
-			//vertex_boundary_markers[i] = 0;
 			vertex_is_fixed[i] = 0;
 		}
 		else {
 			if (vertex_markers(i) == 1) { //Don't change boundary vertices
-			//	vertex_boundary_markers[i] = 1;
 				vertex_is_fixed[i] = 1;
 				//Don't need to change stroke3DPoints here because they're the same as V2's points.
 
 				continue;
 			}
 			V2.row(i) = V2.row(i) + 0.1*N_Vertices.row(i);
-			//vertex_boundary_markers[i] = 0;
 			vertex_is_fixed[i] = 0;
 		}
 	}

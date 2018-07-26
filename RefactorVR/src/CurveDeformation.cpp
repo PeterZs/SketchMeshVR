@@ -20,17 +20,22 @@ std::unordered_map<int, int> local_to_global_edge_ID, global_to_local_edge_ID;
 
 void CurveDeformation::startPullCurve(int _moving_vertex_ID, Eigen::MatrixXd& V, Eigen::MatrixXi& F) {
 	moving_vertex_ID = _moving_vertex_ID;
+	std::cout << "moving vertex id: " << moving_vertex_ID << std::endl;
 	start_pos = V.row(moving_vertex_ID);
 	prev_range_size = -1;
 	prev_drag_size = 0.0;
 	original_positions = V;
 	adjacency_list(F, neighbors);
 	igl::edge_topology(V, F, EV, FE, EF);
+	std::cout << "EV:" << std::endl;
+	for (int i = 0; i < EV.rows(); i++) {
+		std::cout << i << "   " << EV(i, 0) << "   " << EV(i, 1) << std::endl;
+	}
 	visited.resize(V.rows());
 	distance_to_vert.resize(V.rows());
 }
 
-void CurveDeformation::pullCurveTest(const Eigen::RowVector3d& pos, Eigen::MatrixXd& V, Eigen::VectorXi& edge_boundary_markers) {
+void CurveDeformation::pullCurve(const Eigen::RowVector3d& pos, Eigen::MatrixXd& V, Eigen::VectorXi& edge_boundary_markers) {
 	double drag_size = (pos - start_pos).norm() * DRAG_SCALE;
 	bool ROI_is_updated = false;
 
@@ -51,7 +56,9 @@ void CurveDeformation::pullCurveTest(const Eigen::RowVector3d& pos, Eigen::Matri
 		}
 		V.row(moving_vertex_ID) = pos;
 		for (int i = 0; i < curves.size(); i++) {
-			curves[i].laplacian_curve_edit.update_curve(V);
+			if (curves[i].fixed_vertices.size() < curves[i].vertices.size()) { //Don't do any updating if all vertices are fixed
+				curves[i].laplacian_curve_edit.update_curve(V);
+			}
 		}
 
 	}
@@ -70,6 +77,7 @@ bool CurveDeformation::update_ROI_test(double drag_size, Eigen::MatrixXd& V, Eig
 	for (int i = 0; i < vertices_in_range.size(); i++) {
 		std::cout << vertices_in_range[i] << "   ";
 	}
+	std::cout << std::endl;
 	//Collect vertices in each each curve and construct cuve hierarchy
 	Eigen::VectorXi edge_consumed(EV.rows()), fixed(V.rows());
 	edge_consumed.setZero();
@@ -123,22 +131,22 @@ bool CurveDeformation::update_ROI_test(double drag_size, Eigen::MatrixXd& V, Eig
 				curves.back().fixed_edges.push_back(global_to_local_edge_ID.at(edge));
 				curves.back().fixed_edges.push_back(global_to_local_edge_ID.at(edge2));
 			}
-			std::cout << "vertices: ";
+		/*	std::cout << "vertices: ";
 			for (int i = 0; i < curves.back().vertices.size(); i++) {
 				std::cout << curves.back().vertices[i] << "  ";
-			}
+			}*/
 			std::cout << "Fixed vertices: " << std::endl;
 			for (int i = 0; i < curves.back().fixed_vertices.size(); i++) {
 				std::cout << curves.back().fixed_vertices[i] << std::endl;
 			}
-			std::cout << std::endl << "edges: " << std::endl;
+			/*std::cout << std::endl << "edges: " << std::endl;
 			for (int i = 0; i < curves.back().edges.rows(); i++) {
 				std::cout << curves.back().edges.row(i) << std::endl;
 			}
 			std::cout << "Fixed edges: ";
 			for (int i = 0; i < curves.back().fixed_edges.size(); i++) {
 				std::cout << curves.back().fixed_edges[i] << "   ";
-			}
+			}*/
 		}
 	}
 	return true;
@@ -150,7 +158,6 @@ std::vector<int> CurveDeformation::collect_vertices_within_drag_length(double dr
 	visited[moving_vertex_ID] = 1;
 	distance_to_vert[moving_vertex_ID] = drag_size;
 
-	std::cout << "moving vertex id: " << moving_vertex_ID << std::endl;
 	vector<int> vertices_in_range;
 	vertices_in_range.push_back(moving_vertex_ID);
 	propagate(-1, moving_vertex_ID, drag_size, vertices_in_range, V, edge_boundary_markers);
@@ -245,17 +252,11 @@ vector<int> CurveDeformation::get_adjacent_seam_vertices(int vert, PulledCurve& 
 		edge = find_edge(vert, neighbors[vert][i]);
 		auto pos = global_to_local_edge_ID.find(edge);
 		if (pos != global_to_local_edge_ID.end()) {
-			adjacent_vertices.push_back(neighbors[vert][i]);// EV(edge, 0) == vert ? EV(edge, 1) : EV(edge, 0));
+			adjacent_vertices.push_back(neighbors[vert][i]);
 			if (adjacent_vertices.size() == 2) {
 				return adjacent_vertices;
 			}
 		}
-		/*if (std::find(curve.edges.begin(), curve.edges.end(), edge) != curve.edges.end()) {
-			adjacent_vertices.push_back(EV(edge, 0) == vert ? EV(edge, 1) : EV(edge, 0));
-			if (adjacent_vertices.size() == 2) {
-				return adjacent_vertices;
-			}
-		}*/
 	}
 	return adjacent_vertices;
 }
@@ -269,9 +270,6 @@ int CurveDeformation::get_adjacent_seam_edge(int vert, int edge,  Eigen::VectorX
 			if (pos != global_to_local_edge_ID.end()) {
 				return edge2;
 			}
-			/*if (std::find(edges.begin(), edges.end(), edge2) != edges.end()) {
-				return edge2;
-			}*/
 		}
 	}
 	return -1;
@@ -288,7 +286,6 @@ void CurveDeformation::propagate(PulledCurve& curve, int prev_edge, int vert, in
 				curve.edges.bottomRows(1) << vert, neighbors[vert][i];
 				local_to_global_edge_ID.insert({ curve.edges.rows() - 1, edge });
 				global_to_local_edge_ID.insert({ edge, curve.edges.rows() - 1 });
-			//	curve.edges.push_back(edge);
 				edge_consumed[edge] = 1;
 				if (std::find(curve.vertices.begin(), curve.vertices.end(), neighbors[vert][i]) != curve.vertices.end()) { //Curve vertices already contain the next vertex, so we've gotten a loop
 					return;
@@ -318,7 +315,6 @@ void CurveDeformation::propagate(PulledCurve& curve, int prev_edge, int vert, in
 			curve.edges.bottomRows(1) << vert, next_vert;
 			local_to_global_edge_ID.insert({ curve.edges.rows() - 1, next_edge });
 			global_to_local_edge_ID.insert({ next_edge, curve.edges.rows() - 1 });
-			//curve.edges.push_back(next_edge);
 			edge_consumed[next_edge] = 1;
 		}
 		

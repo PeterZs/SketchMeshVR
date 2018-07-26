@@ -52,6 +52,7 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
 	m.new_mapped_indices.resize(m.V.rows()); //Resize the map from old to new (clean) vertex indices to allow it to contain the number of vertices that are in the mesh at the start
 
 	igl::edge_topology(m.V, m.F, EV, FE, EF);
+	Eigen::MatrixXi startEV = EV;
 	adjacency_list(m.F, VV);
 
 	Eigen::MatrixXi original_sharp_or_boundary_edges(0, 4);
@@ -129,12 +130,12 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
 		if (path[i].get_type() == PathElement::EDGE && (m.sharp_edge[path[i].get_ID()] || m.edge_boundary_markers[path[i].get_ID()])) {
 			path[i].fixed = true;
 			replacing_edges.conservativeResize(replacing_edges.rows() + 2, Eigen::NoChange);
-			replacing_edges(replacing_edges.rows() - 2, 1) = EV(path[i].get_ID(), 0); //Pair of original edge start index and middle vertex index (middle vertex index gets set after resampling)
+			replacing_edges(replacing_edges.rows() - 2, 1) = startEV(path[i].get_ID(), 0); //Pair of original edge start index and middle vertex index (middle vertex index gets set after resampling)
 			replacing_edges(replacing_edges.rows() - 2, 2) = m.edge_boundary_markers[path[i].get_ID()];
 			replacing_edges(replacing_edges.rows() - 2, 3) = m.sharp_edge[path[i].get_ID()];
-			replacing_edges(replacing_edges.rows() - 1, 1) = EV(path[i].get_ID(), 1); //Pair of original edge end index and middle vertex index (middle vertex index gets set after resampling)
-			replacing_edges(replacing_edges.rows() - 2, 2) = m.edge_boundary_markers[path[i].get_ID()];
-			replacing_edges(replacing_edges.rows() - 2, 3) = m.sharp_edge[path[i].get_ID()];
+			replacing_edges(replacing_edges.rows() - 1, 1) = startEV(path[i].get_ID(), 1); //Pair of original edge end index and middle vertex index (middle vertex index gets set after resampling)
+			replacing_edges(replacing_edges.rows() - 1, 2) = m.edge_boundary_markers[path[i].get_ID()];
+			replacing_edges(replacing_edges.rows() - 1, 3) = m.sharp_edge[path[i].get_ID()];
 			edge_split_positions.conservativeResize(edge_split_positions.rows() + 1, Eigen::NoChange);
 			edge_split_positions.bottomRows(1) << path[i].get_vertex().transpose();
 		}
@@ -142,6 +143,8 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
 			path[i].fixed = false;
 		}
 	}
+
+
 
 	Eigen::RowVector3d mean_viewpoint = compute_mean_viewpoint(m, outer_boundary_vertices);
 	Eigen::Matrix4f modelview = open_path_stroke.viewer.oculusVR.get_start_action_view() * open_path_stroke.viewer.core.get_model();
@@ -256,8 +259,10 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	m.new_mapped_indices.resize(m.V.rows()); //Resize the map from old to new (clean) vertex indices to allow it to contain the number of vertices that are in the mesh at the start
 
 	Eigen::MatrixXi original_sharp_or_boundary_edges(0, 4);
+	std::cout << "These are original: " << std::endl;
 	for (int i = 0; i < m.sharp_edge.rows(); i++) {
 		if (m.sharp_edge[i] || m.edge_boundary_markers[i]) {
+			std::cout << EV(i, 0) << "  " << EV(i, 1) << "   " << m.edge_boundary_markers[i] << "   " << m.sharp_edge[i] << std::endl;
 			original_sharp_or_boundary_edges.conservativeResize(original_sharp_or_boundary_edges.rows() + 1, Eigen::NoChange);
 			original_sharp_or_boundary_edges.bottomRows(1) << EV(i, 0), EV(i, 1), m.edge_boundary_markers[i], m.sharp_edge[i];
 		}
@@ -452,6 +457,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	for (int i = 0; i < path.size(); i++) {
 		if (path[i].get_type() == PathElement::EDGE && (m.sharp_edge[path[i].get_ID()] || m.edge_boundary_markers[path[i].get_ID()])) {
 			path[i].fixed = true;
+			std::cout << "Test: " << startEV(path[i].get_ID(), 0) << "   " << startEV(path[i].get_ID(), 1) << "   " << m.sharp_edge[path[i].get_ID()] << "  " << m.edge_boundary_markers[path[i].get_ID()] << std::endl;
 			replacing_edges.conservativeResize(replacing_edges.rows() + 2, Eigen::NoChange);
 			replacing_edges(replacing_edges.rows() - 2, 1) = startEV(path[i].get_ID(), 0); //Pair of original edge start index and middle vertex index (middle vertex index gets set after resampling)
 			replacing_edges(replacing_edges.rows() - 2, 2) = m.edge_boundary_markers[path[i].get_ID()];
@@ -499,6 +505,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 			}
 		}
 	}
+	std::cout << "These are replacing: " << std::endl << replacing_edges << std::endl << std::endl;
 
 	surface_path.set_path(new_surface_path);
 
@@ -613,6 +620,9 @@ void LaplacianRemesh::update_edge_indicators(Mesh& m, Eigen::MatrixXi& edges_to_
 	for (int i = 0; i < edges_to_update.rows(); i++) {
 		start = m.new_mapped_indices(edges_to_update(i, 0));
 		end = m.new_mapped_indices(edges_to_update(i, 1));
+		if (edges_to_update(i, 2)) {
+			std::cout << "FlO: " << edges_to_update.row(i) << "       " << m.new_mapped_indices(edges_to_update(i, 0)) << "   " << m.new_mapped_indices(edges_to_update(i, 1)) << std::endl;
+		}
 		if (start == -1 || end == -1) { //Edge no longer exists
 			continue;
 		}

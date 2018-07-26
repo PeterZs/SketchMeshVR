@@ -353,10 +353,14 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				return;
 			}
 			CurveDeformation::startPullCurve(handleID, (*base_mesh).V, (*base_mesh).F);
+			std::cout << "Edge markers: " << std::endl;
+			for (int i = 0; i < (*base_mesh).edge_boundary_markers.rows(); i++) {
+				std::cout << i << "  " << (*base_mesh).edge_boundary_markers[i] << std::endl;
+			}
 			prev_tool_mode = PULL;
 		}
 		else if (prev_tool_mode == PULL) {
-			CurveDeformation::pullCurveTest(pos.transpose().cast<double>(), (*base_mesh).V, (*base_mesh).edge_boundary_markers);
+			CurveDeformation::pullCurve(pos.transpose().cast<double>(), (*base_mesh).V, (*base_mesh).edge_boundary_markers);
 			for (int i = 0; i < (*base_mesh).patches.size(); i++) {
 				(*base_mesh).patches[i]->update_patch_vertex_positions((*base_mesh).V);
 			}
