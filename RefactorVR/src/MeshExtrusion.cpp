@@ -26,7 +26,6 @@ bool MeshExtrusion::extrude_prepare(Stroke& base, SurfacePath& surface_path) {
 bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke, Stroke& base, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport) {
 	Eigen::MatrixXi start_F = m.F;
 	Eigen::MatrixXd start_V = m.V;
-	//Eigen::VectorXi start_vertex_boundary_markers = m.vertex_boundary_markers;
 	Eigen::VectorXi start_edge_boundary_markers = m.edge_boundary_markers;
 	Eigen::VectorXi start_vertex_is_fixed = m.vertex_is_fixed;
 	Eigen::VectorXi start_sharp_edge = m.sharp_edge;
@@ -169,11 +168,10 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 	//TODO: compared to FiberMesh we should add setting sharp boundaries, setting silhouette seam and compute prescribed normals...? 
 
     //Update tracking variables with new vertex indices
-	post_extrude_main_update_points(stroke, silhouette_vertices);
+	post_extrude_main_update_points(stroke, silhouette_vertices); //TODO: check that this now works
 	post_extrude_main_update_bindings(base, surface_path);
 
 	Eigen::MatrixXi new_edge_indicators = original_sharp_or_boundary_edges;
-	//new_edge_indicators = igl::cat(1, original_sharp_or_boundary_edges, added_edges); //Add sharp and boundary edge indicators that are created due to the newly added curve
 	try {
 		update_edge_indicators(m, new_edge_indicators);
 		update_added_edges_indicators(m, added_edges); //For added edges that are already correctly indexed into the new V
@@ -184,7 +182,6 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 			m.F = start_F;
 			m.V = start_V;
 			m.new_mapped_indices = start_new_mapped_indices;
-		//	m.vertex_boundary_markers = start_vertex_boundary_markers;
 			m.edge_boundary_markers = start_edge_boundary_markers;
 			m.vertex_is_fixed = start_vertex_is_fixed;
 			m.sharp_edge = start_sharp_edge;
@@ -253,9 +250,7 @@ void MeshExtrusion::generate_mesh(Mesh& m, Eigen::MatrixXd loop3D, Eigen::Vector
 			vert += offset.transpose();
 			m.V.conservativeResize(m.V.rows() + 1, Eigen::NoChange);
 			m.V.row(m.V.rows() - 1) = vert;
-			//m.vertex_boundary_markers.conservativeResize(m.vertex_boundary_markers.rows() + 1);
 			m.vertex_is_fixed.conservativeResize(m.vertex_is_fixed.rows() + 1);
-			//m.vertex_boundary_markers(m.vertex_boundary_markers.rows() - 1) = 0; //Interior mesh vertex, so non-boundary
 			m.vertex_is_fixed(m.vertex_is_fixed.rows() - 1) = 0; //Interior mesh vertex, so non-fixed
 		}
 	}
@@ -306,12 +301,10 @@ vector<int> MeshExtrusion::add_silhouette_vertices(Mesh& m, int stroke_ID, Eigen
 	vector<int> sil_original_indices;
 	int size_before_silhouette = m.V.rows();
 	m.V.conservativeResize(m.V.rows() + silhouette_vertices.rows(), Eigen::NoChange);
-	//m.vertex_boundary_markers.conservativeResize(m.vertex_boundary_markers.rows() + silhouette_vertices.rows());
 	m.vertex_is_fixed.conservativeResize(m.vertex_is_fixed.rows() + silhouette_vertices.rows());
 
 	for (int i = 0; i < silhouette_vertices.rows(); i++) {
 		m.V.row(size_before_silhouette + i) = silhouette_vertices.row(i);
-		//m.vertex_boundary_markers[size_before_silhouette + i] = stroke_ID;
 		m.vertex_is_fixed[size_before_silhouette + i] = 1;
 		sil_original_indices.push_back(size_before_silhouette + i);
 	}
@@ -340,9 +333,7 @@ void MeshExtrusion::create_loop(Mesh& m, Eigen::MatrixXd& loop3D, Eigen::VectorX
 			idx = 0;
 		}
 	}
-
 }
-
 
 /** Updates the old indicators for sharp edges and edge_boundary_markers after the mesh topology changed and inserts newly generated sharp edges & boundary edges. **/
 void MeshExtrusion::update_edge_indicators(Mesh& m, Eigen::MatrixXi& edges_to_update) {
@@ -360,11 +351,13 @@ void MeshExtrusion::update_edge_indicators(Mesh& m, Eigen::MatrixXi& edges_to_up
 	int start, end, equal_pos;
 	Eigen::VectorXi col1Equals, col2Equals;
 	for (int i = 0; i < edges_to_update.rows(); i++) {
-		start = m.new_mapped_indices(edges_to_update(i, 0));
+		/*start = m.new_mapped_indices(edges_to_update(i, 0));
 		end = m.new_mapped_indices(edges_to_update(i, 1));
 		if (start == -1 || end == -1) { //Edge no longer exists
 			continue;
-		}
+		}*/
+		start = edges_to_update(i, 0);
+		end = edges_to_update(i, 1); //TODO: check that this indeeds work here. Reasoning is that the only edges that get added are between higher indexed vertices or between existing & higher indexed vertices, so they show up lower in EV (and our structure of existing markers won't change, just get elongated)
 
 		col1Equals = EV.col(0).cwiseEqual(min(start, end)).cast<int>();
 		col2Equals = EV.col(1).cwiseEqual(max(start, end)).cast<int>();
@@ -375,6 +368,7 @@ void MeshExtrusion::update_edge_indicators(Mesh& m, Eigen::MatrixXi& edges_to_up
 	}
 }
 
+/** Adds new edges (already with new vertex indices) after the extrusion's interior has been meshed. Does not reset previous indicators (this is done by update_edge_indicators). **/
 void MeshExtrusion::update_added_edges_indicators(Mesh& m, Eigen::MatrixXi& edges_to_update) {
 	if (!igl::is_edge_manifold(m.F)) {
 		throw - 1;

@@ -37,7 +37,6 @@ bool MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke, int c
 bool MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 	Eigen::MatrixXi start_F = m.F;
 	Eigen::MatrixXd start_V = m.V;
-	//Eigen::VectorXi start_vertex_boundary_markers = m.vertex_boundary_markers;
 	Eigen::VectorXi start_edge_boundary_markers = m.edge_boundary_markers;
 	Eigen::VectorXi start_vertex_is_fixed = m.vertex_is_fixed;
 
@@ -69,7 +68,6 @@ bool MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 
 	int original_v_size = m.V.rows() - boundary_vertices.rows();
 	m.V.conservativeResize(original_v_size + V2.rows(), Eigen::NoChange);
-	//m.vertex_boundary_markers.conservativeResize(original_v_size + V2.rows());	
 	m.vertex_is_fixed.conservativeResize(original_v_size + V2.rows());
 
 
@@ -80,7 +78,6 @@ bool MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 			v_tmp += x_vec*V2(i, 0);
 			v_tmp += y_vec*V2(i, 1);
 			m.V.row(original_v_size + i) << v_tmp.transpose();
-		//	m.vertex_boundary_markers[original_v_size + i] = 0;
 			m.vertex_is_fixed[original_v_size + i] = 0;
 		}
 	}
@@ -94,7 +91,6 @@ bool MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 			std::cerr << "Cut resulted in a non edge-manifold mesh, which is not allowed. Please try again. " << std::endl;
 			m.F = start_F;
 			m.V = start_V;
-			//m.vertex_boundary_markers = start_vertex_boundary_markers;
 			m.edge_boundary_markers = start_edge_boundary_markers;
 			m.vertex_is_fixed = start_vertex_is_fixed;
 			return false;
@@ -103,7 +99,7 @@ bool MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 	return true;
 }
 
-/** Updates the old indicators for sharp edges and edge_boundary_markers after the mesh topology changed and inserts newly generated sharp edges & boundary edges. **/
+/** Updates the old indicators for sharp edges and edge_boundary_markers after the cutting surface has been meshed (new sharp/boundary edges are already added in LaplacianRemesh, just increase the size here). **/
 void MeshCut::update_edge_indicators(Mesh& m, Eigen::MatrixXi& edges_to_update) {
 	if (!igl::is_edge_manifold(m.F)) {
 		throw - 1;
@@ -119,11 +115,6 @@ void MeshCut::update_edge_indicators(Mesh& m, Eigen::MatrixXi& edges_to_update) 
 	int start, end, equal_pos;
 	Eigen::VectorXi col1Equals, col2Equals;
 	for (int i = 0; i < edges_to_update.rows(); i++) {
-		/*start = m.new_mapped_indices(edges_to_update(i, 0));
-		end = m.new_mapped_indices(edges_to_update(i, 1));
-		if (start == -1 || end == -1) { //Edge no longer exists
-			continue;
-		}*/
 		start = edges_to_update(i, 0);
 		end = edges_to_update(i, 1);
 
