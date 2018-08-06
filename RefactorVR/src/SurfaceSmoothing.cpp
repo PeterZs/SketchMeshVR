@@ -26,7 +26,7 @@ Eigen::VectorXd SurfaceSmoothing::curvatures(ptrdiff_t(0));
 int ID = 0, iteration = 0;
 int no_boundary_vertices, no_boundary_adjacent_vertices;
 double SurfaceSmoothing::vertex_weight =  1000.0;// 10.0;
-double SurfaceSmoothing::edge_weight = 0.001;// 1.0;
+double SurfaceSmoothing::edge_weight = 0.1;// 1.0;
 double SurfaceSmoothing::factor =  0.8;// 1.9;
 vector<vector<int>> neighbors;
 
@@ -400,7 +400,7 @@ Eigen::VectorXd SurfaceSmoothing::get_curvatures(Mesh &m) {
 
 
 //TODO: instead iterate over sharp_edges, and lookup in EV the vertices that belong to these sharp edges. Set point_on_border to true for these
-Eigen::VectorXi SurfaceSmoothing::points_on_border(Mesh& m) {
+/*Eigen::VectorXi SurfaceSmoothing::points_on_border(Mesh& m) {
     Eigen::MatrixXi EV, FE, EF;
     igl::edge_topology(m.V, m.F, EV, FE, EF);
 
@@ -427,6 +427,21 @@ Eigen::VectorXi SurfaceSmoothing::points_on_border(Mesh& m) {
 		}
 	}
 
+	return point_on_border;
+}*/
+
+Eigen::VectorXi SurfaceSmoothing::points_on_border(Mesh& m) {
+	Eigen::MatrixXi EV, FE, EF;
+	igl::edge_topology(m.V, m.F, EV, FE, EF);
+
+	Eigen::VectorXi point_on_border(m.V.rows());
+	point_on_border.setZero();
+	for (int i = 0; i < m.sharp_edge.rows(); i++) {
+		if (m.sharp_edge[i]) {
+			point_on_border[EV(i, 0)] = 1;
+			point_on_border[EV(i, 1)] = 1;
+		}
+	}
 	return point_on_border;
 }
 

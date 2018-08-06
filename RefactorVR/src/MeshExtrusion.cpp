@@ -86,16 +86,17 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 	silhouette_vertices.conservativeResize(silhouette_vertices.rows() + 1, Eigen::NoChange);
 	Eigen::MatrixXd tmp_sil = silhouette_vertices.topRows(silhouette_vertices.rows() - 1);
 	silhouette_vertices.block(1, 0, silhouette_vertices.rows() - 1, 3) = tmp_sil; 
-	silhouette_vertices.row(0) = m.V.row(boundary_vertices[most_right_vertex_idx]);
-
+	silhouette_vertices.row(0) = m.V.row(boundary_vertices[most_right_vertex_idx]); //Add the right-most vertex
 	silhouette_vertices.conservativeResize(silhouette_vertices.rows() + 1, Eigen::NoChange);
-	silhouette_vertices.row(silhouette_vertices.rows() - 1) = m.V.row(boundary_vertices[most_left_vertex_idx]);
+	silhouette_vertices.row(silhouette_vertices.rows() - 1) = m.V.row(boundary_vertices[most_left_vertex_idx]); //Add the left-most vertex
 
-	silhouette_vertices = CleanStroke3D::resample(silhouette_vertices);
-	tmp_sil = silhouette_vertices.middleRows(1, silhouette_vertices.rows() - 2);
+	silhouette_vertices = CleanStroke3D::resample(silhouette_vertices); //Resample, including the space between the outer silhouette vertices and the left- and right-most base vertices
+	Eigen::MatrixXd silhouette_vertices_smoothed = smooth_stroke(silhouette_vertices);
+	tmp_sil = silhouette_vertices_smoothed.middleRows(1, silhouette_vertices_smoothed.rows() - 2); //Remove the left- and right-most vertices again
 	silhouette_vertices = tmp_sil;
 
 	Eigen::MatrixXi added_edges(0, 4);
+	int size_before_adding_sil = m.V.rows();
 	vector<int> sil_original_indices = add_silhouette_vertices(m, stroke.get_ID(), silhouette_vertices, added_edges);
 	vector<int> sil_original_indices_looped = sil_original_indices;
 	sil_original_indices_looped.push_back(sil_original_indices[0]);
@@ -110,7 +111,11 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 	vector<int> back_loop_base_original_indices;
 	create_loop(m, back_loop3D, boundary_vertices, back_loop_base_original_indices, most_right_vertex_idx, most_left_vertex_idx);
 
+	added_edges.conservativeResize(added_edges.rows() + 1, Eigen::NoChange); 
+	added_edges.bottomRows(1) <<  boundary_vertices[most_right_vertex_idx], size_before_adding_sil, stroke.get_ID(), 0; //Add connection between first silhouette vertex and closest base vertex
 
+	added_edges.conservativeResize(added_edges.rows() + 1, Eigen::NoChange);
+	added_edges.bottomRows(1) << boundary_vertices[most_left_vertex_idx], size_before_adding_sil + silhouette_vertices.rows() - 1, stroke.get_ID(), 0; //Add connection between last silhouette vertex and closest base vertex
 	
 	//Get center and normal for first half-dome and generate mesh
 	Eigen::RowVector3d new_center_front(0,0,0);
@@ -172,9 +177,9 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 	post_extrude_main_update_bindings(base, surface_path);
 
 	Eigen::MatrixXi new_edge_indicators = original_sharp_or_boundary_edges;
+	new_edge_indicators = igl::cat(1, new_edge_indicators, added_edges); //Both are already correctly indexed into the new V
 	try {
 		update_edge_indicators(m, new_edge_indicators);
-		update_added_edges_indicators(m, added_edges); //For added edges that are already correctly indexed into the new V
 	}
 	catch(int ex){
 		if (ex == -1) {
@@ -189,6 +194,33 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 		}
 	}
 	return true;
+}
+
+Eigen::MatrixXd MeshExtrusion::smooth_stroke(Eigen::MatrixXd& input_points) {
+	Eigen::MatrixXd new_points = Eigen::MatrixXd::Zero(input_points.rows(), 3);
+	int nr_iterations = max(5.0, input_points.rows() / 4.0);
+	for (int i = 0; i < nr_iterations; i++) {
+		move_to_middle(input_points, new_points);
+		move_to_middle(new_points, input_points);
+	}
+	return new_points;
+}
+
+void MeshExtrusion::move_to_middle(Eigen::MatrixXd &positions, Eigen::MatrixXd &new_positions) {
+	int n = positions.rows();
+	Eigen::Vector3d prev, cur, next;
+	new_positions.row(0) = positions.row(0);
+	new_positions.bottomRows(1) = positions.bottomRows(1);
+
+	for (int i = 1; i < n - 1; i++) { //Skip the first and last vertex, because we don't have a loop here and want to keep them fixed
+		prev = positions.row(((i - 1) + n) % n);
+		cur = positions.row(i % n);
+		next = positions.row(((i + 1) + n) % n);
+
+		new_positions(i, 0) = (cur[0] * 2 + prev[0] + next[0]) / 4;
+		new_positions(i, 1) = (cur[1] * 2 + prev[1] + next[1]) / 4;
+		new_positions(i, 2) = (cur[2] * 2 + prev[2] + next[2]) / 4;
+	}
 }
 
 void MeshExtrusion::remove_out_of_bounds_silhouette(Eigen::MatrixXd& silhouette_vertices, Eigen::RowVector3d& center, const Eigen::RowVector3d& left_most, const Eigen::RowVector3d& right_most, Eigen::RowVector3d& dir) {
@@ -309,11 +341,9 @@ vector<int> MeshExtrusion::add_silhouette_vertices(Mesh& m, int stroke_ID, Eigen
 		sil_original_indices.push_back(size_before_silhouette + i);
 	}
 
-	std::cout << "Added edges: " << std::endl;
 	for (int i = 0; i < silhouette_vertices.rows() - 1; i++) {
 		added_edges.conservativeResize(added_edges.rows() + 1, Eigen::NoChange);
 		added_edges.bottomRows(1) << size_before_silhouette + i, size_before_silhouette + i + 1, stroke_ID, 0;
-		std::cout << added_edges.bottomRows(1) << std::endl;
 	}
 	return sil_original_indices;
 }
@@ -350,6 +380,7 @@ void MeshExtrusion::update_edge_indicators(Mesh& m, Eigen::MatrixXi& edges_to_up
 
 	int start, end, equal_pos;
 	Eigen::VectorXi col1Equals, col2Equals;
+	std::cout << "Test one: " << std::endl;
 	for (int i = 0; i < edges_to_update.rows(); i++) {
 		/*start = m.new_mapped_indices(edges_to_update(i, 0));
 		end = m.new_mapped_indices(edges_to_update(i, 1));
@@ -365,11 +396,13 @@ void MeshExtrusion::update_edge_indicators(Mesh& m, Eigen::MatrixXi& edges_to_up
 
 		m.edge_boundary_markers[equal_pos] = edges_to_update(i, 2);
 		m.sharp_edge[equal_pos] = edges_to_update(i, 3);
+		std::cout << EV.row(equal_pos) << "   " << edges_to_update(i, 2) << "    " << edges_to_update(i, 3) << std::endl;
 	}
+	std::cout << std::endl;
 }
 
 /** Adds new edges (already with new vertex indices) after the extrusion's interior has been meshed. Does not reset previous indicators (this is done by update_edge_indicators). **/
-void MeshExtrusion::update_added_edges_indicators(Mesh& m, Eigen::MatrixXi& edges_to_update) {
+/*void MeshExtrusion::update_added_edges_indicators(Mesh& m, Eigen::MatrixXi& edges_to_update) {
 	if (!igl::is_edge_manifold(m.F)) {
 		throw - 1;
 		return;
@@ -378,7 +411,7 @@ void MeshExtrusion::update_added_edges_indicators(Mesh& m, Eigen::MatrixXi& edge
 	igl::edge_topology(m.V, m.F, EV, FE, EF);
 	m.sharp_edge.conservativeResize(EV.rows());
 	m.edge_boundary_markers.conservativeResize(EV.rows());
-
+	std::cout << "Test two: " << std::endl;
 	int start, end, equal_pos;
 	Eigen::VectorXi col1Equals, col2Equals;
 	for (int i = 0; i < edges_to_update.rows(); i++) {
@@ -391,8 +424,11 @@ void MeshExtrusion::update_added_edges_indicators(Mesh& m, Eigen::MatrixXi& edge
 
 		m.edge_boundary_markers[equal_pos] = edges_to_update(i, 2);
 		m.sharp_edge[equal_pos] = edges_to_update(i, 3);
+		std::cout << EV.row(equal_pos) << "   " << edges_to_update(i, 2) << "    " << edges_to_update(i, 3) << std::endl;
+
 	}
-}
+	std::cout << std::endl;
+}*/
 
 /** Updates the old face indices with the new indexing and inserts new faces that are made in triangulation. **/
 void MeshExtrusion::update_face_indices(Mesh& m, Eigen::MatrixXi& F2, vector<int> sil_original_indices, vector<int> loop_base_original_indices, int nr_silhouette_vert, int size_before_gen, int loop2D_size) {

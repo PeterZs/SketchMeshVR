@@ -17,6 +17,7 @@ using namespace igl;
 using namespace std;
 
 std::chrono::steady_clock::time_point _time2, _time1;
+double min_inter_point_distance = 2.0*0.00005625;
 
 Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::opengl::glfw::Viewer &v, int stroke_ID_) :
 	V(V_),
@@ -93,10 +94,10 @@ bool Stroke::addSegment(Eigen::Vector3f& pos) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
 		if (timePast < 300000) {
-			return false;
+		//	return false;
 		}
 		else { //If enough time has passed, check if controller moved a large enough distance_to_vert
-			if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < 0.00005625) {
+			if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < min_inter_point_distance) {
 				return false;
 			}
 			if (stroke3DPoints.rows() > 10) {
@@ -129,7 +130,7 @@ void Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
 		if (timePast < 300000) {
-			return;
+		//	return;
 		}
 	}
 
@@ -145,7 +146,7 @@ void Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
 		if (!stroke3DPoints.isZero() && hit_pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && hit_pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && hit_pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
 			return;
 		}
-		if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - hit_pos.transpose()).squaredNorm() < 0.00005625) {
+		if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - hit_pos.transpose()).squaredNorm() < min_inter_point_distance) {
 			return;
 		}
 
@@ -209,7 +210,7 @@ void Stroke::addSegmentCut(Eigen::Vector3f& pos) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
 		if (timePast < 300000) {
-			return;
+			//return;
 		}
 	}
 
@@ -231,7 +232,7 @@ void Stroke::addSegmentCut(Eigen::Vector3f& pos) {
 			cout << "This shouldn't happen. Draw the first point outside of the mesh" << endl;
 			return;
 		}
-		if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - hit_pos.transpose()).squaredNorm() < 0.00005625) {
+		if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - hit_pos.transpose()).squaredNorm() < min_inter_point_distance) {
 			return;
 		}
 
@@ -289,7 +290,7 @@ void Stroke::addSegmentExtrusionBase(Eigen::Vector3f& pos) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
 		if (timePast < 300000) {
-			return;
+		//	return;
 		}
 	}
 
@@ -305,7 +306,7 @@ void Stroke::addSegmentExtrusionBase(Eigen::Vector3f& pos) {
 		if (!stroke3DPoints.isZero() && hit_pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && hit_pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && hit_pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
 			return;
 		}
-		else if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - hit_pos.transpose()).squaredNorm() < 0.00005625) {
+		else if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - hit_pos.transpose()).squaredNorm() < min_inter_point_distance) {
 			return;
 		}
 
@@ -355,7 +356,7 @@ void Stroke::addSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 		_time2 = std::chrono::high_resolution_clock::now();
 		auto timePast = std::chrono::duration_cast<std::chrono::nanoseconds>(_time2 - _time1).count();
 		if (timePast < 3000) {
-			return;
+			//return;
 		}
 	}
 
@@ -369,7 +370,7 @@ void Stroke::addSegmentExtrusionSilhouette(Eigen::Vector3f& pos) {
 	if (!stroke2DPoints.isZero() && pt2D[0] == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && pt2D[1] == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) {//Check that the point is new compared to last time
 		return;
 	}
-	else if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < 0.0000005625) {
+	else if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < 0.01*min_inter_point_distance) {
 		return;
 	}
 
@@ -491,7 +492,15 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_b
 	Eigen::MatrixXd new_3DPoints = stroke3DPoints.topRows(stroke3DPoints.rows() - 1);
 	new_3DPoints.conservativeResize(new_3DPoints.rows() + resampled_3DPoints.rows(), Eigen::NoChange);
 	new_3DPoints.bottomRows(resampled_3DPoints.rows()) = resampled_3DPoints;
-	set3DPoints(new_3DPoints);
+
+
+
+	Eigen::MatrixXd resampled_new_3DPoints = CleanStroke3D::resample_by_length_sub(new_3DPoints, 0, new_3DPoints.rows()-1, sqrt(min_inter_point_distance));
+	closest_vert_bindings.clear();
+	for (int i = 0; i < resampled_new_3DPoints.rows(); i++) {
+		closest_vert_bindings.push_back(i);
+	}
+	set3DPoints(resampled_new_3DPoints);
 
 	Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
 	Eigen::MatrixX3d projected_points;
@@ -572,7 +581,6 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_b
 			vertex_is_fixed[i] = 0;
 		}
 	}
-
 
 
 	Eigen::VectorXd dep_tmp = Eigen::VectorXd::Constant(V2.rows(), dep.mean());
@@ -759,8 +767,6 @@ void Stroke::undo_stroke_add(Eigen::VectorXi& edge_boundary_markers, Eigen::Vect
 		(col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
 		edge_boundary_markers[equal_pos] = 0;
 		sharp_edge[equal_pos] = 0; //Unset sharp edges (e.g. edges that were previously sharp, now smooth, but they're not entirely removed)
-	
-	
 	}
 
 	vector<vector<int>> neighbors;

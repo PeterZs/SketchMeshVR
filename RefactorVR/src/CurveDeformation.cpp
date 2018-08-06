@@ -7,14 +7,14 @@ using namespace std;
 using namespace igl;
 
 int moving_vertex_ID, prev_range_size = -1;
-double prev_drag_size, DRAG_SCALE = 1.5;
+double prev_drag_size, DRAG_SCALE = 2.9;
 Eigen::RowVector3d start_pos;
 vector<vector<int>> CurveDeformation::neighbors;
 Eigen::MatrixXi CurveDeformation::EV, CurveDeformation::FE, CurveDeformation::EF;
 
 Eigen::VectorXi visited;
 Eigen::VectorXd distance_to_vert;
-Eigen::MatrixXd original_positions;
+Eigen::MatrixXd original_positions, tmp_original_pos;
 vector<CurveDeformation::PulledCurve> curves;
 std::unordered_map<int, int> local_to_global_edge_ID, global_to_local_edge_ID;
 
@@ -27,22 +27,23 @@ void CurveDeformation::startPullCurve(int _moving_vertex_ID, Eigen::MatrixXd& V,
 	original_positions = V;
 	adjacency_list(F, neighbors);
 	igl::edge_topology(V, F, EV, FE, EF);
-	std::cout << "EV:" << std::endl;
-	for (int i = 0; i < EV.rows(); i++) {
-		std::cout << i << "   " << EV(i, 0) << "   " << EV(i, 1) << std::endl;
-	}
 	visited.resize(V.rows());
 	distance_to_vert.resize(V.rows());
+	tmp_original_pos.resize(1, 4);
+	tmp_original_pos << moving_vertex_ID, start_pos;
 }
 
 void CurveDeformation::pullCurve(const Eigen::RowVector3d& pos, Eigen::MatrixXd& V, Eigen::VectorXi& edge_boundary_markers) {
 	double drag_size = (pos - start_pos).norm() * DRAG_SCALE;
 	bool ROI_is_updated = false;
+	Eigen::MatrixXd prev_V;
 
 	if (prev_drag_size < drag_size) { //Take the current drag_size and current_ROI_size relative to the size of the stroke we're pulling on. //TODO: test if we want to take it relative to the size of the whole mesh instead (we have access to V after all)?
+		prev_V = V;
 		ROI_is_updated = update_ROI_test(drag_size, V, edge_boundary_markers);
 	}
-	V = original_positions; //TODO: see if we need this/whether it makes any difference in stability
+	//V = original_positions; //TODO: see if we need this/whether it makes any difference in stability
+	
 
 	if (prev_range_size <= 1) {
 		V.row(moving_vertex_ID) = pos;
@@ -50,6 +51,16 @@ void CurveDeformation::pullCurve(const Eigen::RowVector3d& pos, Eigen::MatrixXd&
 	else {
 
 		if (ROI_is_updated) {
+		/*	for (int i = 0; i < curves.size(); i++) {
+				for (int j = 0; j < curves[i].vertices.size(); j++) {
+				//	V.row(curves[i].vertices[j]) = original_positions.row(curves[i].vertices[j]);
+					tmp_original_pos.conservativeResize(tmp_original_pos.rows() + 1, Eigen::NoChange);
+					tmp_original_pos.bottomRows(1) << curves[i].vertices[j], V.row(curves[i].vertices[j]);
+				}
+			}
+			V = prev_V;*/
+		V = original_positions;
+
 			for (int i = 0; i < curves.size(); i++) {
 				curves[i].laplacian_curve_edit.setup_for_update_curve(curves[i].vertices, curves[i].fixed_vertices, curves[i].edges, curves[i].fixed_edges, curves[i].vertex_triplets, curves[i].edge_triplets, V, EV);
 			}
@@ -67,17 +78,21 @@ void CurveDeformation::pullCurve(const Eigen::RowVector3d& pos, Eigen::MatrixXd&
 bool CurveDeformation::update_ROI_test(double drag_size, Eigen::MatrixXd& V, Eigen::VectorXi& edge_boundary_markers) {
 	prev_drag_size = drag_size;
 
+	/*for (int i = 0; i < tmp_original_pos.rows(); i++) {
+		V.row(tmp_original_pos(i, 0)) = tmp_original_pos.row(i).rightCols(3);
+	}*/
+
 	vector<int> vertices_in_range = collect_vertices_within_drag_length(drag_size, V, edge_boundary_markers);
 	if (vertices_in_range.size() == prev_range_size) {
 		return false;
 	}
 	prev_range_size = vertices_in_range.size();
 	sort_by_distance(vertices_in_range);
-	std::cout << "Vertices in range: ";
+/*	std::cout << "Vertices in range: ";
 	for (int i = 0; i < vertices_in_range.size(); i++) {
 		std::cout << vertices_in_range[i] << "   ";
 	}
-	std::cout << std::endl;
+	std::cout << std::endl;*/
 	//Collect vertices in each each curve and construct cuve hierarchy
 	Eigen::VectorXi edge_consumed(EV.rows()), fixed(V.rows());
 	edge_consumed.setZero();
@@ -134,11 +149,11 @@ bool CurveDeformation::update_ROI_test(double drag_size, Eigen::MatrixXd& V, Eig
 		/*	std::cout << "vertices: ";
 			for (int i = 0; i < curves.back().vertices.size(); i++) {
 				std::cout << curves.back().vertices[i] << "  ";
-			}*/
+			}
 			std::cout << "Fixed vertices: " << std::endl;
 			for (int i = 0; i < curves.back().fixed_vertices.size(); i++) {
 				std::cout << curves.back().fixed_vertices[i] << std::endl;
-			}
+			}*/
 			/*std::cout << std::endl << "edges: " << std::endl;
 			for (int i = 0; i < curves.back().edges.rows(); i++) {
 				std::cout << curves.back().edges.row(i) << std::endl;

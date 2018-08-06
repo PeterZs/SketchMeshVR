@@ -233,13 +233,18 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		tool_mode = SMOOTH;
 	}
 
+	std::cout << "TooL: " << tool_mode << std::endl;
 
 	if (tool_mode == DRAW) {
+		std::cout << "Draw" << std::endl;
 		if (draw_should_block) { //User has been too close to first sample point (closing the stroke too much), so we're in blocked state till the buttons are released again
+			std::cout << "exit here" << std::endl;
+
 			return;
 		}
 		if (prev_tool_mode == NONE) {
 			if (has_recentered) {
+				std::cout << "Already recentered" << std::endl;
 				viewer.oculusVR.set_start_action_view(viewer.core.get_view());
 				stroke_collection.clear();
 				next_added_stroke_ID = 2;
@@ -248,6 +253,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				prev_tool_mode = DRAW;
 			}
 			else {
+				std::cout << "get here" << std::endl;
 				reset_before_draw();
 				viewer.oculusVR.request_recenter();
 				has_recentered = true;
@@ -353,10 +359,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				return;
 			}
 			CurveDeformation::startPullCurve(handleID, (*base_mesh).V, (*base_mesh).F);
-			std::cout << "Edge markers: " << std::endl;
-			for (int i = 0; i < (*base_mesh).edge_boundary_markers.rows(); i++) {
-				std::cout << i << "  " << (*base_mesh).edge_boundary_markers[i] << std::endl;
-			}
 			prev_tool_mode = PULL;
 		}
 		else if (prev_tool_mode == PULL) {
@@ -365,7 +367,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				(*base_mesh).patches[i]->update_patch_vertex_positions((*base_mesh).V);
 			}
 
-			for (int i = 0; i < 8; i++) {
+			for (int i = 0; i < 18; i++) {
 				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
 			}
 
@@ -590,6 +592,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		}
 		else if (prev_tool_mode == CUT) {
 			if (!added_stroke->has_points_on_mesh) {
+				prev_tool_mode = NONE;
 				viewer.update_screen_while_computing = false;
 				return;
 			}
@@ -678,11 +681,17 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		else if (prev_tool_mode == EXTRUDE) {
 			if (extrusion_base_already_drawn) { //User has drawn the silhouette stroke for extrusion
 				dirty_boundary = true;
+				std::cout << "test flo:" << added_stroke->get3DPoints().rows() << std::endl;
+				
 				added_stroke->toLoop();
 				added_stroke->is_loop = false; //Set to false manually, because we don't want curveDeformation to consider it as a loop (but we do need looped 3DPoints)
 
-				bool success_extrude = MeshExtrusion::extrude_main(*base_mesh, base_surface_path, *added_stroke, *extrusion_base, base_model, base_view, base_proj, base_viewport);
-				if (!success_extrude) { //Catches the case that the extrusion base removes all faces/vertices
+				bool success_extrude = false;
+				if (added_stroke->get3DPoints().rows() > 6) {
+					success_extrude = MeshExtrusion::extrude_main(*base_mesh, base_surface_path, *added_stroke, *extrusion_base, base_model, base_view, base_proj, base_viewport);
+				}
+
+				if (!success_extrude) { //Catches the case that the extrusion base removes all faces/vertices or that the extrusion silhouette has too little samples/is just a click
 					viewer.update_screen_while_computing = false;
 					prev_tool_mode = NONE;
 					next_added_stroke_ID -= 2;
@@ -721,7 +730,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				}
 
 				for (int i = 0; i < 10; i++) {
-					//	SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
+						SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
 				}
 
 				//Update the stroke positions after smoothing, in case their positions have changed (although they really shouldn't)
@@ -734,7 +743,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				viewer.data().set_mesh(V, F);
 				Eigen::MatrixXd N_corners;
 				igl::per_corner_normals(V, F, 50, N_corners);
-				viewer.data().set_normals(N_corners); //TODO: NORMALS
+				viewer.data().set_normals(N_corners);
 
 				draw_all_strokes();
 				viewer.selected_data_index = 2;
