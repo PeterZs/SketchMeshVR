@@ -180,7 +180,6 @@ void reset_before_draw() {
 	extrusion_base_already_drawn = false;
 	(*base_mesh).V.resize(0, 3);
 	(*base_mesh).F.resize(0, 3);
-	//(*base_mesh).vertex_boundary_markers.resize(0);
 	(*base_mesh).vertex_is_fixed.resize(0);
 	(*base_mesh).edge_boundary_markers.resize(0);
 	(*base_mesh).new_mapped_indices.resize(0);
@@ -592,6 +591,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		}
 		else if (prev_tool_mode == CUT) {
 			if (!added_stroke->has_points_on_mesh) {
+				//next_added_stroke_ID--; //Cannot just decrement this, since it will be done double (upon release post stroke draw and upon release post click)
 				prev_tool_mode = NONE;
 				viewer.update_screen_while_computing = false;
 				return;
@@ -876,6 +876,15 @@ void menu_closed() {
 	viewer.oculusVR.menu_active = false;
 }
 
+void reset_trackers() {
+	if (cut_stroke_already_drawn || extrusion_base_already_drawn) { //If we're switching from an unfinished cut or extrusion
+		next_added_stroke_ID--;
+	}
+	cut_stroke_already_drawn = false;
+	extrusion_base_already_drawn = false;
+
+}
+
 int main(int argc, char *argv[]) {
 	//Init stroke selector
 	initial_stroke = new Stroke(V, F, viewer, 0);
@@ -1075,6 +1084,7 @@ int main(int argc, char *argv[]) {
 
 		ImGui::PushID(0);
 		if (ImGui::ImageButton(im_texID_draw, icon_size, uv_start, uv_end, frame_padding, icon_background_color)) {
+			reset_trackers();
 			selected_tool_mode = DRAW;
 			im_texID_cur = im_texID_draw;
 			viewer.selected_data_index = 2;
@@ -1088,6 +1098,7 @@ int main(int argc, char *argv[]) {
 		ImGui::PushID(1);
 		//ImGui::SetCursorPos(ImVec2(0, 345));
 		if (ImGui::ImageButton(im_texID_pull, icon_size, uv_start, uv_end, frame_padding, icon_background_color)) {
+			reset_trackers();
 			selected_tool_mode = PULL;
 			im_texID_cur = im_texID_pull;
 			viewer.selected_data_index = 2;
@@ -1101,6 +1112,7 @@ int main(int argc, char *argv[]) {
 		ImGui::PushID(2);
 		//ImGui::SetCursorPos(ImVec2(379, 379));
 		if (ImGui::ImageButton(im_texID_add, icon_size, uv_start, uv_end, frame_padding, icon_background_color)) {
+			reset_trackers();
 			selected_tool_mode = ADD;
 			im_texID_cur = im_texID_add;
 			viewer.selected_data_index = 2;
@@ -1113,6 +1125,7 @@ int main(int argc, char *argv[]) {
 
 		ImGui::PushID(3);
 		if (ImGui::ImageButton(im_texID_cut, icon_size, uv_start, uv_end, frame_padding, icon_background_color)) {
+			reset_trackers();
 			selected_tool_mode = CUT;
 			im_texID_cur = im_texID_cut;
 			viewer.selected_data_index = 2;
@@ -1126,6 +1139,7 @@ int main(int argc, char *argv[]) {
 		ImGui::PushID(4);
 		//ImGui::SetCursorPos(ImVec2(0, 345));
 		if (ImGui::ImageButton(im_texID_extrude, icon_size, uv_start, uv_end, frame_padding, icon_background_color)) {
+			reset_trackers();
 			selected_tool_mode = EXTRUDE;
 			im_texID_cur = im_texID_extrude;
 			viewer.selected_data_index = 2;
@@ -1139,6 +1153,7 @@ int main(int argc, char *argv[]) {
 		ImGui::PushID(5);
 		//ImGui::SetCursorPos(ImVec2(379, 379));
 		if (ImGui::ImageButton(im_texID_remove, icon_size, uv_start, uv_end, frame_padding, icon_background_color)) {
+			reset_trackers();
 			selected_tool_mode = REMOVE;
 			im_texID_cur = im_texID_remove;
 			viewer.selected_data_index = 2;
