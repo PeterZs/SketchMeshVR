@@ -24,7 +24,7 @@ public:
     void counter_clockwise();
     void strokeReset();
     void update_Positions(Eigen::MatrixXd V);
-	bool update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & sharp_edge, Eigen::VectorXi & vertex_is_fixed);
+	bool update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & sharp_edge, Eigen::VectorXi & vertex_is_fixed, Eigen::MatrixXi& replacing_vertex_bindings);
 	void undo_stroke_add(Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & sharp_edge, Eigen::VectorXi & vertex_is_fixed);
     bool empty2D() const { return stroke2DPoints.isZero(); }
 	bool toLoop();

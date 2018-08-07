@@ -87,7 +87,7 @@ void Stroke::swap(Stroke & tmp) {//The pointers to V and F will always be the sa
 
 Stroke::~Stroke() {}
 
-/** Used for DRAW. Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its projection as a 2D point (and stores the projected z-value). After adding the new point it will restart the timer. **/
+/** Used for DRAW. Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon). After adding the new point it will restart the timer. **/
 bool Stroke::addSegment(Eigen::Vector3f& pos) {
 
 	if (!stroke3DPoints.isZero()) {
@@ -709,13 +709,29 @@ void Stroke::update_Positions(Eigen::MatrixXd V) {
 
 /** Remaps the stroke's vertex bindings after the mesh topology has changed. If a stroke becomes non-continous (can only happen to strokes that were non-looped at the start and that did not have their first and/or last point removed) the stroke will be removed and its boundary_vertex_markers unset. Looped strokes always stay continuous, since we can ony remove one continuous piece of them.
 	Note that this method does not update the stroke3DPoints, use update_Positions() for that. **/
-bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi& edge_boundary_markers, Eigen::VectorXi& sharp_edge, Eigen::VectorXi& vertex_is_fixed) {
+bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi& edge_boundary_markers, Eigen::VectorXi& sharp_edge, Eigen::VectorXi& vertex_is_fixed, Eigen::MatrixXi& replacing_vertex_bindings) {
 	vector<int> new_bindings;
 	int first_included_after_remove = -1;
 	bool points_were_removed = false, no_tracked_point_yet = true, stays_continuous = false, originally_is_loop = is_loop;
 
+	for (int i = 0; i < replacing_vertex_bindings.rows(); i++) {
+		if (replacing_vertex_bindings(i, 0) == stroke_ID) {
+			auto loc = std::find(closest_vert_bindings.begin(), closest_vert_bindings.end(), replacing_vertex_bindings(i, 1));
+			int idx = distance(closest_vert_bindings.begin(), loc);
+			loc = std::find(closest_vert_bindings.begin(), closest_vert_bindings.end(), replacing_vertex_bindings(i, 2));
+			int idx2 = distance(closest_vert_bindings.begin(), loc);
+			if (idx2 - idx != 1) {
+				std::cerr << "Something went wrong. Multiple vertices inserted on 1 edge?" << std::endl;
+			}
+			else {
+				closest_vert_bindings.insert(loc, replacing_vertex_bindings(i, 3)); //Insert the new middle vertex between the 2 existing edge vertices
+			}
+		}
+	}
+
 	for (int i = 0; i < closest_vert_bindings.size() - 1; i++) {	//Closest_vert_bindings is always a loop
 		if (new_mapped_indices[closest_vert_bindings[i]] == -1) { //Removed vertex
+			std::cout << "Removed vertex?" << std::endl;
 			if (!originally_is_loop && (i == 0 || i == closest_vert_bindings.size() - 2)) {
 				stays_continuous = true;
 			}
@@ -759,22 +775,39 @@ void Stroke::undo_stroke_add(Eigen::VectorXi& edge_boundary_markers, Eigen::Vect
 
 	int start, end, equal_pos;
 	Eigen::VectorXi col1Equals, col2Equals;
-	for (int i = 0; i < closest_vert_bindings.size()-1; i++) {
+	std::cout << "Is loop" << is_loop << std::endl;
+	for (int i = 0; i < closest_vert_bindings.size() - 1 - !is_loop; i++) {
 		start = closest_vert_bindings[i];
 		end = closest_vert_bindings[(i + 1) % closest_vert_bindings.size()];
+		std::cout << "Start&end " << start << "  " << end;
 		col1Equals = EV.col(0).cwiseEqual(min(start, end)).cast<int>();
 		col2Equals = EV.col(1).cwiseEqual(max(start, end)).cast<int>();
-		(col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
+		int maxval = (col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
+		std::cout <<" "<< maxval <<" at equal_pos: " << equal_pos << " " << EV.row(equal_pos) << "   " << EF.row(equal_pos) << std::endl;
 		edge_boundary_markers[equal_pos] = 0;
 		sharp_edge[equal_pos] = 0; //Unset sharp edges (e.g. edges that were previously sharp, now smooth, but they're not entirely removed)
 	}
 
+	/*for (int i = 0; i < edge_boundary_markers.rows(); i++) {
+		if (edge_boundary_markers[i]) {
+			std::cout << EV.row(i) << "  " << edge_boundary_markers[i] << std::endl;
+		}
+		if (sharp_edge[i]) {
+			std::cout << i << " is sharp" << std::endl;
+		}
+	}*/
+
+
+
+
 	vector<vector<int>> neighbors;
 	adjacency_list(F, neighbors);
-
+	std::cout << "vert bindings" << std::endl;
 	for (int i = 0; i < closest_vert_bindings.size(); i++) {
+		std::cout << closest_vert_bindings[i] << "  has neighbors  ";
 		vertex_is_fixed[closest_vert_bindings[i]] = 0;
 		for (int j = 0; j < neighbors[closest_vert_bindings[i]].size(); j++) {
+			std::cout << neighbors[closest_vert_bindings[i]][j] << "   ";
 			start = closest_vert_bindings[i];
 			end = neighbors[closest_vert_bindings[i]][j];
 			col1Equals = EV.col(0).cwiseEqual(min(start, end)).cast<int>();
@@ -782,8 +815,15 @@ void Stroke::undo_stroke_add(Eigen::VectorXi& edge_boundary_markers, Eigen::Vect
 			(col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
 			if (edge_boundary_markers[equal_pos] > 0) { //If the vertex is part of another boundary edge, then it stays fixed
 				vertex_is_fixed[closest_vert_bindings[i]] = 1;
-				break;
+				//break;
 			}
+		}
+		std::cout << std::endl;
+	}
+	std::cout << std::endl;
+	for (int i = 0; i < vertex_is_fixed.rows(); i++) {
+		if (vertex_is_fixed[i]) {
+			std::cout << i << "is fixed" << std::endl;
 		}
 	}
 }

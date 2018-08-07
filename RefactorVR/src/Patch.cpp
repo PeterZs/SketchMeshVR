@@ -60,7 +60,6 @@ void Patch::create_mesh_structure(Mesh& m, Eigen::VectorXi& faces) {
 	}
 	mesh.V = patch_vertices;
 	mesh.F = patch_faces;
-	//mesh.vertex_boundary_markers = new_vertex_boundary_markers;
 	mesh.edge_boundary_markers = new_edge_boundary_markers;
 	mesh.vertex_is_fixed = new_vertex_is_fixed;
 	mesh.new_mapped_indices = new_mapped_indices;
@@ -100,8 +99,6 @@ void Patch::get_patch_vertex(int v_idx, int face, Eigen::MatrixXd& patch_vertice
 	parent_vertices.conservativeResize(parent_vertices.rows() + 1);
 	parent_vertices.tail(1) << v_idx;
 	mesh_to_patch_indices[v_idx] = parent_vertices.rows() - 1;
-	//new_vertex_boundary_markers.conservativeResize(new_vertex_boundary_markers.rows() + 1);
-	//new_vertex_boundary_markers.tail(1) << boundary_markers_orig.row(v_idx);
 	new_vertex_is_fixed.conservativeResize(new_vertex_is_fixed.rows() + 1);
 	new_vertex_is_fixed.tail(1) << vertex_is_fixed_orig.row(v_idx);
 	new_mapped_indices.conservativeResize(new_mapped_indices.rows() + 1);
@@ -122,9 +119,3 @@ void Patch::update_patch_vertex_positions(Eigen::MatrixXd& base_V) {
 		}
 	}
 }
-
-/*void Patch::update_patch_boundary_markers(Eigen::VectorXi& base_boundary_markers) {
-	for (int i = 0; i < base_boundary_markers.rows(); i++) {
-		mesh.vertex_boundary_markers(mesh_to_patch_indices[i]) = base_boundary_markers(i);
-	}
-}*/

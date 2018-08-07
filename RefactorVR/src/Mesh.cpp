@@ -6,7 +6,6 @@ Mesh::Mesh(Eigen::MatrixXd & V_, Eigen::MatrixXi & F_, Eigen::VectorXi & edge_bo
 Mesh::Mesh() :
 	V(Eigen::MatrixXd(0, 3)),
 	F(Eigen::MatrixXi(0, 3)),
-	//vertex_boundary_markers(Eigen::VectorXi()),
 	edge_boundary_markers(Eigen::VectorXi()),
 	vertex_is_fixed(Eigen::VectorXi()),
 	new_mapped_indices(Eigen::VectorXi()),
@@ -20,7 +19,6 @@ Mesh::Mesh() :
 Mesh & Mesh::operator=(Mesh other){
 	F.resize(other.F.rows(), 3);
 	F = other.F;
-//	vertex_boundary_markers = other.vertex_boundary_markers;
 	edge_boundary_markers = other.edge_boundary_markers;
 	vertex_is_fixed = other.vertex_is_fixed;
 	new_mapped_indices = other.new_mapped_indices;

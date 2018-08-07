@@ -53,6 +53,9 @@ Eigen::VectorXi sharp_edge;
 //Takes care of index mapping from before a cut/extrusion action to after (since some vertices are removed)
 Eigen::VectorXi new_mapped_indices;
 
+//Tracker needed for updating the strokes' closest vertex bindings after a stroke edge has been split (e.g. due to stroke add, cut or extrude)
+Eigen::MatrixXi replacing_vertex_bindings(0, 4);
+
 Mesh* base_mesh;
 
 std::function<void()> current_tool_HUD;
@@ -232,18 +235,13 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		tool_mode = SMOOTH;
 	}
 
-	std::cout << "TooL: " << tool_mode << std::endl;
 
 	if (tool_mode == DRAW) {
-		std::cout << "Draw" << std::endl;
 		if (draw_should_block) { //User has been too close to first sample point (closing the stroke too much), so we're in blocked state till the buttons are released again
-			std::cout << "exit here" << std::endl;
-
 			return;
 		}
 		if (prev_tool_mode == NONE) {
 			if (has_recentered) {
-				std::cout << "Already recentered" << std::endl;
 				viewer.oculusVR.set_start_action_view(viewer.core.get_view());
 				stroke_collection.clear();
 				next_added_stroke_ID = 2;
@@ -252,7 +250,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				prev_tool_mode = DRAW;
 			}
 			else {
-				std::cout << "get here" << std::endl;
 				reset_before_draw();
 				viewer.oculusVR.request_recenter();
 				has_recentered = true;
@@ -325,11 +322,8 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 			if (remove_stroke_clicked == 2) { //Mechanism to force the user to click twice on the same stroke before removing it (safeguard)
 				stroke_was_removed = true;
-				//TODO: below will break if we remove a curve that has vertices that belong to multiple curves, these will then get unmarked as boundary vertices. Replace vertex_boundary_markers either with a list per vertex or some bitwise operator (e.g. belonging to boundary 1 gives value 1, belonging to 1 and 2 gives value 3 etc)
-				stroke_collection[closest_stroke_idx].undo_stroke_add(edge_boundary_markers, sharp_edge, vertex_is_fixed); //Sets the vertex_boundary_markers for the vertices of this stroke to 0 again
-			/*	for (int i = 0; i < (*base_mesh).patches.size(); i++) {
-					(*base_mesh).patches[i]->update_patch_boundary_markers(vertex_boundary_markers);
-				}*/
+				stroke_collection[closest_stroke_idx].undo_stroke_add(edge_boundary_markers, sharp_edge, vertex_is_fixed);
+	
 				//We might have changed the patch structure (e.g. when removing a sharp cut stroke), so request new patches
 				(*base_mesh).patches.clear();
 				(*base_mesh).face_patch_map.clear();
@@ -390,9 +384,8 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			}
 
 			draw_all_strokes(); //Will remove a possible old black (wrong) stroke
-			added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID);
+			added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID); //For CUT, only increase the next added stroke ID upon button release (when we know it succeeded)
 			viewer.oculusVR.set_start_action_view(viewer.core.get_view());
-			next_added_stroke_ID++;
 			added_stroke->addSegmentCut(pos);
 		}
 		else if (prev_tool_mode == CUT) {
@@ -491,7 +484,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 			bool success;
 			if (added_stroke->starts_on_mesh && added_stroke->ends_on_mesh) {
-				success = LaplacianRemesh::remesh_open_path(*base_mesh, *added_stroke);
+				success = LaplacianRemesh::remesh_open_path(*base_mesh, *added_stroke, replacing_vertex_bindings);
 			}
 			else if (!added_stroke->starts_on_mesh && !added_stroke->ends_on_mesh) { //Stroke like a cut stroke (starts and ends off mesh to wrap around)
 			   //Need to remesh like it's a cut but without removing the inside faces (we get 2 loops of boundary vertices that both need to be stitched, so can't use remesh_open_path)
@@ -524,11 +517,11 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			(*base_mesh).face_patch_map.clear();
 			(*base_mesh).patches = Patch::init_patches(*base_mesh);
 
-			initial_stroke->update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed); //Don't test if the initial one dies
+			initial_stroke->update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed, replacing_vertex_bindings); //Don't test if the initial one dies
 
 			int nr_removed = 0, original_collection_size = stroke_collection.size();
 			for (int i = 0; i < original_collection_size - 1; i++) { //Don't update the added stroke, as this is done inside the remeshing already
-				if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed)) {
+				if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed, replacing_vertex_bindings)) {
 					//Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist
 					stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
 					nr_removed++;
@@ -568,7 +561,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			igl::per_corner_normals(V, F, 50, N_corners);
 			viewer.data().set_normals(N_corners);
 
-			stroke_was_removed = false; //Reset
+			stroke_was_removed = false;
 			dirty_boundary = true;
 			draw_all_strokes();
 		}
@@ -591,7 +584,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		}
 		else if (prev_tool_mode == CUT) {
 			if (!added_stroke->has_points_on_mesh) {
-				//next_added_stroke_ID--; //Cannot just decrement this, since it will be done double (upon release post stroke draw and upon release post click)
 				prev_tool_mode = NONE;
 				viewer.update_screen_while_computing = false;
 				return;
@@ -612,7 +604,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				bool cut_success = MeshCut::cut(*base_mesh, *added_stroke, clicked_face);
 				if (!cut_success) { //Catches the following cases: when the cut removes all mesh vertices/faces, when the first/last cut point aren't correct (face -1 in SurfacePath) or when sorting takes "infinite" time
 					cut_stroke_already_drawn = false;
-					next_added_stroke_ID--; //Undo ID increment since stroke didn't actually get pushed back
 					prev_tool_mode = NONE;
 					sound_error_beep();
 					viewer.data().set_points(Eigen::MatrixXd(), black); //Will remove the pink cut stroke
@@ -628,12 +619,13 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				(*base_mesh).patches = Patch::init_patches(*base_mesh);
 
 				stroke_collection.push_back(*added_stroke);
+				next_added_stroke_ID++; //Stroke is successfully pushed back
 
-				initial_stroke->update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed); //Don't test if the initial one dies
+				initial_stroke->update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed, replacing_vertex_bindings); //Don't test if the initial one dies
 
 				int nr_removed = 0, original_collection_size = stroke_collection.size();
 				for (int i = 0; i < original_collection_size; i++) {
-					if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed)) {
+					if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed, replacing_vertex_bindings)) {
 						//Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist
 						stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
 						nr_removed++;
@@ -664,7 +656,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			else { //We're finished drawing the cut stroke, prepare for when user draws the final stroke to remove the part
 				if (added_stroke->has_self_intersection()) {
 					std::cerr << "Cut stroke contains a loop which is illegal. Please try again. " << std::endl;
-					next_added_stroke_ID--; //Undo ID increment since stroke didn't actually get pushed back
 					prev_tool_mode = NONE;
 					sound_error_beep();
 					viewer.data().set_points(Eigen::MatrixXd(), black); //Will remove the pink cut stroke
@@ -680,9 +671,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		}
 		else if (prev_tool_mode == EXTRUDE) {
 			if (extrusion_base_already_drawn) { //User has drawn the silhouette stroke for extrusion
-				dirty_boundary = true;
-				std::cout << "test flo:" << added_stroke->get3DPoints().rows() << std::endl;
-				
+				dirty_boundary = true;				
 				added_stroke->toLoop();
 				added_stroke->is_loop = false; //Set to false manually, because we don't want curveDeformation to consider it as a loop (but we do need looped 3DPoints)
 
@@ -716,11 +705,11 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				stroke_collection.push_back(*extrusion_base);
 				stroke_collection.push_back(*added_stroke);
 
-				initial_stroke->update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed);
+				initial_stroke->update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed, replacing_vertex_bindings);
 
 				int nr_removed = 0, original_collection_size = stroke_collection.size();
 				for (int i = 0; i < original_collection_size - 1; i++) { //Skip the newly added stroke since it is already updated inside extrude_main()
-					if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed)) {
+					if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed, replacing_vertex_bindings)) {
 						//Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist (or in case of non-loop strokes that have a middle portion removed, the undo_stroke_add is done inside of the update_vert_bindings
 						stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
 						nr_removed++;
@@ -877,11 +866,19 @@ void menu_closed() {
 }
 
 void reset_trackers() {
-	if (cut_stroke_already_drawn || extrusion_base_already_drawn) { //If we're switching from an unfinished cut or extrusion
+	if (extrusion_base_already_drawn) { //If we're switching from an unfinished extrusion
 		next_added_stroke_ID--;
 	}
 	cut_stroke_already_drawn = false;
 	extrusion_base_already_drawn = false;
+	if (prev_closest_stroke_idx != -1) {
+		stroke_collection[prev_closest_stroke_idx].stroke_color = old_selected_stroke_color; //Reset the color of the previously selected stroke
+		prev_closest_stroke_ID = -1;
+	}
+	remove_stroke_clicked = 0;
+
+	viewer.data().set_points(Eigen::MatrixXd(), black); //Will remove a possible pink cut stroke
+	draw_all_strokes();
 
 }
 

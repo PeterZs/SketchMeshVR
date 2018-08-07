@@ -10,7 +10,6 @@ public:
 	Patch() : mesh(patch_vertices, patch_faces, new_edge_boundary_markers, new_vertex_is_fixed, new_mapped_indices, new_sharp_edge, -1) {
 		parent_vertices = Eigen::VectorXi();
 		parent_faces = Eigen::VectorXi();
-	//	new_vertex_boundary_markers = Eigen::VectorXi();
 		new_edge_boundary_markers = Eigen::VectorXi();
 		new_vertex_is_fixed = Eigen::VectorXi();
 		new_mapped_indices = Eigen::VectorXi();

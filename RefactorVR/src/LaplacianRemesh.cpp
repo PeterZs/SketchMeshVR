@@ -31,7 +31,9 @@ Eigen::VectorXi LaplacianRemesh::remesh_extrusion_remove_inside(Mesh & m, Surfac
 	return remesh(m, surface_path, model, view, proj, viewport, remesh_success);
 }
 
-bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
+bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke, Eigen::MatrixXi& replacing_vertex_bindings) {
+	replacing_vertex_bindings.resize(0, 4);
+	remove_inside_faces = false;
 	SurfacePath surface_path;
 	surface_path.create_from_open_path(open_path_stroke);
 
@@ -138,6 +140,8 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
 			replacing_edges(replacing_edges.rows() - 1, 3) = m.sharp_edge[path[i].get_ID()];
 			edge_split_positions.conservativeResize(edge_split_positions.rows() + 1, Eigen::NoChange);
 			edge_split_positions.bottomRows(1) << path[i].get_vertex().transpose();
+			replacing_vertex_bindings.conservativeResize(replacing_vertex_bindings.rows() + 1, Eigen::NoChange);
+			replacing_vertex_bindings.bottomRows(1) << m.edge_boundary_markers[path[i].get_ID()], startEV(path[i].get_ID(), 0), startEV(path[i].get_ID(), 1), -1; //Middle vertex index gets set after resampling
 		}
 		else {
 			path[i].fixed = false;
@@ -171,6 +175,7 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke) {
 			if (resampled_path.row(i) == edge_split_positions.row(j)) {
 				replacing_edges(j * 2 + 0, 0) = m.V.rows() + i; //Middle vertex is connected to 2 other vertices
 				replacing_edges(j * 2 + 1, 0) = m.V.rows() + i;
+				replacing_vertex_bindings(j, 3) = m.V.rows() + i;
 				break; //We can break after we've found the adjacent edges
 			}
 		}
