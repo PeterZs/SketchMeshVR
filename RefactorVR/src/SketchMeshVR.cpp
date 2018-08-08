@@ -546,6 +546,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			draw_all_strokes();
 		}
 		else if (prev_tool_mode == REMOVE && stroke_was_removed) { //Only redraw if we actually removed a stroke (otherwise we draw unnecessary)
+			dirty_boundary = true;
 			for (int i = 0; i < 10; i++) {
 				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
 			}
@@ -562,7 +563,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			viewer.data().set_normals(N_corners);
 
 			stroke_was_removed = false;
-			dirty_boundary = true;
 			draw_all_strokes();
 		}
 		else if (prev_tool_mode == PULL && handleID != -1) {
