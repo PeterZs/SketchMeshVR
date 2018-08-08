@@ -68,10 +68,9 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke, Eigen:
 	for (int i = 0; i < path.size(); i++) {
 		if (path[i].get_type() == PathElement::FACE) {
 			face = path[i].get_ID();
-			dirty_vertices[m.F(face, 0)] = true; //These will ensure that all vertices of the end faces will also be in outer_boundary_vertices
-			dirty_vertices[m.F(face, 1)] = true;
-			dirty_vertices[m.F(face, 2)] = true;
-
+			dirty_vertices[m.F(face, 0)] += 1; //These will ensure that all vertices of the end faces will also be in outer_boundary_vertices
+			dirty_vertices[m.F(face, 1)] += 1;
+			dirty_vertices[m.F(face, 2)] += 1;
 		}
 		else {
 			edge = path[i].get_ID();
@@ -590,8 +589,8 @@ void LaplacianRemesh::update_mesh_values(Mesh& m, Eigen::MatrixXd path, int stro
 	int size_before = m.V.rows();
 	m.V.conservativeResize(m.V.rows() + path.rows() - hold_back_due_to_loop, Eigen::NoChange);
 	m.vertex_is_fixed.conservativeResize(m.vertex_is_fixed.rows() + path.rows() - hold_back_due_to_loop);
-
 	m.new_mapped_indices.conservativeResize(m.new_mapped_indices.rows() + path.rows() - hold_back_due_to_loop, Eigen::NoChange);
+	
 	for (int i = 0; i < path.rows() - hold_back_due_to_loop; i++) {
 		m.V.row(size_before + i) << path.row(i);
 		m.vertex_is_fixed[size_before + i] = 1;
@@ -616,7 +615,7 @@ void LaplacianRemesh::update_edge_indicators(Mesh& m, Eigen::MatrixXi& edges_to_
 	m.edge_boundary_markers.resize(EV.rows());
 	m.edge_boundary_markers.setZero();
 
-	int start, end, equal_pos;
+	int start, end, equal_pos, val;
 	Eigen::VectorXi col1Equals, col2Equals;
 	for (int i = 0; i < edges_to_update.rows(); i++) {
 		start = m.new_mapped_indices(edges_to_update(i, 0));
@@ -628,10 +627,11 @@ void LaplacianRemesh::update_edge_indicators(Mesh& m, Eigen::MatrixXi& edges_to_
 
 		col1Equals = EV.col(0).cwiseEqual(min(start, end)).cast<int>();
 		col2Equals = EV.col(1).cwiseEqual(max(start, end)).cast<int>();
-		(col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
-
-		m.edge_boundary_markers[equal_pos] = edges_to_update(i, 2);
-		m.sharp_edge[equal_pos] = edges_to_update(i, 3);
+		val = (col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
+		if (val == 2) { //When adding an open path, we might have the case where both vertices still exist, but the edge between them disappeared
+			m.edge_boundary_markers[equal_pos] = edges_to_update(i, 2);
+			m.sharp_edge[equal_pos] = edges_to_update(i, 3);
+		}
 	}
 }
 
