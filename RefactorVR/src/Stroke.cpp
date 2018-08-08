@@ -18,6 +18,7 @@ using namespace std;
 
 std::chrono::steady_clock::time_point _time2, _time1;
 double min_inter_point_distance = 2.0*0.00005625;
+Eigen::RowVector3d red_color(1, 0, 0);
 
 Stroke::Stroke(const Eigen::MatrixXd &V_, const Eigen::MatrixXi &F_, igl::opengl::glfw::Viewer &v, int stroke_ID_) :
 	V(V_),
@@ -116,9 +117,9 @@ bool Stroke::addSegment(Eigen::Vector3f& pos) {
 		stroke3DPoints.row(stroke3DPoints.rows() - 1) << pos[0], pos[1], pos[2];
 	}
 	closest_vert_bindings.push_back(stroke3DPoints.rows() - 1); //In the case of DRAW this will match the vertex indices, since we start from 0
-	viewer.data().set_stroke_points(stroke3DPoints); //Will remove all previous points but is okay for draw since it's the only points there are
+	viewer.data().add_edges(stroke3DPoints.topRows(stroke3DPoints.rows() - 1), stroke3DPoints.middleRows(1, stroke3DPoints.rows() - 1), red_color);
 	if (stroke3DPoints.rows() > 10 && (stroke3DPoints.bottomRows(1) - stroke3DPoints.row(0)).squaredNorm() < (stroke3DPoints.row(1) - stroke3DPoints.row(0)).squaredNorm()*8.0) { //Show the closing line if the current point is close enough the first point (and we have already at least 10 samples)
-		viewer.data().add_stroke_points(stroke3DPoints.row(0));
+		viewer.data().add_edges(stroke3DPoints.bottomRows(1), stroke3DPoints.row(0), red_color);
 	}
 	_time1 = std::chrono::high_resolution_clock::now();
 	return false;
@@ -484,11 +485,15 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_b
 	closing_stroke3DPoints.row(0) = stroke3DPoints.row(stroke3DPoints.rows() - 2);
 	closing_stroke3DPoints.row(1) = stroke3DPoints.row(0);
 	Eigen::MatrixXd resampled_3DPoints = CleanStroke3D::resample_by_length_sub(closing_stroke3DPoints, 0, 1, mean_sample_dist);
-	closest_vert_bindings.pop_back();
+	std::cout << "Test: " << closest_vert_bindings[0] << "  " << closest_vert_bindings.back() << std::endl;
+
+/*	closest_vert_bindings.pop_back();
 	int size_before = closest_vert_bindings.size();
 	for (int i = 0; i < resampled_3DPoints.rows(); i++) { //The last resampled point is a copy of the first element of the original stroke, so add it to create a loop again
 		closest_vert_bindings.push_back(size_before + i);
-	}
+	}*/
+	std::cout << "Test: " << stroke3DPoints.row(0) - stroke3DPoints.bottomRows(1) << std::endl;
+
 	Eigen::MatrixXd new_3DPoints = stroke3DPoints.topRows(stroke3DPoints.rows() - 1);
 	new_3DPoints.conservativeResize(new_3DPoints.rows() + resampled_3DPoints.rows(), Eigen::NoChange);
 	new_3DPoints.bottomRows(resampled_3DPoints.rows()) = resampled_3DPoints;
@@ -501,13 +506,17 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_b
 		closest_vert_bindings.push_back(i);
 	}
 	set3DPoints(resampled_new_3DPoints);
+	std::cout << "Test after: " << stroke3DPoints.row(0) - stroke3DPoints.bottomRows(1) << std::endl;
+	std::cout << "Test after: " << closest_vert_bindings[0] << "  " << closest_vert_bindings.back() << std::endl;
 
 	Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
 	Eigen::MatrixX3d projected_points;
 	igl::project(stroke3DPoints, modelview, viewer.core.get_proj(), viewer.core.viewport, projected_points);
-	dep = projected_points.col(2).topRows(projected_points.rows() - 1);
+	//dep = projected_points.col(2).topRows(projected_points.rows() - 1);
+	dep = projected_points.col(2);
 
-	stroke2DPoints = projected_points.topRows(projected_points.rows() - 1);
+	stroke2DPoints = projected_points;
+//	stroke2DPoints = projected_points.topRows(projected_points.rows() - 1);
 	Eigen::MatrixXd original_stroke2DPoints = stroke2DPoints.leftCols(2);
 	stroke2DPoints = resample_stroke2D(original_stroke2DPoints); //Enabling this might give a discrepancy between what is drawn and the result you get but does give smoother meshes
 
@@ -529,8 +538,8 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_b
 	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq25a" + to_string((int)(mean_squared_sample_dist)), V2_tmp, F2, vertex_markers, edge_markers);
 	double mean_Z = stroke3DPoints.col(2).mean();
 	V2 = Eigen::MatrixXd::Constant(V2_tmp.rows(), V2_tmp.cols() + 1, mean_Z);
-	V2.block(0, 0, V2_tmp.rows(), 2) = V2_tmp;
-
+	//V2.block(0, 0, V2_tmp.rows(), 2) = V2_tmp;
+	V2.leftCols(2) = V2_tmp;
 
 	generate_backfaces(F2, F2_back);
 	int nr_boundary_vertices = (vertex_markers.array() == 1).count();
@@ -607,6 +616,11 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_b
 			edge_boundary_markers[i] = 1;
 		}
 	}
+
+	//Make vertex bindings and 3DPoints looped again
+	stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
+	stroke3DPoints.bottomRows(1) = stroke3DPoints.row(0);
+	closest_vert_bindings.push_back(closest_vert_bindings[0]);
 
 	return backside_vertex_map;
 }
@@ -713,15 +727,21 @@ bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::V
 	vector<int> new_bindings;
 	int first_included_after_remove = -1;
 	bool points_were_removed = false, no_tracked_point_yet = true, stays_continuous = false, originally_is_loop = is_loop;
-
+	std::cout << "ID: " << stroke_ID << std::endl;
+	
+	for (int j = 0; j < closest_vert_bindings.size(); j++) {
+					std::cout << closest_vert_bindings[j] << "  ";
+	}
+	std::cout << std::endl;
 	for (int i = 0; i < replacing_vertex_bindings.rows(); i++) {
 		if (replacing_vertex_bindings(i, 0) == stroke_ID) {
+			std::cout << replacing_vertex_bindings(i, 1) << "  " << new_mapped_indices[replacing_vertex_bindings(i, 1)] << " " << replacing_vertex_bindings(i, 2) << "  " << new_mapped_indices[replacing_vertex_bindings(i, 2)] << std::endl;
 			auto loc = std::find(closest_vert_bindings.begin(), closest_vert_bindings.end(), replacing_vertex_bindings(i, 1));
 			int idx = distance(closest_vert_bindings.begin(), loc);
 			loc = std::find(closest_vert_bindings.begin(), closest_vert_bindings.end(), replacing_vertex_bindings(i, 2));
 			int idx2 = distance(closest_vert_bindings.begin(), loc);
-			if (idx2 - idx != 1) {
-				std::cerr << "Something went wrong. Multiple vertices inserted on 1 edge?" << std::endl;
+			if (abs(idx2 - idx) != 1) { //Take absolute in case vertices are found in reversed order (e.g. first 2 vertex bindings of the original stroke which has been cut, so the first stroke vertex and the intersection vertex to the cut surface). Find will return the position of the first found one 
+				std::cerr << std::endl << replacing_vertex_bindings(i,1) << "   " << replacing_vertex_bindings(i,2) <<  " Something went wrong. Multiple vertices inserted on 1 edge?" << std::endl;
 			}
 			else {
 				closest_vert_bindings.insert(loc, replacing_vertex_bindings(i, 3)); //Insert the new middle vertex between the 2 existing edge vertices
@@ -731,7 +751,6 @@ bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::V
 
 	for (int i = 0; i < closest_vert_bindings.size() - 1; i++) {	//Closest_vert_bindings is always a loop
 		if (new_mapped_indices[closest_vert_bindings[i]] == -1) { //Removed vertex
-			std::cout << "Removed vertex?" << std::endl;
 			if (!originally_is_loop && (i == 0 || i == closest_vert_bindings.size() - 2)) {
 				stays_continuous = true;
 			}
@@ -815,7 +834,7 @@ void Stroke::undo_stroke_add(Eigen::VectorXi& edge_boundary_markers, Eigen::Vect
 			(col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
 			if (edge_boundary_markers[equal_pos] > 0) { //If the vertex is part of another boundary edge, then it stays fixed
 				vertex_is_fixed[closest_vert_bindings[i]] = 1;
-				//break;
+				break;
 			}
 		}
 		std::cout << std::endl;

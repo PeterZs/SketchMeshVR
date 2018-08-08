@@ -17,18 +17,18 @@ bool LaplacianRemesh::remove_inside_faces = true;
 Eigen::MatrixXi LaplacianRemesh::EV, LaplacianRemesh::FE, LaplacianRemesh::EF;
 vector<vector<int>> LaplacianRemesh::VV;
 
-Eigen::VectorXi LaplacianRemesh::remesh_cut_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success, int cut_clicked_face) {
+Eigen::VectorXi LaplacianRemesh::remesh_cut_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success, int cut_clicked_face, Eigen::MatrixXi& replacing_vertex_bindings) {
 	is_front_loop = false;
 	remove_inside_faces = true;
 	adjacency_list(m.F, VV);
-	return remesh(m, surface_path, model, view, proj, viewport, remesh_success, cut_clicked_face);
+	return remesh(m, surface_path, model, view, proj, viewport, remesh_success, cut_clicked_face, replacing_vertex_bindings);
 }
 
-Eigen::VectorXi LaplacianRemesh::remesh_extrusion_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success) {
+Eigen::VectorXi LaplacianRemesh::remesh_extrusion_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success, Eigen::MatrixXi& replacing_vertex_bindings) {
 	is_front_loop = true;
 	remove_inside_faces = true;
 	adjacency_list(m.F, VV);
-	return remesh(m, surface_path, model, view, proj, viewport, remesh_success);
+	return remesh(m, surface_path, model, view, proj, viewport, remesh_success, -1, replacing_vertex_bindings);
 }
 
 bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke, Eigen::MatrixXi& replacing_vertex_bindings) {
@@ -226,7 +226,8 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke, Eigen:
 	return true;
 }
 
-bool LaplacianRemesh::remesh_cutting_path(Mesh& m, Stroke& cut_path_stroke) {
+bool LaplacianRemesh::remesh_cutting_path(Mesh& m, Stroke& cut_path_stroke, Eigen::MatrixXi& replacing_vertex_bindings) {
+	replacing_vertex_bindings.resize(0, 4);
 	bool remesh_success = true;
 	is_front_loop = false;
 	remove_inside_faces = false;
@@ -237,12 +238,13 @@ bool LaplacianRemesh::remesh_cutting_path(Mesh& m, Stroke& cut_path_stroke) {
 	if (!success) {
 		return false;
 	}
-	remesh(m, surface_path, cut_path_stroke.viewer.core.get_model(), cut_path_stroke.viewer.oculusVR.get_start_action_view(), cut_path_stroke.viewer.core.get_proj(), cut_path_stroke.viewer.core.viewport, remesh_success);
+	remesh(m, surface_path, cut_path_stroke.viewer.core.get_model(), cut_path_stroke.viewer.oculusVR.get_start_action_view(), cut_path_stroke.viewer.core.get_proj(), cut_path_stroke.viewer.core.viewport, remesh_success, -1, replacing_vertex_bindings);
 	update_add_path_points_and_bindings(cut_path_stroke, surface_path);
 	return remesh_success;
 }
 
-Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success, int cut_clicked_face) {
+Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success, int cut_clicked_face, Eigen::MatrixXi& replacing_vertex_bindings) {
+	replacing_vertex_bindings.resize(0, 4);
 	Eigen::MatrixXi start_F = m.F;
 	Eigen::MatrixXd start_V = m.V;
 	Eigen::VectorXi start_edge_boundary_markers = m.edge_boundary_markers;
@@ -468,6 +470,8 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 			replacing_edges(replacing_edges.rows() - 1, 3) = m.sharp_edge[path[i].get_ID()];
 			edge_split_positions.conservativeResize(edge_split_positions.rows() + 1, Eigen::NoChange);
 			edge_split_positions.bottomRows(1) << path[i].get_vertex().transpose();
+			replacing_vertex_bindings.conservativeResize(replacing_vertex_bindings.rows() + 1, Eigen::NoChange);
+			replacing_vertex_bindings.bottomRows(1) << m.edge_boundary_markers[path[i].get_ID()], startEV(path[i].get_ID(), 0), startEV(path[i].get_ID(), 1), -1; //Middle vertex index gets set after resampling
 		}
 		else {
 			path[i].fixed = false;
@@ -502,6 +506,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 			if (resampled_path.row(i) == edge_split_positions.row(j) && i<resampled_path.rows()-1) { //Don't check the last vertex for looped paths that have the last vertex as a copy of the 0-th vertex (will give out-of-bounds vertex index)
 				replacing_edges(j * 2 + 0, 0) = vertex_is_clean.rows() + i; //Middle vertex is connected to 2 other vertices
 				replacing_edges(j * 2 + 1, 0) = vertex_is_clean.rows() + i;
+				replacing_vertex_bindings(j, 3) = vertex_is_clean.rows() + i;
 				break; //We can break after we've found the adjacent edges
 			}
 		}

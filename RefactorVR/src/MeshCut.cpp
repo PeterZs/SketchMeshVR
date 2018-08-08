@@ -8,13 +8,13 @@ using namespace std;
 using namespace igl;
 
 
-bool MeshCut::cut(Mesh& m, Stroke& stroke, int clicked_face) {
+bool MeshCut::cut(Mesh& m, Stroke& stroke, int clicked_face, Eigen::MatrixXi& replacing_vertex_bindings) {
 	SurfacePath surface_path;
 	bool success = surface_path.create_from_stroke_cut(stroke); //Prepares the drawn stroke (inserts extra points at the edges that it crosses)
 	if (!success) {
 		return false;
 	}
-	success = cut_main(m, surface_path, stroke, clicked_face);
+	success = cut_main(m, surface_path, stroke, clicked_face, replacing_vertex_bindings);
 	if (!success) {
 		return false;
 	}
@@ -24,9 +24,9 @@ bool MeshCut::cut(Mesh& m, Stroke& stroke, int clicked_face) {
 	return true;
 }
 
-bool MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke, int clicked_face) {
+bool MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke, int clicked_face, Eigen::MatrixXi& replacing_vertex_bindings) {
 	bool remesh_success = true;
-	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_cut_remove_inside(m, surface_path, stroke.viewer.core.get_model(), stroke.viewer.oculusVR.get_start_action_view(), stroke.viewer.core.get_proj(), stroke.viewer.core.viewport, remesh_success, clicked_face);
+	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_cut_remove_inside(m, surface_path, stroke.viewer.core.get_model(), stroke.viewer.oculusVR.get_start_action_view(), stroke.viewer.core.get_proj(), stroke.viewer.core.viewport, remesh_success, clicked_face, replacing_vertex_bindings);
 	if (!remesh_success) {
 		return false;
 	}

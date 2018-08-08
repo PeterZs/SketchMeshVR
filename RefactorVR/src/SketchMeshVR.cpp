@@ -108,21 +108,10 @@ bool prev_laser_show;
 
 void draw_all_strokes() {
 	Eigen::MatrixXd added_points = initial_stroke->get3DPoints();
-	int nr_edges = added_points.rows() - 1;
+	int points_to_hold_back = 1 + !initial_stroke->is_loop;
 	viewer.data().set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), red); //Clear the non-original stroke edges
+	viewer.data().add_edges(added_points.topRows(added_points.rows() - points_to_hold_back), added_points.middleRows(1, added_points.rows() - points_to_hold_back), red);
 
-	if (initial_stroke->is_loop) {
-		added_points = initial_stroke->get3DPoints();
-		nr_edges = added_points.rows() - 1;
-		viewer.data().set_stroke_points(igl::cat(1, (Eigen::MatrixXd) added_points.topRows(nr_edges), (Eigen::MatrixXd)added_points.row(0))); //Create a loop and draw edges
-	}
-	else { //set_stroke_points always makes a loop, so don't use that when our stroke ain't a loop (anymore)
-		added_points = initial_stroke->get3DPoints();
-		nr_edges = added_points.rows() - 2; //Subtract 2 because we don't close the loop
-		viewer.data().add_edges(added_points.topRows(nr_edges), added_points.middleRows(1, nr_edges), red);
-	}
-
-	int points_to_hold_back;
 	for (int i = 0; i < stroke_collection.size(); i++) {
 		added_points = stroke_collection[i].get3DPoints();
 		points_to_hold_back = 1 + !stroke_collection[i].is_loop;
@@ -436,7 +425,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 					sound_error_beep();
 					Eigen::MatrixXd drawn_points = initial_stroke->get3DPoints();
 					initial_stroke->strokeReset();
-					//vertex_boundary_markers.resize(0);
 					vertex_is_fixed.resize(0);
 					edge_boundary_markers.resize(0);
 					dirty_boundary = true;
@@ -468,9 +456,9 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				viewer.data().set_normals(N_corners);
 
 				//Overlay the drawn stroke
-				int strokeSize = (vertex_is_fixed.array() > 0).count();
-				Eigen::MatrixXd strokePoints = V.block(0, 0, strokeSize, 3);
-				viewer.data().set_stroke_points(igl::cat(1, strokePoints, (Eigen::MatrixXd) V.row(0)));
+				Eigen::MatrixXd added_points = initial_stroke->get3DPoints();
+				int points_to_hold_back = 1 + !initial_stroke->is_loop;
+				viewer.data().add_edges(added_points.topRows(added_points.rows() - points_to_hold_back), added_points.middleRows(1, added_points.rows() - points_to_hold_back), red);
 			}
 		}
 		else if (prev_tool_mode == ADD) {
@@ -492,7 +480,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				added_stroke->append_final_point();
 				added_stroke->toLoop();
 
-				success = LaplacianRemesh::remesh_cutting_path(*base_mesh, *added_stroke);
+				success = LaplacianRemesh::remesh_cutting_path(*base_mesh, *added_stroke, replacing_vertex_bindings);
 			}
 			else {
 				std::cerr << "An added stroke either needs both the end- & startpoint to be outside of the mesh, or both on the mesh. Please try again. " << std::endl;
@@ -521,17 +509,14 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 			int nr_removed = 0, original_collection_size = stroke_collection.size();
 			for (int i = 0; i < original_collection_size - 1; i++) { //Don't update the added stroke, as this is done inside the remeshing already
-				if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed, replacing_vertex_bindings)) {
-					//Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist
+				if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed, replacing_vertex_bindings)) { //Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist
 					stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
 					nr_removed++;
 					dirty_boundary = true;
-					continue; //Go to the next stroke, don't update this ones' positions
 				}
 			}
 
-			//TODO: test if below is needed
-			//Update the stroke positions, in case their positions have changed (although they really shouldn't)
+			//Update the stroke positions, will update with resampled stroke points
 			initial_stroke->update_Positions(V);
 			for (int i = 0; i < stroke_collection.size() - 1; i++) {
 				stroke_collection[i].update_Positions(V);
@@ -601,7 +586,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				added_stroke->append_final_point();
 				added_stroke->toLoop();
 
-				bool cut_success = MeshCut::cut(*base_mesh, *added_stroke, clicked_face);
+				bool cut_success = MeshCut::cut(*base_mesh, *added_stroke, clicked_face, replacing_vertex_bindings);
 				if (!cut_success) { //Catches the following cases: when the cut removes all mesh vertices/faces, when the first/last cut point aren't correct (face -1 in SurfacePath) or when sorting takes "infinite" time
 					cut_stroke_already_drawn = false;
 					prev_tool_mode = NONE;
@@ -625,20 +610,19 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 				int nr_removed = 0, original_collection_size = stroke_collection.size();
 				for (int i = 0; i < original_collection_size; i++) {
-					if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed, replacing_vertex_bindings)) {
-						//Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist
+					if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed, replacing_vertex_bindings)) { //Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist
 						stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
 						nr_removed++;
 						dirty_boundary = true;
-						continue; //Go to the next stroke, don't update this ones' positions
 					}
 				}
 
 				for (int i = 0; i < 10; i++) {
+					std::cout << "iter: " << i << std::endl;
 					SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
 				}
 
-				//Update the stroke positions after smoothing, in case their positions have changed (although they really shouldn't)
+				//Update the stroke positions after smoothing, will also add resampled points
 				initial_stroke->update_Positions(V);
 				for (int i = 0; i < stroke_collection.size(); i++) {
 					stroke_collection[i].update_Positions(V);
@@ -650,7 +634,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				igl::per_corner_normals(V, F, 50, N_corners);
 				viewer.data().set_normals(N_corners);
 
-				cut_stroke_already_drawn = false; //Reset
+				cut_stroke_already_drawn = false;
 				draw_all_strokes();
 			}
 			else { //We're finished drawing the cut stroke, prepare for when user draws the final stroke to remove the part
@@ -677,7 +661,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 				bool success_extrude = false;
 				if (added_stroke->get3DPoints().rows() > 6) {
-					success_extrude = MeshExtrusion::extrude_main(*base_mesh, base_surface_path, *added_stroke, *extrusion_base, base_model, base_view, base_proj, base_viewport);
+					success_extrude = MeshExtrusion::extrude_main(*base_mesh, base_surface_path, *added_stroke, *extrusion_base, base_model, base_view, base_proj, base_viewport, replacing_vertex_bindings);
 				}
 
 				if (!success_extrude) { //Catches the case that the extrusion base removes all faces/vertices or that the extrusion silhouette has too little samples/is just a click
@@ -714,7 +698,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 						stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
 						nr_removed++;
 						dirty_boundary = true;
-						continue; //Go to the next stroke, don't update this ones' positions
 					}
 				}
 
@@ -722,7 +705,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 						SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
 				}
 
-				//Update the stroke positions after smoothing, in case their positions have changed (although they really shouldn't)
+				//Update the stroke positions after smoothing, also updates resampled stroke points
 				initial_stroke->update_Positions(V);
 				for (int i = 0; i < stroke_collection.size() - 1; i++) {
 					stroke_collection[i].update_Positions(V);
@@ -884,7 +867,7 @@ void reset_trackers() {
 
 int main(int argc, char *argv[]) {
 	//Init stroke selector
-	initial_stroke = new Stroke(V, F, viewer, 0);
+	initial_stroke = new Stroke(V, F, viewer, 1);
 	base_mesh = new Mesh(V, F, edge_boundary_markers, vertex_is_fixed, new_mapped_indices, sharp_edge, 0);
 
 	Eigen::MatrixXd V_floor(4, 3);

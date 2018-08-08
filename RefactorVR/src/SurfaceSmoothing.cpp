@@ -60,7 +60,10 @@ void SurfaceSmoothing::smooth(Mesh& base_mesh, bool& BOUNDARY_IS_DIRTY){
 
 	for (int i = 0; i < base_mesh.patches.size(); i++) {
 		Patch* patch = (base_mesh.patches[i]);
+		std::cout << "get to here" << std::endl;
 		smooth_main((*patch).mesh, BOUNDARY_IS_DIRTY);
+		std::cout << "get to after" << std::endl;
+
 		(*patch).update_parent_vertex_positions(base_mesh.V);
 		prev_mesh_ID = (*patch).mesh.ID;
 	}
@@ -93,6 +96,7 @@ void SurfaceSmoothing::smooth_main(Mesh &m, bool BOUNDARY_IS_DIRTY) {
 	else if (m.ID != prev_mesh_ID){
 		adjacency_list(m.F, neighbors);
 	}
+	std::cout << "get to flo" << std::endl;
 
 	if(BOUNDARY_IS_DIRTY || m.ID != prev_mesh_ID) {
 		no_boundary_vertices = (m.vertex_is_fixed.array() > 0).count();
@@ -108,10 +112,20 @@ void SurfaceSmoothing::smooth_main(Mesh &m, bool BOUNDARY_IS_DIRTY) {
 			}
 		}
 	}
+	std::cout << "get to fiwawe" << std::endl;
+
 	igl::per_vertex_normals(m.V, m.F, PER_VERTEX_NORMALS_WEIGHTING_TYPE_UNIFORM, vertex_normals);
+	std::cout << "get to aewfa" << std::endl;
+
 	Eigen::VectorXd target_LMs = compute_target_LMs(m, L, BOUNDARY_IS_DIRTY);
+	std::cout << "get to w232" << std::endl;
+
 	Eigen::VectorXd target_edge_lengths = compute_target_edge_lengths(m, L);
+	std::cout << "get to 1234" << std::endl;
+
 	compute_target_vertices(m, L, target_LMs, target_edge_lengths, BOUNDARY_IS_DIRTY);
+	std::cout << "get to 678" << std::endl;
+
 }
 
 Eigen::MatrixXd SurfaceSmoothing::compute_laplacian_matrix(Mesh &m) {

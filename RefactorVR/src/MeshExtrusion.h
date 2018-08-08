@@ -8,9 +8,7 @@ class MeshExtrusion {
 
 public:
 	static bool extrude_prepare(Stroke & base, SurfacePath & surface_path);
-	static bool extrude_main(Mesh & m, SurfacePath & surface_path, Stroke & stroke, Stroke & base, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport);
-
-
+	static bool extrude_main(Mesh & m, SurfacePath & surface_path, Stroke & stroke, Stroke & base, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, Eigen::MatrixXi & replacing_vertex_bindings);
 
 
 private:
@@ -21,16 +19,12 @@ private:
 	static std::vector<int> add_silhouette_vertices(Mesh & m, int stroke_ID, Eigen::MatrixXd & silhouette_vertices, Eigen::MatrixXi & boundary_markers);
 	static void create_loop(Mesh & m, Eigen::MatrixXd & loop3D, Eigen::VectorXi & boundary_vertices, std::vector<int> &loop_base_original_indices, int start_idx, int end_idx);
 	static void update_edge_indicators(Mesh & m, Eigen::MatrixXi & edges_to_update);
-	//static void update_added_edges_indicators(Mesh & m, Eigen::MatrixXi & edges_to_update);
-	//static void update_sharp_edges(Mesh & m, Eigen::MatrixXi sharpEV);
-	//static void update_boundary_edges(Mesh & m, Eigen::MatrixXi & boundary_markers);
 	static void update_face_indices(Mesh & m, Eigen::MatrixXi & F2, std::vector<int> sil_original_indices, std::vector<int> loop_base_original_indices, int nr_silhouette_vert, int size_before_gen, int loop2D_size);
 	static void post_extrude_prepare_update_points(Stroke& stroke, SurfacePath& surface_path);
 	static void post_extrude_main_update_points(Stroke & stroke, Eigen::MatrixXd new_positions);
 	static void post_extrude_main_update_bindings(Stroke & base, SurfacePath & surface_path);
 	static Eigen::MatrixXd smooth_stroke(Eigen::MatrixXd & input_points);
 	static void move_to_middle(Eigen::MatrixXd & positions, Eigen::MatrixXd & new_positions);
-	//static std::vector<int> add_silhouette_vertices(Mesh & m, int stroke_ID, Eigen::MatrixXd & silhouette_vertices);
 	static void remove_out_of_bounds_silhouette(Eigen::MatrixXd & silhouette_vertices, Eigen::RowVector3d & center, const Eigen::RowVector3d & left_most, const Eigen::RowVector3d & right_most, Eigen::RowVector3d & dir);
 
 };
