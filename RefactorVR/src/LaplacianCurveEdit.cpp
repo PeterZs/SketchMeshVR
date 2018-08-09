@@ -22,16 +22,13 @@ void LaplacianCurveEdit::setup_for_update_curve(std::vector<int> vertices_, std:
 	Rot.resize(edges.rows());
 	original_L0.resize(edges.rows(), 3);
 	vertex_global_to_local.clear();
-//	edge_global_to_local.clear();
 
 	for (int i = 0; i < edges.rows(); i++) {
 		original_L0.row(i) = V.row(edges(i, 1)) - V.row(edges(i, 0));
-	//	original_L0.row(i) = V.row(EV(edges[i], 1)) - V.row(EV(edges[i], 0));
 	}
 
 	for (int i = 0; i < vertices.size(); i++) {
 		vertex_global_to_local.insert({vertices[i], i });
-	//	std::cout << "Map " << vertices[i] << " to " << i << std::endl;
 	}
 
 	int idx;
@@ -48,21 +45,7 @@ void LaplacianCurveEdit::setup_for_update_curve(std::vector<int> vertices_, std:
 		fixed_vertices_local[i] = idx;
 		is_fixed[idx] = 1;
 	}
-
-	/*for (int i = 0; i < fixed_edges.size(); i++) { //Create local indexing for fixed_edges
-		auto loc = std::find(edges.begin(), edges.end(), fixed_edges[i]);
-		if (loc == edges.end()) {
-			std::cout << "Something wrong 2" << std::endl;
-		}
-		idx = distance(edges.begin(), loc);
-		fixed_edges[i] = idx;
-	}*/
 	//Fixed_edges already has local indexing into edges
-
-
-	/*for (int i = 0; i < edges.size(); i++) {
-		edge_global_to_local.insert({ edges[i], i });
-	}*/
 
 	setup_for_L1_position_step();
 }
@@ -81,18 +64,7 @@ void LaplacianCurveEdit::setup_for_L1_position_step() {
 		original_L1.row(i) = V.row(v1) - (0.5*V.row(v0) + 0.5*V.row(v2));
 		vertex_triplet_to_rot_idx[i][0] = find_edge(v0, v1);
 		vertex_triplet_to_rot_idx[i][1] = find_edge(v1, v2);
-		/*vertex_triplet_to_rot_idx[i][0] = edge_global_to_local.find(find_edge(v0, v1))->second;
-		vertex_triplet_to_rot_idx[i][1] = edge_global_to_local.find(find_edge(v1, v2))->second;*/
 
-		if (vertex_global_to_local.at(v0) - vertex_global_to_local.find(v0)->second > 0) {
-			std::cout << "wrong indexing1" << std::endl;
-		}
-		if (vertex_global_to_local.at(v1) - vertex_global_to_local.find(v1)->second > 0) {
-			std::cout << "wrong indexing2" << std::endl;
-		}
-		if (vertex_global_to_local.at(v2) - vertex_global_to_local.find(v2)->second > 0) {
-			std::cout << "wrong indexing3" << std::endl;
-		}
 		tripletList.push_back(T(i, vertex_global_to_local.at(v0), -0.5));
 		tripletList.push_back(T(i, vertex_global_to_local.at(v1), 1.0));
 		tripletList.push_back(T(i, vertex_global_to_local.at(v2), -0.5));
@@ -136,8 +108,7 @@ void LaplacianCurveEdit::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
 		if (vertex_global_to_local.at(edges(i, 1)) - vertex_global_to_local.find(edges(i, 1))->second > 0) {
 			std::cout << "wrong indexing5" << std::endl;
 		}
-	//	v0 = vertex_global_to_local.find(EV(edges[i], 0))->second;
-	//	v1 = vertex_global_to_local.find(EV(edges[i], 1))->second;
+
 		tripletList.push_back(T(i * 3 + 0, v0 * 3, -1)); //L0
 		tripletList.push_back(T(i * 3 + 0, v1 * 3, 1)); //L0
 		tripletList.push_back(T(i * 3 + 0, vertices.size() * 3 + i * 3, 0));
@@ -162,9 +133,6 @@ void LaplacianCurveEdit::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
 
 	int e0, e1, e2;
 	for (int i = 0; i < edge_triplets.rows(); i++) { //Laplacian of the rotation matrix: L dR*R = 0 (r_i*R_i - r_j*R_j = 0 for i,j in Edges)
-		/*e0 = edge_global_to_local.find(edge_triplets(i, 0))->second;
-		e1 = edge_global_to_local.find(edge_triplets(i, 1))->second;
-		e2 = edge_global_to_local.find(edge_triplets(i, 2))->second;*/
 		e0 = edge_triplets(i, 0);
 		e1 = edge_triplets(i, 1);
 		e2 = edge_triplets(i, 2);
@@ -331,16 +299,6 @@ Eigen::Matrix3d LaplacianCurveEdit::average_rot(Eigen::Matrix3d& r0, Eigen::Matr
 	}
 	return rnew;
 }
-
-/*int LaplacianCurveEdit::find_edge(int start, int end) {
-	Eigen::VectorXi col1Equals, col2Equals;
-	int equal_pos;
-	col1Equals = EV.col(0).cwiseEqual(std::min(start, end)).cast<int>();
-	col2Equals = EV.col(1).cwiseEqual(std::max(start, end)).cast<int>();
-	(col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
-
-	return equal_pos;
-}*/
 
 int LaplacianCurveEdit::find_edge(int start, int end) {
 	for (int i = 0; i < edges.rows(); i++) {

@@ -453,7 +453,6 @@ void Stroke::strokeReset() {
 }
 
 bool Stroke::toLoop() {
-
 	if (stroke3DPoints.rows() > 2) { //Don't do anything if we have only 1 line segment
 		stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
 		stroke3DPoints.row(stroke3DPoints.rows() - 1) << stroke3DPoints.row(0);
@@ -679,9 +678,7 @@ void Stroke::generate_backfaces(Eigen::MatrixXi &faces, Eigen::MatrixXi &back_fa
 }
 
 /** Returns the ID of the stroke's 3D point that is closest to where the user clicked. Stores the distance_to_vert to this point in closest_distance. If the user clicked too far away from any of the stroke's points, it will return -1. **/
-int Stroke::selectClosestVertex(Eigen::Vector3f pos, double& closest_distance) {
-	//Loop over all stroke points and find the closest one to the hand position. Compare all distances and keep the closest.
-
+int Stroke::selectClosestVertex(Eigen::Vector3f pos, double& closest_distance)  {
 	double closest_dist = INFINITY, dist;
 	int closest_ID;
 
@@ -692,7 +689,6 @@ int Stroke::selectClosestVertex(Eigen::Vector3f pos, double& closest_distance) {
 			closest_ID = i;
 		}
 	}
-
 
 	closest_dist = sqrt(closest_dist);
 	double stroke_diag = compute_stroke_diag();
@@ -782,6 +778,19 @@ bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::V
 		return false;
 	}
 
+	int start, end;
+	Eigen::VectorXi col1Equals, col2Equals;
+	for (int i = 0; i < closest_vert_bindings.size(); i++) {
+		start = closest_vert_bindings[i];
+		end = closest_vert_bindings[(i + 1) % closest_vert_bindings.size()];
+		col1Equals = EV.col(0).cwiseEqual(min(start, end)).cast<int>();
+		col2Equals = EV.col(1).cwiseEqual(max(start, end)).cast<int>();
+		int maxval = (col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
+		if (maxval == 2) {
+			stroke_edges.conservativeResize(stroke_edges.rows() + 1, Eigen::NoChange);
+			stroke_edges.bottomRows(1) << start, end;
+		}
+	}
 
 	return true;
 }

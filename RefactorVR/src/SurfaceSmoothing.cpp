@@ -412,38 +412,6 @@ Eigen::VectorXd SurfaceSmoothing::get_curvatures(Mesh &m) {
 	return curvatures;
 }
 
-
-//TODO: instead iterate over sharp_edges, and lookup in EV the vertices that belong to these sharp edges. Set point_on_border to true for these
-/*Eigen::VectorXi SurfaceSmoothing::points_on_border(Mesh& m) {
-    Eigen::MatrixXi EV, FE, EF;
-    igl::edge_topology(m.V, m.F, EV, FE, EF);
-
-	int equal_pos;
-	Eigen::VectorXi col1Equals, col2Equals;
-	Eigen::VectorXi point_on_border(neighbors.size());
-	point_on_border.setZero();
-
-	for(int i = 0; i < neighbors.size(); i++) {
-		if(point_on_border[i] == 1) {
-			continue;
-		}
-
-		for(int j = 0; j < neighbors[i].size(); j++) {
-			col1Equals = EV.col(0).cwiseEqual(std::min(i, neighbors[i][j])).cast<int>();
-			col2Equals = EV.col(1).cwiseEqual(std::max(i, neighbors[i][j])).cast<int>();
-			int maxval = (col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
-
-			if(m.sharp_edge[equal_pos]) {
-				point_on_border[i] = 1;
-				point_on_border[neighbors[i][j]] = 1;
-				break;
-			}
-		}
-	}
-
-	return point_on_border;
-}*/
-
 Eigen::VectorXi SurfaceSmoothing::points_on_border(Mesh& m) {
 	Eigen::MatrixXi EV, FE, EF;
 	igl::edge_topology(m.V, m.F, EV, FE, EF);

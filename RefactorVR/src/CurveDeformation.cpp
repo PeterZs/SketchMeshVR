@@ -146,22 +146,6 @@ bool CurveDeformation::update_ROI_test(double drag_size, Eigen::MatrixXd& V, Eig
 				curves.back().fixed_edges.push_back(global_to_local_edge_ID.at(edge));
 				curves.back().fixed_edges.push_back(global_to_local_edge_ID.at(edge2));
 			}
-		/*	std::cout << "vertices: ";
-			for (int i = 0; i < curves.back().vertices.size(); i++) {
-				std::cout << curves.back().vertices[i] << "  ";
-			}
-			std::cout << "Fixed vertices: " << std::endl;
-			for (int i = 0; i < curves.back().fixed_vertices.size(); i++) {
-				std::cout << curves.back().fixed_vertices[i] << std::endl;
-			}*/
-			/*std::cout << std::endl << "edges: " << std::endl;
-			for (int i = 0; i < curves.back().edges.rows(); i++) {
-				std::cout << curves.back().edges.row(i) << std::endl;
-			}
-			std::cout << "Fixed edges: ";
-			for (int i = 0; i < curves.back().fixed_edges.size(); i++) {
-				std::cout << curves.back().fixed_edges[i] << "   ";
-			}*/
 		}
 	}
 	return true;
