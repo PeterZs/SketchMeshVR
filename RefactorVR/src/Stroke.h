@@ -23,7 +23,6 @@ public:
 	void append_final_point();
     void counter_clockwise();
     void strokeReset();
-    void update_Positions(Eigen::MatrixXd V);
 	bool update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & sharp_edge, Eigen::VectorXi & vertex_is_fixed, Eigen::MatrixXi& replacing_vertex_bindings);
 	void undo_stroke_add(Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & sharp_edge, Eigen::VectorXi & vertex_is_fixed);
     bool empty2D() const { return stroke2DPoints.isZero(); }
@@ -33,6 +32,8 @@ public:
 	bool line_segments_intersect(Eigen::RowVector2d& p1, Eigen::RowVector2d& p2, Eigen::RowVector2d& p3, Eigen::RowVector2d& p4);
 	int selectClosestVertex(Eigen::Vector3f pos, double & closest_distance);
 	double compute_stroke_diag();
+
+	void update_Positions(Eigen::MatrixXd V, bool structure_changed);
     
     int get_vertex_idx_for_point(int i);
     int get_ID();
@@ -43,6 +44,7 @@ public:
 	Eigen::MatrixX3d get3DPointsBack();
 	Eigen::MatrixX3d get_hand_pos();
 	Eigen::MatrixXi get_hit_faces();
+	Eigen::MatrixXi get_stroke_edges();
 	::std::vector<int> get_closest_vert_bindings();
     void set3DPoints(Eigen::MatrixX3d new_3DPoints);
     void set_closest_vert_bindings(::std::vector<int> new_vert_bindings);
@@ -68,6 +70,7 @@ private:
 	Eigen::MatrixX3d stroke3DPoints;
 	Eigen::MatrixX3d stroke3DPointsBack;
 	Eigen::MatrixXd stroke2DPoints; //Used for early checking if point is new (in screen coordinates)
+	Eigen::MatrixXi stroke_edges; //Indices into closest_vert_bindings, where every row contains the 2 end points of a stroke edge (looped)
 	Eigen::MatrixXi faces_hit;
 	Eigen::MatrixX3d hand_pos_at_draw; //Only used for extrusion base strokes.
 	Eigen::RowVector3d cut_stroke_final_point; //Only used for cutting strokes. First point outside of the mesh

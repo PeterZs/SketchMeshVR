@@ -99,6 +99,8 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 	int size_before_adding_sil = m.V.rows();
 	vector<int> sil_original_indices = add_silhouette_vertices(m, stroke.get_ID(), silhouette_vertices, added_edges);
 	vector<int> sil_original_indices_looped = sil_original_indices;
+	sil_original_indices_looped.insert(sil_original_indices_looped.begin(), boundary_vertices[most_right_vertex_idx]);
+	sil_original_indices_looped.push_back(boundary_vertices[most_left_vertex_idx]);
 	sil_original_indices_looped.push_back(sil_original_indices[0]);
 	stroke.set_closest_vert_bindings(sil_original_indices_looped);
 
@@ -170,10 +172,8 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 	generate_mesh(m, back_loop3D, new_center_back, x_vec, y_vec, offset, silhouette_vertices.rows(), back_loop_base_original_indices, sil_original_indices);
 
 
-	//TODO: compared to FiberMesh we should add setting sharp boundaries, setting silhouette seam and compute prescribed normals...? 
-
     //Update tracking variables with new vertex indices
-	post_extrude_main_update_points(stroke, silhouette_vertices); //TODO: check that this now works
+	//post_extrude_main_update_points(stroke, silhouette_vertices); //TODO: check that this now works
 	post_extrude_main_update_bindings(base, surface_path);
 
 	Eigen::MatrixXi new_edge_indicators = original_sharp_or_boundary_edges;

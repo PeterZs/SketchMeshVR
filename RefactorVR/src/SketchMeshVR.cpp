@@ -19,6 +19,7 @@
 
 #include <igl/opengl/glfw/imgui/ImGuiMenu.h>
 #include <igl/opengl/glfw/imgui/ImGuiHelpers.h>
+#include <igl/slice.h>
 #include <SketchMeshVR.h>
 #include <Stroke.h>
 #include "SurfaceSmoothing.h"
@@ -102,35 +103,43 @@ bool draw_should_block = false;
 
 Eigen::RowVector3d red(1, 0, 0);
 Eigen::RowVector3d black(0, 0, 0);
+Eigen::RowVector3d blue(0, 0, 1);
 
 Eigen::RowVector3d laser_end_point;
 bool prev_laser_show;
 
 void draw_all_strokes() {
-	//Eigen::MatrixXd added_points = initial_stroke->get3DPoints();
-	//int points_to_hold_back = 1 + !initial_stroke->is_loop;
 	viewer.data().set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), red); //Clear the non-original stroke edges
-	//viewer.data().add_edges(added_points.topRows(added_points.rows() - points_to_hold_back), added_points.middleRows(1, added_points.rows() - points_to_hold_back), red);
 	Eigen::MatrixXd added_points;
 	int points_to_hold_back;
 	for (int i = 0; i < stroke_collection.size(); i++) {
-		added_points = stroke_collection[i].get3DPoints();
-		points_to_hold_back = 1 + !stroke_collection[i].is_loop;
-		viewer.data().add_edges(added_points.topRows(added_points.rows() - points_to_hold_back), added_points.middleRows(1, added_points.rows() - points_to_hold_back), stroke_collection[i].stroke_color);
+		Eigen::VectorXi col_slice(3);
+		col_slice.col(0) << 0, 1, 2;
+		Eigen::MatrixXd edges_start, edges_end;
+		Eigen::MatrixXi stroke_edges = stroke_collection[i].get_stroke_edges();
+		igl::slice(V, stroke_edges.col(0).topRows(stroke_edges.rows() - !stroke_collection[i].is_loop), col_slice, edges_start);
+		igl::slice(V, stroke_edges.col(1).topRows(stroke_edges.rows() - !stroke_collection[i].is_loop), col_slice, edges_end);
+		//std::cout << "starts of: " << i << "    "<< stroke_edges.col(0).topRows(stroke_edges.rows() - !stroke_collection[i].is_loop).transpose() << std::endl;
+		//std::cout << "ends of: " << i << "    " << stroke_edges.col(1).topRows(stroke_edges.rows() - !stroke_collection[i].is_loop).transpose() << std::endl;
+
+		viewer.data().add_edges(edges_start, edges_end, stroke_collection[i].stroke_color);
 	}
 }
 
 void draw_extrusion_base() {
+	std::cout << "extru base" << std::endl;
+	//The extrusion base does not get resampled, so use simple old method
 	Eigen::MatrixXd added_points = extrusion_base->get3DPoints();
-	int points_to_hold_back = 1 + extrusion_base->is_loop;
-	viewer.data().add_edges(added_points.topRows(added_points.rows() - points_to_hold_back), added_points.middleRows(1, added_points.rows() - points_to_hold_back), extrusion_base->stroke_color);
+	std::cout << added_points << std::endl;
+	int points_to_hold_back = 1 + !extrusion_base->is_loop;
+	viewer.data().add_edges(added_points.topRows(added_points.rows() - points_to_hold_back), added_points.middleRows(1, added_points.rows() - points_to_hold_back), red);
 }
 
 void select_dragging_handle(Eigen::Vector3f& pos) {
 	double closest_dist = INFINITY;
-	//handleID = initial_stroke->selectClosestVertex(pos, closest_dist);
 	double current_closest = closest_dist;
 	closest_stroke_ID = -1;
+	handleID = -1;
 	int tmp_handleID;
 	for (int i = 0; i < stroke_collection.size(); i++) { //Additional strokes that cross the original stroke will never be selected as the pulled curve when the user clicks a vertex that also belongs to the original boundary, since their vertex positions are the same and we check for SMALLER distances
 		tmp_handleID = stroke_collection[i].selectClosestVertex(pos, closest_dist); //Returns the index into stroke3DPoints of the closest point
@@ -181,6 +190,7 @@ void reset_before_draw() {
 	(*base_mesh).patches.clear(); //Request new patches
 	(*base_mesh).face_patch_map.clear();
 	viewer.data().clear();
+	added_stroke->stroke_color = blue;
 }
 
 void sound_error_beep() {
@@ -194,10 +204,6 @@ void sound_error_beep() {
 void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 	set_laser_points(pos);
 	if (pressed == OculusVR::ButtonCombo::TRIG && (selected_tool_mode == ADD || selected_tool_mode == REMOVE || selected_tool_mode == CUT || selected_tool_mode == EXTRUDE)) {
-		/*if (initial_stroke->empty2D()) { //Don't go into these modes when there is no mesh yet
-			prev_tool_mode = FAIL;
-			return;
-		}*/
 		if (stroke_collection.size() == 0) { //Don't go into these modes when there is no mesh yet
 			prev_tool_mode = FAIL;
 			return;
@@ -205,15 +211,13 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 	}
 	else if (pressed == OculusVR::ButtonCombo::TRIG && selected_tool_mode == REMOVE) {
 		if (stroke_collection.size() == 1) {
-		//if (stroke_collection.size() == 0) {
 			return;
 		}
 	}
 	else if (pressed == OculusVR::ButtonCombo::THUMB_MOVE) {
 		V = viewer.data().V;
-		//initial_stroke->update_Positions(V);
 		for (int i = 0; i < stroke_collection.size(); i++) {
-			stroke_collection[i].update_Positions(V);
+			stroke_collection[i].update_Positions(V, false);
 		}
 		draw_all_strokes();
 		prev_tool_mode = NAVIGATE;
@@ -238,11 +242,10 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		if (prev_tool_mode == NONE) {
 			if (has_recentered) {
 				viewer.oculusVR.set_start_action_view(viewer.core.get_view());
-				stroke_collection.clear();
+				stroke_collection.clear();	
+				added_stroke = new Stroke(V, F, viewer, 1);
+				added_stroke->stroke_color = blue;
 				next_added_stroke_ID = 2;
-				//initial_stroke->strokeReset();
-				//initial_stroke->addSegment(pos);
-				added_stroke->strokeReset();
 				added_stroke->addSegment(pos);
 				prev_tool_mode = DRAW;
 			}
@@ -254,13 +257,13 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		}
 		else if (prev_tool_mode == DRAW) {
 			draw_should_block = added_stroke->addSegment(pos);
-			//	draw_should_block = initial_stroke->addSegment(pos);
 			return;
 		}
 	}
 	else if (tool_mode == ADD) {
 		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) { //Adding a new control curve onto an existing mesh
 			added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID);
+			added_stroke->stroke_color = blue;
 			next_added_stroke_ID++;
 			added_stroke->is_loop = false;
 			added_stroke->addSegmentAdd(pos);
@@ -364,7 +367,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 			//initial_stroke->update_Positions(V);
 			for (int i = 0; i < stroke_collection.size(); i++) {
-				stroke_collection[i].update_Positions(V);
+				stroke_collection[i].update_Positions(V, false);
 			}
 
 			viewer.data().set_mesh(V, F);
@@ -383,6 +386,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 			draw_all_strokes(); //Will remove a possible old black (wrong) stroke
 			added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID); //For CUT, only increase the next added stroke ID upon button release (when we know it succeeded)
+			added_stroke->stroke_color = red;
 			viewer.oculusVR.set_start_action_view(viewer.core.get_view());
 			added_stroke->addSegmentCut(pos);
 		}
@@ -397,11 +401,13 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			prev_tool_mode = EXTRUDE;
 			if (extrusion_base_already_drawn) {
 				added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID);
+				added_stroke->stroke_color = blue;
 				next_added_stroke_ID++;
 				added_stroke->addSegmentExtrusionSilhouette(pos);
 			}
 			else {
 				extrusion_base = new Stroke(V, F, viewer, next_added_stroke_ID);
+				extrusion_base->stroke_color = red;
 				next_added_stroke_ID++;
 				extrusion_base->addSegmentExtrusionBase(pos);
 			}
@@ -437,7 +443,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				//	Eigen::MatrixXd drawn_points = initial_stroke->get3DPoints();
 				//	initial_stroke->strokeReset();
 					Eigen::MatrixXd drawn_points = added_stroke->get3DPoints();
-					added_stroke->strokeReset();
+				//	added_stroke->strokeReset();
 					vertex_is_fixed.resize(0);
 					edge_boundary_markers.resize(0);
 					dirty_boundary = true;
@@ -454,6 +460,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				sharp_edge.resize(EV.rows());
 				sharp_edge.setZero(); //Set all edges to smooth after initial draw
 
+				stroke_collection.push_back(*added_stroke);
 				(*base_mesh).patches = Patch::init_patches(*base_mesh);
 
 				dirty_boundary = true;
@@ -461,7 +468,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 					SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
 				}
 
-				added_stroke->update_Positions(V);
+				stroke_collection.back().update_Positions(V, true);
 				//initial_stroke->update_Positions(V);
 				viewer.data().clear();
 				viewer.data().set_mesh(V, F);
@@ -472,9 +479,19 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				//Overlay the drawn stroke
 				//Eigen::MatrixXd added_points = initial_stroke->get3DPoints();
 				//int points_to_hold_back = 1 + !initial_stroke->is_loop;
-				Eigen::MatrixXd added_points = added_stroke->get3DPoints();
-				int points_to_hold_back = 1 + !added_stroke->is_loop;
-				viewer.data().add_edges(added_points.topRows(added_points.rows() - points_to_hold_back), added_points.middleRows(1, added_points.rows() - points_to_hold_back), red);
+			//	Eigen::MatrixXd added_points = added_stroke->get3DPoints();
+			//	int points_to_hold_back = 1 + !added_stroke->is_loop;
+				//viewer.data().add_edges(added_points.topRows(added_points.rows() - points_to_hold_back), added_points.middleRows(1, added_points.rows() - points_to_hold_back), red);
+				/*Eigen::VectorXi col_slice(3);
+				col_slice.col(0) << 0, 1, 2;
+				Eigen::MatrixXd edges_start, edges_end;
+				Eigen::MatrixXi stroke_edges = added_stroke->get_stroke_edges();
+				igl::slice(V, stroke_edges.col(0).topRows(stroke_edges.rows() - !added_stroke->is_loop), col_slice, edges_start);
+				igl::slice(V, stroke_edges.col(1).topRows(stroke_edges.rows() - !added_stroke->is_loop), col_slice, edges_end);
+
+				viewer.data().add_edges(edges_start, edges_end, red);*/
+
+				draw_all_strokes();
 			}
 		}
 		else if (prev_tool_mode == ADD) {
@@ -535,7 +552,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			//Update the stroke positions, will update with resampled stroke points
 		//	initial_stroke->update_Positions(V);
 			for (int i = 0; i < stroke_collection.size(); i++) { //TODO: I removed -1 here, check if still works
-				stroke_collection[i].update_Positions(V);
+				stroke_collection[i].update_Positions(V, true);
 			}
 
 			viewer.data().clear();
@@ -553,7 +570,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			}
 
 			for (int i = 0; i < stroke_collection.size(); i++) {
-				stroke_collection[i].update_Positions(V);
+				stroke_collection[i].update_Positions(V, false);
 			}
 
 			//TODO: calling clear will erase the mesh/trackball rotation, so only do clear() when absolutely necessary. Check if below works like this
@@ -573,7 +590,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 		//	initial_stroke->update_Positions(V);
 			for (int i = 0; i < stroke_collection.size(); i++) {
-				stroke_collection[i].update_Positions(V);
+				stroke_collection[i].update_Positions(V, false);
 			}
 
 			//viewer.data().clear();
@@ -641,7 +658,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				//Update the stroke positions after smoothing, will also add resampled points
 				//initial_stroke->update_Positions(V);
 				for (int i = 0; i < stroke_collection.size(); i++) {
-					stroke_collection[i].update_Positions(V);
+					stroke_collection[i].update_Positions(V, true);
 				}
 
 				viewer.data().clear();
@@ -724,7 +741,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				//Update the stroke positions after smoothing, also updates resampled stroke points
 				//initial_stroke->update_Positions(V);
 				for (int i = 0; i < stroke_collection.size(); i++) { //TODO: I removed -1 here, check that it still works
-					stroke_collection[i].update_Positions(V);
+					stroke_collection[i].update_Positions(V, true);
 				}
 
 				viewer.data().clear();
@@ -804,7 +821,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			}
 			SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
 			for (int i = 0; i < stroke_collection.size(); i++) {
-				stroke_collection[i].update_Positions(V);
+				stroke_collection[i].update_Positions(V, false);
 			}
 			//	viewer.data().clear();
 			viewer.data().set_mesh(V, F);
@@ -818,9 +835,20 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			V = viewer.data().V;
 			//initial_stroke->update_Positions(V);
 			for (int i = 0; i < stroke_collection.size(); i++) {
-				stroke_collection[i].update_Positions(V);
-			}
+				stroke_collection[i].update_Positions(V, true);
+			}	
 			draw_all_strokes();
+
+			if (extrusion_base_already_drawn) {
+				//First need to update the extrusion base manually, since it doesn't have any closest_vertex_indices yet. Retrieve vertex positions
+				vector<PathElement> base_path = base_surface_path.get_path();
+				Eigen::MatrixX3d new_3DPoints(base_path.size(), 3);
+				for (int i = 0; i < base_path.size(); i++) {
+					new_3DPoints.row(i) = base_path[i].get_vertex().transpose();
+				}
+				extrusion_base->set3DPoints(new_3DPoints);
+				draw_extrusion_base();
+			}
 		}
 
 		prev_tool_mode = NONE;
