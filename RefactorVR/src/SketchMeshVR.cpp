@@ -92,7 +92,7 @@ bool cut_stroke_already_drawn = false;
 
 //Variables for extrusion
 bool extrusion_base_already_drawn = false;
-SurfacePath base_surface_path;
+SurfacePath base_surface_path, cut_surface_path;
 Eigen::Matrix4f base_model, base_view, base_proj;
 Eigen::Vector4f base_viewport;
 
@@ -126,7 +126,6 @@ void draw_all_strokes() {
 void draw_extrusion_base() {
 	//The extrusion base does not get resampled, so use simple old method
 	Eigen::MatrixXd added_points = extrusion_base->get3DPoints();
-	std::cout << added_points << std::endl;
 	int points_to_hold_back = 1 + !extrusion_base->is_loop;
 	viewer.data().add_edges(added_points.topRows(added_points.rows() - points_to_hold_back), added_points.middleRows(1, added_points.rows() - points_to_hold_back), red);
 }
@@ -212,13 +211,40 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		}
 	}
 	else if (pressed == OculusVR::ButtonCombo::THUMB_MOVE) {
-		std::cout << "First nav block" << std::endl;
+		viewer.selected_data_index = 2;
+		if (prev_tool_mode != NAVIGATE) {
+			prev_laser_show = viewer.data().show_laser;
+		}
 		viewer.data().show_laser = false;
+		viewer.selected_data_index = 1;		
 		V = viewer.data().V;
 		for (int i = 0; i < stroke_collection.size(); i++) {
 			stroke_collection[i].update_Positions(V, false);
 		}
 		draw_all_strokes();
+
+		if (extrusion_base_already_drawn) {
+			Eigen::MatrixXd new_points = extrusion_base->get3DPoints();
+			viewer.data().rotate_points(new_points);
+			extrusion_base->set3DPoints(new_points);
+			draw_extrusion_base();
+
+			new_points = base_surface_path.get3DPoints();
+			viewer.data().rotate_points(new_points);
+			base_surface_path.set_rotated_points(new_points);
+		}
+		if (cut_stroke_already_drawn) {
+			Eigen::MatrixXd new_points = added_stroke->get3DPoints();
+			viewer.data().rotate_points(new_points);
+			added_stroke->set3DPoints(new_points);
+			int nr_edges = new_points.rows() - 1;
+			viewer.data().add_edges(new_points.topRows(nr_edges), new_points.middleRows(1, nr_edges), Eigen::RowVector3d(1, 0, 1));
+
+			new_points = cut_surface_path.get3DPoints();
+			viewer.data().rotate_points(new_points);
+			cut_surface_path.set_rotated_points(new_points);
+		}
+
 		prev_tool_mode = NAVIGATE;
 		return;
 	}
@@ -261,7 +287,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) { //Adding a new control curve onto an existing mesh
 			added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID);
 			added_stroke->stroke_color = blue;
-			//next_added_stroke_ID++;
 			added_stroke->is_loop = false;
 			added_stroke->addSegmentAdd(pos);
 			prev_tool_mode = ADD;
@@ -524,6 +549,10 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				}
 			}
 
+			for (int i = 0; i < 8; i++) {
+				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
+			}
+
 			//Update the stroke positions, will update with resampled stroke points
 			for (int i = 0; i < stroke_collection.size(); i++) { //TODO: I removed -1 here, check if still works
 				stroke_collection[i].update_Positions(V, true);
@@ -584,13 +613,10 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 					viewer.update_screen_while_computing = false;
 					return;
 				}
-				int clicked_face = hits[0].id;
-
-				added_stroke->prepend_first_point();
-				added_stroke->append_final_point();
-				added_stroke->toLoop();
-
-				bool cut_success = MeshCut::cut(*base_mesh, *added_stroke, clicked_face, replacing_vertex_bindings);
+				int clicked_face = hits[0].id;			
+				std::cout << "Before flo" << std::endl;
+				bool cut_success = MeshCut::cut(*base_mesh, *added_stroke, cut_surface_path, clicked_face, replacing_vertex_bindings);
+				std::cout << "afte flo" << std::endl;
 				if (!cut_success) { //Catches the following cases: when the cut removes all mesh vertices/faces, when the first/last cut point aren't correct (face -1 in SurfacePath) or when sorting takes "infinite" time
 					cut_stroke_already_drawn = false;
 					prev_tool_mode = NONE;
@@ -618,11 +644,11 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 						dirty_boundary = true;
 					}
 				}
-
+				std::cout << "between flo" << std::endl;
 				for (int i = 0; i < 10; i++) {
 					SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
 				}
-
+				std::cout << "post flo" << std::endl;
 				//Update the stroke positions after smoothing, will also add resampled points
 				for (int i = 0; i < stroke_collection.size(); i++) {
 					stroke_collection[i].update_Positions(V, true);
@@ -650,6 +676,27 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 					viewer.update_screen_while_computing = false;
 					return;
 				}
+
+				added_stroke->prepend_first_point();
+				added_stroke->append_final_point();
+				added_stroke->toLoop();
+
+				bool success_cut_prepare = MeshCut::cut_prepare(*added_stroke, cut_surface_path);
+				if (!success_cut_prepare) {
+					sound_error_beep();
+					prev_tool_mode = NONE;
+					draw_all_strokes(); //Removes the drawn cut stroke
+					Eigen::MatrixXd drawn_points = added_stroke->get3DPoints();
+					int nr_edges = drawn_points.rows() - 1;
+					viewer.data().add_edges(drawn_points.topRows(nr_edges), drawn_points.middleRows(1, nr_edges), black); //Display the stroke in black to show that it went wrong
+					viewer.update_screen_while_computing = false;
+					return;
+				}
+				draw_all_strokes();
+				//Overlay the pink cut stroke
+				Eigen::MatrixXd drawn_points = added_stroke->get3DPoints();
+				int nr_edges = drawn_points.rows() - 1;
+				viewer.data().add_edges(drawn_points.topRows(nr_edges), drawn_points.middleRows(1, nr_edges), Eigen::RowVector3d(1, 0, 1));
 				cut_stroke_already_drawn = true;
 			}
 		}
@@ -796,30 +843,18 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			draw_all_strokes();
 		}
 		else if (prev_tool_mode == NAVIGATE) {
-			std::cout << "Second nav block" << std::endl;
-			V = viewer.data().V;
+			viewer.selected_data_index = 2;
+			viewer.data().show_laser = prev_laser_show;
+			viewer.selected_data_index = 1;
 
-			for (int i = 0; i < stroke_collection.size(); i++) {
-				stroke_collection[i].update_Positions(V, true);
-			}	
-			draw_all_strokes();
-
-			if (extrusion_base_already_drawn) {
-				//First need to update the extrusion base manually, since it doesn't have any closest_vertex_indices yet. Retrieve vertex positions
-				/*vector<PathElement> base_path = base_surface_path.get_path();
-				Eigen::MatrixX3d new_3DPoints(base_path.size(), 3);
-				for (int i = 0; i < base_path.size(); i++) {
-					new_3DPoints.row(i) = base_path[i].get_vertex().transpose();
-				}*/
-
-				//TODO: officially the mesh trackball angle and mesh translation should be recovered using a mutex, since they are written to from OculusVR
-				//extrusion_base->rotate_points(viewer.data().mesh_trackball_angle, viewer.data().mesh_translation);
-				Eigen::MatrixXd new_points = extrusion_base->get3DPoints();
-				viewer.data().rotate_points(new_points);
-				extrusion_base->set3DPoints(new_points);
-				draw_extrusion_base();
+		/*	if (extrusion_base_already_drawn) {
+				base_surface_path.rotate(V);
 			}
-			viewer.data().show_laser = true;
+			if (cut_stroke_already_drawn) {
+				std::cout << "start" << std::endl;
+				cut_surface_path.rotate(V);
+				std::cout << "end" << std::endl;
+			}*/
 		}
 
 		prev_tool_mode = NONE;
@@ -983,7 +1018,7 @@ int main(int argc, char *argv[]) {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
 	void* im_texID_pull = (void *)(intptr_t)img_texture2;
 
-	filename = std::string(cur_dir) + "\\..\\data\\free\\plus.png";
+	filename = std::string(cur_dir) + "\\..\\data\\free\\add.png";
 	img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
 	if (!img_data) {
 		std::cerr << "Could not load image 3." << std::endl;
@@ -996,7 +1031,7 @@ int main(int argc, char *argv[]) {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
 	void* im_texID_add = (void *)(intptr_t)img_texture3;
 
-	filename = std::string(cur_dir) + "\\..\\data\\free\\scissor.png";
+	filename = std::string(cur_dir) + "\\..\\data\\free\\cut.png";
 	img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
 	if (!img_data) {
 		std::cerr << "Could not load image 4." << std::endl;
@@ -1022,7 +1057,7 @@ int main(int argc, char *argv[]) {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
 	void* im_texID_extrude = (void *)(intptr_t)img_texture5;
 
-	filename = std::string(cur_dir) + "\\..\\data\\free\\minus.png";
+	filename = std::string(cur_dir) + "\\..\\data\\free\\remove.png";
 	img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
 	if (!img_data) {
 		std::cerr << "Could not load image 6." << std::endl;
@@ -1164,7 +1199,7 @@ int main(int argc, char *argv[]) {
 	viewer.oculusVR.callback_menu_opened = menu_opened;
 	viewer.oculusVR.callback_menu_closed = menu_closed;
 	viewer.data().point_size = 15;
-	viewer.data().show_lines = true; //TODO change
+	viewer.data().show_lines = false; //TODO change
 	viewer.launch_oculus();
 }
 

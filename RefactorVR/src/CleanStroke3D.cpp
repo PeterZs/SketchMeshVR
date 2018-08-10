@@ -12,8 +12,9 @@ Eigen::MatrixXd CleanStroke3D::resample_by_length_with_fixes(std::vector<PathEle
 		}
 		return result;
 	}
-
+	std::cout << path_vertices.size() << std::endl;
 	if (path_vertices[0].get_vertex() == path_vertices[path_vertices.size() - 1].get_vertex()) {
+		std::cout << "True" << std::endl;
 		for (int i = 0; i < path_vertices.size(); i++) {
 			if (path_vertices[i].fixed) {
 				path_vertices.pop_back();

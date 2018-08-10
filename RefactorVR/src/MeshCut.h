@@ -7,7 +7,8 @@
 class MeshCut {
 
 public:
-	static bool cut(Mesh & m, Stroke & stroke, int clicked_face, Eigen::MatrixXi & replacing_vertex_bindings);
+	static bool cut_prepare(Stroke & stroke, SurfacePath & surface_path);
+	static bool cut(Mesh & m, Stroke & stroke, SurfacePath & surface_path, int clicked_face, Eigen::MatrixXi & replacing_vertex_bindings);
 
 private:	
 	static bool cut_main(Mesh & m, SurfacePath & surface_path, Stroke & stroke, int clicked_face, Eigen::MatrixXi & replacing_vertex_bindings);

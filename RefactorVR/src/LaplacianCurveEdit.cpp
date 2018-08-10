@@ -22,6 +22,7 @@ void LaplacianCurveEdit::setup_for_update_curve(std::vector<int> vertices_, std:
 	Rot.resize(edges.rows());
 	original_L0.resize(edges.rows(), 3);
 	vertex_global_to_local.clear();
+	curve_structure_was_updated = true;
 
 	for (int i = 0; i < edges.rows(); i++) {
 		original_L0.row(i) = V.row(edges(i, 1)) - V.row(edges(i, 0));
@@ -200,10 +201,10 @@ void LaplacianCurveEdit::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
 	//A.prune([](int i, int j, double val) {return val != 0.0; });//Will prune everything that is 0 but keep the rest
 	Eigen::SparseMatrix<double> AT = A.transpose();
 //	solverPosRot.compute(AT*A);
-	if (curve_structure_was_update) {
+	if (curve_structure_was_updated) {
 		solverPosRot.analyzePattern(AT*A);
-
-	}
+		curve_structure_was_updated = false;
+	} 
 	solverPosRot.factorize(AT*A);
 	if (solverPosRot.info() != Eigen::Success) {
 		std::cout << "Check if any non-zero entries were removed" << std::endl << A_before << std::endl << std::endl << std::endl << A << std::endl;

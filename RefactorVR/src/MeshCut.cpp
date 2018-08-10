@@ -7,18 +7,26 @@
 using namespace std;
 using namespace igl;
 
-
-bool MeshCut::cut(Mesh& m, Stroke& stroke, int clicked_face, Eigen::MatrixXi& replacing_vertex_bindings) {
-	SurfacePath surface_path;
+bool MeshCut::cut_prepare(Stroke& stroke, SurfacePath& surface_path) {
 	bool success = surface_path.create_from_stroke_cut(stroke); //Prepares the drawn stroke (inserts extra points at the edges that it crosses)
 	if (!success) {
 		return false;
 	}
-	success = cut_main(m, surface_path, stroke, clicked_face, replacing_vertex_bindings);
+	post_cut_update_points(stroke, surface_path); //Can also be used for intermediate update
+	return true;
+}
+
+bool MeshCut::cut(Mesh& m, Stroke& stroke, SurfacePath& surface_path, int clicked_face, Eigen::MatrixXi& replacing_vertex_bindings) {
+	/*SurfacePath surface_path;
+	bool success = surface_path.create_from_stroke_cut(stroke); //Prepares the drawn stroke (inserts extra points at the edges that it crosses)
+	if (!success) {
+		return false;
+	}*/
+	bool success = cut_main(m, surface_path, stroke, clicked_face, replacing_vertex_bindings);
 	if (!success) {
 		return false;
 	}
-
+	std::cout << "here" << std::endl;
 	post_cut_update_points(stroke, surface_path);
 
 	return true;
@@ -30,7 +38,7 @@ bool MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke, int c
 	if (!remesh_success) {
 		return false;
 	}
-
+	std::cout << "Before hre" << std::endl;
 	return mesh_open_hole(boundary_vertices, m);
 }
 
@@ -184,7 +192,7 @@ void MeshCut::post_cut_update_points(Stroke& stroke, SurfacePath& surface_path) 
 
 	Eigen::MatrixX3d new_3DPoints(path.size() + 1 - nr_to_remove, 3); //Increase size by 1 (if it's not a loop) because we want it to become a loop again
 	vector<int> new_closest_vertex_indices(path.size() + 1 - nr_to_remove);
-	for(int i = 0; i < path.size()-nr_to_remove; i++) {
+	for(int i = 0; i < path.size() - nr_to_remove; i++) {
 		new_3DPoints.row(i) = path[i].get_vertex().transpose();
 		new_closest_vertex_indices[i] = path[i].get_v_idx();
 	}

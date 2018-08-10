@@ -43,6 +43,7 @@ private:
 	Eigen::Matrix3d average_rot(Eigen::Matrix3d & r0, Eigen::Matrix3d & r1);
 	int find_edge(int start, int end);
 
+	bool curve_structure_was_updated;
 };
 
 

@@ -311,6 +311,21 @@ Eigen::MatrixX3d SurfacePath::create_loop_from_front_and_back(Eigen::MatrixX3d& 
 	return result;
 }
 
+//Used when the user navigates, to rotate the points that are inside the SurfacePath 
+void SurfacePath::set_rotated_points(Eigen::MatrixXd& V) {
+	for (int i = 0; i < path.size(); i++) {
+		path[i].set_vertex(V.row(i));
+	}
+}
+
+Eigen::MatrixXd SurfacePath::get3DPoints() {
+	Eigen::MatrixXd points(path.size(), 3);
+	for (int i = 0; i < path.size(); i++) {
+		points.row(i) = path[i].get_vertex();
+	}
+	return points;
+}
+
 vector<PathElement> SurfacePath::get_path() {
 	return path;
 }

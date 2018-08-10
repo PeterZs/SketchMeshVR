@@ -271,7 +271,7 @@ void Stroke::addSegmentCut(Eigen::Vector3f& pos) {
 			faces_hit.row(faces_hit.rows() - 1) << hits[0].id, hits[1].id;
 		}
 
-		viewer.data().add_points(stroke3DPoints.row(stroke3DPoints.rows() - 1), Eigen::RowVector3d(1, 0, 1));
+		//viewer.data().add_points(stroke3DPoints.row(stroke3DPoints.rows() - 1), Eigen::RowVector3d(1, 0, 1));
 		if (stroke3DPoints.rows() > 2) {
 			viewer.data().add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(1, 0, 1));
 		}
