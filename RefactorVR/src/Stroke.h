@@ -22,6 +22,7 @@ public:
 	void prepend_first_point();
 	void append_final_point();
     void counter_clockwise();
+	void rotate_points(Eigen::Quaternionf& trackball_rot, Eigen::Vector3f& mesh_translation);
     void strokeReset();
 	bool update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & sharp_edge, Eigen::VectorXi & vertex_is_fixed, Eigen::MatrixXi& replacing_vertex_bindings);
 	void undo_stroke_add(Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & sharp_edge, Eigen::VectorXi & vertex_is_fixed);
