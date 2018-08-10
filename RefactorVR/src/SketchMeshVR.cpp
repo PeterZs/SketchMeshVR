@@ -207,6 +207,13 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 	}
 	else if (pressed == OculusVR::ButtonCombo::TRIG && selected_tool_mode == REMOVE) {
 		if (stroke_collection.size() == 1) {
+			prev_tool_mode = FAIL;
+			return;
+		}
+	}
+	else if (pressed == OculusVR::ButtonCombo::TRIG && selected_tool_mode == CHANGE) {
+		if (stroke_collection.size() < 2) {
+			prev_tool_mode = FAIL;
 			return;
 		}
 	}
@@ -359,7 +366,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 			prev_tool_mode = REMOVE;
 		}
-		if (prev_tool_mode == REMOVE) {
+		else if (prev_tool_mode == REMOVE) {
 			return; //For REMOVE we only take action upon button press and release 
 		}
 	}
@@ -384,7 +391,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			}
 
 			for (int i = 0; i < 18; i++) {
-				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
+				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary,false);
 			}
 
 			//initial_stroke->update_Positions(V);
@@ -446,6 +453,49 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 	else if (tool_mode == SMOOTH) {
 		prev_tool_mode = SMOOTH;
 	}
+	else if (tool_mode == CHANGE) {
+		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) {
+			Eigen::Vector3f hit_pos;
+			vector<igl::Hit> hits;
+
+			if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
+				hit_pos = (V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v).cast<float>();
+			}
+			else { //Hand ray did not intersect mesh
+				prev_tool_mode = FAIL;
+				return;
+			}
+
+			double closest_dist = INFINITY;
+			double current_closest = closest_dist;
+			int tmp_handleID, closest_stroke_idx;
+			handleID = -1;
+			for (int i = 0; i < stroke_collection.size(); i++) { //TODO: might need to skip stroke 0
+				tmp_handleID = stroke_collection[i].selectClosestVertex(hit_pos, closest_dist);
+				if ((closest_dist < current_closest) && (tmp_handleID != -1)) {
+					current_closest = closest_dist;
+					handleID = tmp_handleID;
+					closest_stroke_ID = stroke_collection[i].get_ID();
+					closest_stroke_idx = i;
+				}
+			}
+
+			if (handleID == -1) {//User clicked too far from any of the stroke vertices
+				prev_tool_mode = FAIL;
+				return;
+			}
+			else{
+				//TODO: currently does not update multiple strokes when you click on an intersection vertex 
+				stroke_collection[closest_stroke_idx].stroke_color = stroke_collection[closest_stroke_idx].stroke_color == red ? blue : red;
+				stroke_collection[closest_stroke_idx].switch_stroke_edges_type(sharp_edge);
+				draw_all_strokes();
+				prev_tool_mode = CHANGE;
+			}
+		}
+		else if (prev_tool_mode == CHANGE) {
+			return; //Only take action upon button press and release
+		}
+	}
 	else if (tool_mode == NONE) {	//Have to finish up as if we're calling mouse_up()
 		has_recentered = false;
 		if (prev_tool_mode == NONE) {
@@ -482,7 +532,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 				dirty_boundary = true;
 				for (int i = 0; i < initial_smooth_iter; i++) {
-					SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
+					SurfaceSmoothing::smooth(*base_mesh, dirty_boundary,false);
 				}
 
 				stroke_collection.back().update_Positions(V, true);
@@ -498,14 +548,25 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		else if (prev_tool_mode == ADD) {
 			dirty_boundary = true;
 			if (!added_stroke->has_points_on_mesh) {
+				prev_tool_mode = NONE;
 				sound_error_beep();
-				std::cerr << "The stroke you are trying to add does not have any points that lie on the mesh surface. Will not be able to process, try again." << std::endl;
+				std::cerr << "The stroke you are trying to add does not have any points that lie on the mesh surface. Will not be able to process, please try again." << std::endl;
+				viewer.update_screen_while_computing = false;
+				return;
+			}
+			else if (added_stroke->get3DPoints().rows() < 2) {
+				prev_tool_mode = NONE;
+				sound_error_beep();
+				std::cerr << "The stroke you are trying to add does not have enough points. Please try again." << std::endl;
+				Eigen::MatrixXd drawn_points = added_stroke->get3DPoints();
+				int nr_edges = drawn_points.rows() - 1;
+				viewer.data().add_edges(drawn_points.topRows(nr_edges), drawn_points.middleRows(1, nr_edges), black); //Display the stroke in black to show that it went wrong
 				viewer.update_screen_while_computing = false;
 				return;
 			}
 
 			bool success;
-			if (added_stroke->starts_on_mesh && added_stroke->ends_on_mesh) {
+			if (added_stroke->starts_on_mesh && added_stroke->ends_on_mesh && !added_stroke->has_been_outside_mesh) {
 				success = LaplacianRemesh::remesh_open_path(*base_mesh, *added_stroke, replacing_vertex_bindings);
 			}
 			else if (!added_stroke->starts_on_mesh && !added_stroke->ends_on_mesh) { //Stroke like a cut stroke (starts and ends off mesh to wrap around)
@@ -517,7 +578,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				success = LaplacianRemesh::remesh_cutting_path(*base_mesh, *added_stroke, replacing_vertex_bindings);
 			}
 			else {
-				std::cerr << "An added stroke either needs both the end- & startpoint to be outside of the mesh, or both on the mesh. Please try again. " << std::endl;
+				std::cerr << "An added stroke either needs both the end- & startpoint to be outside of the mesh, or all points to be on the mesh. Please try again. " << std::endl;
 				success = false;
 			}
 
@@ -550,7 +611,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			}
 
 			for (int i = 0; i < 8; i++) {
-				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
+				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary,false);
 			}
 
 			//Update the stroke positions, will update with resampled stroke points
@@ -569,7 +630,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		else if (prev_tool_mode == REMOVE && stroke_was_removed) { //Only redraw if we actually removed a stroke (otherwise we draw unnecessary)
 			dirty_boundary = true;
 			for (int i = 0; i < 10; i++) {
-				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
+				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary,false);
 			}
 
 			for (int i = 0; i < stroke_collection.size(); i++) {
@@ -587,7 +648,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		}
 		else if (prev_tool_mode == PULL && handleID != -1) {
 			for (int i = 0; i < 20; i++) {
-				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
+				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary,false);
 			}
 
 			for (int i = 0; i < stroke_collection.size(); i++) {
@@ -614,9 +675,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 					return;
 				}
 				int clicked_face = hits[0].id;			
-				std::cout << "Before flo" << std::endl;
 				bool cut_success = MeshCut::cut(*base_mesh, *added_stroke, cut_surface_path, clicked_face, replacing_vertex_bindings);
-				std::cout << "afte flo" << std::endl;
 				if (!cut_success) { //Catches the following cases: when the cut removes all mesh vertices/faces, when the first/last cut point aren't correct (face -1 in SurfacePath) or when sorting takes "infinite" time
 					cut_stroke_already_drawn = false;
 					prev_tool_mode = NONE;
@@ -646,7 +705,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				}
 				std::cout << "between flo" << std::endl;
 				for (int i = 0; i < 10; i++) {
-					SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
+					SurfaceSmoothing::smooth(*base_mesh, dirty_boundary,false);
 				}
 				std::cout << "post flo" << std::endl;
 				//Update the stroke positions after smoothing, will also add resampled points
@@ -747,7 +806,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				}
 
 				for (int i = 0; i < 10; i++) {
-						SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
+						SurfaceSmoothing::smooth(*base_mesh, dirty_boundary,false);
 				}
 
 				//Update the stroke positions after smoothing, also updates resampled stroke points
@@ -830,9 +889,29 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				viewer.update_screen_while_computing = false;
 				return;
 			}
-			SurfaceSmoothing::smooth(*base_mesh, dirty_boundary);
+			SurfaceSmoothing::smooth(*base_mesh, dirty_boundary,false);
 			for (int i = 0; i < stroke_collection.size(); i++) {
 				stroke_collection[i].update_Positions(V, false);
+			}
+
+			viewer.data().set_mesh(V, F);
+			Eigen::MatrixXd N_corners;
+			igl::per_corner_normals(V, F, 50, N_corners);
+			viewer.data().set_normals(N_corners);
+
+			draw_all_strokes();
+		}
+		else if (prev_tool_mode == CHANGE) {
+			//We might have changed the patch structure (e.g. when removing a sharp boundary stroke), so request new patches
+			(*base_mesh).patches.clear();
+			(*base_mesh).face_patch_map.clear();
+			(*base_mesh).patches = Patch::init_patches(*base_mesh);
+			std::cout << (*base_mesh).sharp_edge.rows() << std::endl << std::endl;
+			dirty_boundary = true;
+		
+			SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, true); //Force reset of the matrices. We might have changed a stroke type without changing the number of patches
+			for (int i = 0; i < 10; i++) {
+				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
 			}
 
 			viewer.data().set_mesh(V, F);
@@ -846,15 +925,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			viewer.selected_data_index = 2;
 			viewer.data().show_laser = prev_laser_show;
 			viewer.selected_data_index = 1;
-
-		/*	if (extrusion_base_already_drawn) {
-				base_surface_path.rotate(V);
-			}
-			if (cut_stroke_already_drawn) {
-				std::cout << "start" << std::endl;
-				cut_surface_path.rotate(V);
-				std::cout << "end" << std::endl;
-			}*/
 		}
 
 		prev_tool_mode = NONE;
@@ -1182,7 +1252,8 @@ int main(int argc, char *argv[]) {
 		//ImGui::SetCursorPos(ImVec2(379, 379));
 		if (ImGui::ImageButton(im_texID_remove, icon_size, uv_start, uv_end, frame_padding, icon_background_color)) {
 			reset_trackers();
-			selected_tool_mode = REMOVE;
+			//selected_tool_mode = REMOVE;
+			selected_tool_mode = CHANGE;
 			im_texID_cur = im_texID_remove;
 			viewer.selected_data_index = 2;
 			viewer.data().show_laser = true;
@@ -1199,7 +1270,7 @@ int main(int argc, char *argv[]) {
 	viewer.oculusVR.callback_menu_opened = menu_opened;
 	viewer.oculusVR.callback_menu_closed = menu_closed;
 	viewer.data().point_size = 15;
-	viewer.data().show_lines = false; //TODO change
+	viewer.data().show_lines = true; //TODO change
 	viewer.launch_oculus();
 }
 

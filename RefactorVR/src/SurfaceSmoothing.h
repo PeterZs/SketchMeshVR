@@ -20,8 +20,8 @@ public:
 	static std::unordered_map<int, Eigen::SparseMatrix<double>> precompute_matrix_for_positions;
     static std::unordered_map<int, Eigen::SparseMatrix<double>> AT_for_positions;
 	static std::unordered_map<int, Eigen::VectorXd> precomputed_laplacian_weights;
+	static void smooth(Mesh & base_mesh, bool & BOUNDARY_IS_DIRTY, bool force_update);
 
-	static void smooth(Mesh & base_mesh, bool& BOUNDARY_IS_DIRTY);
 
 private:
 	static void clear_precomputed_matrices();

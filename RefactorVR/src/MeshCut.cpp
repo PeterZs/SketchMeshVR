@@ -26,7 +26,7 @@ bool MeshCut::cut(Mesh& m, Stroke& stroke, SurfacePath& surface_path, int clicke
 	if (!success) {
 		return false;
 	}
-	std::cout << "here" << std::endl;
+
 	post_cut_update_points(stroke, surface_path);
 
 	return true;
@@ -38,7 +38,7 @@ bool MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke, int c
 	if (!remesh_success) {
 		return false;
 	}
-	std::cout << "Before hre" << std::endl;
+
 	return mesh_open_hole(boundary_vertices, m);
 }
 

@@ -274,7 +274,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 
 	int face = -1, edge = -1;
 	vector<PathElement> path = surface_path.get_path();
-	std::cout << path.size() << std::endl;
+
 	if (!is_front_loop) { //Append first element at the end in case of cutting, to make it a loop and compatible with extrusion's loop
 		path.push_back(path[0]);
 	}
@@ -427,7 +427,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 			return Eigen::VectorXi::Zero(1);
 		}
 	}
-	std::cout << "Kaan" << std::endl;
+
 	Eigen::RowVector3d mean_viewpoint_inner = compute_mean_viewpoint(m, inner_boundary_vertices);
 	Eigen::RowVector3d mean_viewpoint_outer = compute_mean_viewpoint(m, outer_boundary_vertices);
 
@@ -455,7 +455,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	}
 
 	update_face_indices(m);
-	std::cout << "taefger" << std::endl;
+
 
 	//Up to here disappearing vertices and faces have been removed from the mesh and corresponding indices/markers have been updated
 	Eigen::MatrixXi replacing_edges(0, 4);
@@ -484,20 +484,20 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	if (CleanStroke3D::get_stroke_length(path, 0, path.size() - 1) / unit_length < 12) { //We'd end up with less than 12 samples
 		unit_length = CleanStroke3D::get_stroke_length(path, 0, path.size() - 1) / 12; //Adapt length such that we get 12 samples
 	}
-	std::cout << "4yhsa" << std::endl;
+
 
 	Eigen::MatrixXd resampled_path = CleanStroke3D::resample_by_length_with_fixes(path, unit_length);
 	Eigen::Matrix4f modelview = view * model;
 	if (!is_counter_clockwise_boundaries(resampled_path, modelview, proj, viewport, mean_viewpoint_inner, true)) {
 		resampled_path = resampled_path.colwise().reverse().eval();
 	}
-	std::cout << "PC: " << std::endl;
+
 	vector<int> path_vertices;
 	int original_V_size = m.V.rows();
 	for (int i = 0; i < resampled_path.rows() - 1; i++) { //Do not use the last path vertex, as it is a copy of the first and creates unwanted behaviour
 		path_vertices.push_back(original_V_size + i); //Store the vertex indices (in m.V) of the path vertices
 	}
-	std::cout << "yrrtec" << std::endl;
+
 
 	Eigen::MatrixXi added_edges(0, 4);
 	update_mesh_values(m, resampled_path, surface_path.get_origin_stroke_ID(), vertex_is_clean.rows(), true, added_edges);
@@ -515,7 +515,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 			}
 		}
 	}
-	std::cout << "Test" << std::endl;
+
 	surface_path.set_path(new_surface_path);
 
 	//Update the outer_boundary_vertices (which are indices into V before it was sliced to keep only the clean vertices)
@@ -547,7 +547,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 
 		stitch(path_vertices, inner_boundary_vertices, m, true);
 	}
-	std::cout << "at end" << std::endl;
+
 	Eigen::MatrixXi new_edge_indicators;
 	new_edge_indicators = igl::cat(1, original_sharp_or_boundary_edges, added_edges); //Add sharp and boundary edge indicators that are created due to the newly added curve
 	new_edge_indicators = igl::cat(1, new_edge_indicators, replacing_edges); //Add sharp edge & boundary indicators that are created due to old sharp or boundary edges being broken

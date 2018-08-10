@@ -26,6 +26,7 @@ public:
     void strokeReset();
 	bool update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & sharp_edge, Eigen::VectorXi & vertex_is_fixed, Eigen::MatrixXi& replacing_vertex_bindings);
 	void undo_stroke_add(Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & sharp_edge, Eigen::VectorXi & vertex_is_fixed);
+	void switch_stroke_edges_type(Eigen::VectorXi & sharp_edge);
     bool empty2D() const { return stroke2DPoints.isZero(); }
 	bool toLoop();
 	std::unordered_map<int, int> generate3DMeshFromStroke(Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & vertex_is_fixed, Eigen::MatrixXd & mesh_V, Eigen::MatrixXi & mesh_F);

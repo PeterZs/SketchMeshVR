@@ -3,12 +3,15 @@
 
 static Eigen::MatrixXi EV, FE, EF;
 static int next_mesh_ID;
+static Eigen::MatrixXd Vert;
 
 std::vector<Patch*> Patch::init_patches(Mesh& h) {
 	next_mesh_ID = h.ID + 1;
 	igl::edge_topology(h.V, h.F, EV, FE, EF);
+	Vert = h.V;
 
 	std::vector<Patch*> patches;
+	h.face_patch_map.clear();
 	h.face_patch_map.resize(h.F.rows(), nullptr);
 
 	for (int i = 0; i < h.F.rows(); i++) {
@@ -18,6 +21,7 @@ std::vector<Patch*> Patch::init_patches(Mesh& h) {
 			Eigen::VectorXi faces;
 			propagate_patch(new_patch, i, faces, h.face_patch_map, h.sharp_edge);
 			(*new_patch).create_mesh_structure(h, faces);
+			std::cout << "inside patch sharp edge: "<< std::endl << new_patch->mesh.sharp_edge.transpose() << std::endl;
 			patches.push_back(new_patch);
 		}
 	}
@@ -43,7 +47,7 @@ void Patch::create_mesh_structure(Mesh& m, Eigen::VectorXi& faces) {
 	patch_faces.resize(0, 3);
 	patch_edge_is_init = Eigen::VectorXi::Zero(EF.rows());
 	mesh_to_patch_indices = Eigen::VectorXi::Constant(m.V.rows(), -1);
-
+	
 	for (int i = 0; i < faces.rows(); i++) {
 		for (int j = 0; j < 3; j++) {
 			int edge = FE(faces[i], j);
@@ -73,7 +77,7 @@ void Patch::get_patch_edge(int edge, Eigen::VectorXi& patch_edge_is_init, Eigen:
 	if (sharp_edge(edge)) {
 
 	}
-	else if (patch_edge_is_init[edge]) {
+	 if (patch_edge_is_init[edge]) {
 		return;
 	}
 
@@ -83,6 +87,7 @@ void Patch::get_patch_edge(int edge, Eigen::VectorXi& patch_edge_is_init, Eigen:
 	get_patch_vertex(end, face, patch_vertices, patch_vertex_is_init, V_orig, vertex_is_fixed_orig, new_mapped_indices_orig, mesh_to_patch_indices);
 	new_sharp_edge.conservativeResize(new_sharp_edge.rows() + 1);
 	new_sharp_edge.tail(1) << sharp_edge[edge];
+	std::cout << "Start, end val: " << Vert.row(start) << "  " << Vert.row(end) << "   " << edge <<  "  " << sharp_edge[edge] << std::endl;
 	new_edge_boundary_markers.conservativeResize(new_edge_boundary_markers.rows() + 1);
 	new_edge_boundary_markers.tail(1) << edge_boundary_markers[edge];
 	patch_edge_is_init[edge] = 1;

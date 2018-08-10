@@ -16,7 +16,9 @@ using namespace igl;
 typedef Eigen::Triplet<double> T;
 
 int SurfaceSmoothing::prev_vertex_count = -1;
+
 static int prev_mesh_ID = -1;
+static int prev_patch_count = -1;
 Eigen::MatrixX3d SurfaceSmoothing::vertex_normals(0, 3);
 std::vector<Eigen::SparseLU<Eigen::SparseMatrix<double>>*> solver1_array;
 std::vector<Eigen::SparseLU<Eigen::SparseMatrix<double>>*> solver2_array;
@@ -39,15 +41,17 @@ std::unordered_map<int, Eigen::SparseMatrix<double>> SurfaceSmoothing::precomput
 std::unordered_map<int, Eigen::SparseMatrix<double>> SurfaceSmoothing::AT_for_positions;
 std::unordered_map<int, Eigen::VectorXd> SurfaceSmoothing::precomputed_laplacian_weights;
 
-void SurfaceSmoothing::smooth(Mesh& base_mesh, bool& BOUNDARY_IS_DIRTY){
+void SurfaceSmoothing::smooth(Mesh& base_mesh, bool& BOUNDARY_IS_DIRTY, bool force_update){
 	if (base_mesh.patches.empty()) {
 		base_mesh.patches = Patch::init_patches(base_mesh);
 	}
 
-	if(prev_vertex_count != base_mesh.V.rows()) { //The mesh topology has changed, so we need to reset the precomputed matrices. If only boundary constraints got added, we can reuse part of the matrices so don't clear it all out but instead overwrite certain parts
-        ID++;
+	if(force_update || (prev_vertex_count != base_mesh.V.rows()) || (prev_patch_count != base_mesh.patches.size())) { //The mesh topology has changed, so we need to reset the precomputed matrices. If only boundary constraints got added, we can reuse part of the matrices so don't clear it all out but instead overwrite certain parts
+       // ID++;
+		std::cout << "patch size was" << prev_patch_count << "  now is " << base_mesh.patches.size() << std::endl;
 		clear_precomputed_matrices();
 		prev_vertex_count = base_mesh.V.rows();
+		prev_patch_count = base_mesh.patches.size();
 		iteration = 0;
 		for (int i = 0; i < base_mesh.patches.size(); i++) {
 			solver1_array.push_back(new Eigen::SparseLU<Eigen::SparseMatrix<double>>);
@@ -62,7 +66,7 @@ void SurfaceSmoothing::smooth(Mesh& base_mesh, bool& BOUNDARY_IS_DIRTY){
 		Patch* patch = (base_mesh.patches[i]);
 	//	std::cout << "get to here" << std::endl;
 		smooth_main((*patch).mesh, BOUNDARY_IS_DIRTY);
-		//std::cout << "get to after" << std::endl;
+	//	std::cout << "get to after" << std::endl;
 
 		(*patch).update_parent_vertex_positions(base_mesh.V);
 		prev_mesh_ID = (*patch).mesh.ID;
@@ -169,11 +173,10 @@ Eigen::VectorXd SurfaceSmoothing::compute_initial_curvature_test(Mesh& m) {
 		return initial_curvatures;
 }
 
-
 Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L, bool BOUNDARY_IS_DIRTY) {
 	Eigen::SparseMatrix<double> A = get_precompute_matrix_for_LM_and_edges(m);
     Eigen::SparseMatrix<double> AT;
-	if(A.rows() == 0 && A.cols() == 0) {
+	if(A.rows() == 0 && A.cols() == 0 || (BOUNDARY_IS_DIRTY && iteration == 0)) {
 		std::vector<T> tripletList;
 		tripletList.reserve(m.V.rows()*(m.V.rows() + 1));
 		for(int i = 0; i < m.V.rows(); i++) {
@@ -194,23 +197,23 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 		set_precompute_matrix_for_LM_and_edges(m, A);
         set_AT_for_LM_and_edges(m, AT);
 	}
-	else if(BOUNDARY_IS_DIRTY && iteration == 0) {
+	/*else if(BOUNDARY_IS_DIRTY && iteration == 0) {
 		int nr_V = m.V.rows();
 		A.prune([nr_V](int i, int j, float) {return i < nr_V; }); //Keeps the first #V rows (which contains L, which didn't change) and prunes the rest
-	
+		A.conservativeResize(m.V.rows() * 2, m.V.rows());
 		for(int i = 0; i < m.V.rows(); i++) {
 			if (m.vertex_is_fixed[i] > 0) { //Constrain only the current boundary in the first iteration
-
-				A.coeffRef(m.V.rows() + i, i) = 1; //For target LM'/edge length'
+				A.insert(m.V.rows() + i, i) = 1;
+			//	A.coeffRef(m.V.rows() + i, i) = 1; //For target LM'/edge length'
 			}
 		}
-
+		A.prune(0.0);
 		AT = A.transpose();
 		(*solver1_array[m.ID - 1]).compute(AT*A); //Take ID-1 because ID 0 is reserved for the basemesh and patches start from 1
 
 		set_precompute_matrix_for_LM_and_edges(m, A);
 		set_AT_for_LM_and_edges(m, AT);
-	}
+	}*/
 	
 	if(iteration == 1) { //Constrain all vertices after the first iteration
 		std::vector<T> tripletList;
@@ -418,8 +421,11 @@ Eigen::VectorXi SurfaceSmoothing::points_on_border(Mesh& m) {
 
 	Eigen::VectorXi point_on_border(m.V.rows());
 	point_on_border.setZero();
+	std::cout << "sharp edge inside: " << std::endl << m.sharp_edge.transpose() << std::endl;
+
 	for (int i = 0; i < m.sharp_edge.rows(); i++) {
 		if (m.sharp_edge[i]) {
+			std::cout << "cake "<< i << "   " << m.V.row(EV(i, 0)) << "  " << m.V.row(EV(i, 1)) << std::endl;
 			point_on_border[EV(i, 0)] = 1;
 			point_on_border[EV(i, 1)] = 1;
 		}

@@ -205,6 +205,9 @@ void Stroke::addSegmentAdd(Eigen::Vector3f& pos) {
 			dir_after_cut = viewer.oculusVR.get_right_touch_direction().cast<double>();
 			prev_point_was_on_mesh = false;
 		}
+		else {
+			has_been_outside_mesh = true; //We have an off-mesh point, that is not the start or end point
+		}
 		ends_on_mesh = false;
 	}
 
@@ -738,7 +741,6 @@ void Stroke::update_Positions(Eigen::MatrixXd V, bool structure_changed) {
 		Eigen::VectorXi col1Equals, col2Equals;
 		stroke_edges.resize(0, 2);
 		for (int i = 0; i < closest_vert_bindings.size() - 1; i++) { //Closest_vert_bindings is already looped, so don't double loop it
-			std::cout << closest_vert_bindings[i] << "   ";
 			start = closest_vert_bindings[i];
 			end = closest_vert_bindings[(i + 1) % closest_vert_bindings.size()];
 			col1Equals = EV.col(0).cwiseEqual(min(start, end)).cast<int>();
@@ -753,7 +755,6 @@ void Stroke::update_Positions(Eigen::MatrixXd V, bool structure_changed) {
 			stroke_edges.conservativeResize(stroke_edges.rows() + 1, Eigen::NoChange);
 			stroke_edges.bottomRows(1) << closest_vert_bindings[closest_vert_bindings.size() - 2], closest_vert_bindings.back(); //Manually make it looped again, with a connection between the last 2 vertex bindings (even if there is not an actual edge connecting them, e.g. with interrupted strokes due to a cut). Drawing the strokes assumes they're always looped, and then takes the correct number of rows based on is_loop
 		}
-		std::cout << closest_vert_bindings.back() << std::endl;
 	}
 }
 
@@ -766,7 +767,6 @@ bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::V
 	
 	for (int i = 0; i < replacing_vertex_bindings.rows(); i++) {
 		if (replacing_vertex_bindings(i, 0) == stroke_ID) {
-			std::cout << replacing_vertex_bindings(i, 1) << "  " << new_mapped_indices[replacing_vertex_bindings(i, 1)] << " " << replacing_vertex_bindings(i, 2) << "  " << new_mapped_indices[replacing_vertex_bindings(i, 2)] << std::endl;
 			auto loc = std::find(closest_vert_bindings.begin(), closest_vert_bindings.end(), replacing_vertex_bindings(i, 1));
 			int idx = distance(closest_vert_bindings.begin(), loc);
 			loc = std::find(closest_vert_bindings.begin(), closest_vert_bindings.end(), replacing_vertex_bindings(i, 2));
@@ -808,25 +808,11 @@ bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::V
 }
 
 void Stroke::undo_stroke_add(Eigen::VectorXi& edge_boundary_markers, Eigen::VectorXi& sharp_edge, Eigen::VectorXi& vertex_is_fixed) {	
-
-	//TODO: check that closest_vert_bindings is actually in stroke order (so 2 bindings in a row form an edge of the stroke)
 	Eigen::MatrixXi EV, FE, EF;
 	igl::edge_topology(V, F, EV, FE, EF);
 
 	int start, end, equal_pos;
 	Eigen::VectorXi col1Equals, col2Equals;
-	std::cout << "Is loop" << is_loop << std::endl;
-/*	for (int i = 0; i < closest_vert_bindings.size() - 1 - !is_loop; i++) {
-		start = closest_vert_bindings[i];
-		end = closest_vert_bindings[(i + 1) % closest_vert_bindings.size()];
-		std::cout << "Start&end " << start << "  " << end;
-		col1Equals = EV.col(0).cwiseEqual(min(start, end)).cast<int>();
-		col2Equals = EV.col(1).cwiseEqual(max(start, end)).cast<int>();
-		int maxval = (col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
-		std::cout <<" "<< maxval <<" at equal_pos: " << equal_pos << " " << EV.row(equal_pos) << "   " << EF.row(equal_pos) << std::endl;
-		edge_boundary_markers[equal_pos] = 0;
-		sharp_edge[equal_pos] = 0; //Unset sharp edges (e.g. edges that were previously sharp, now smooth, but they're not entirely removed)
-	}*/
 
 	for (int i = 0; i < stroke_edges.rows() - !is_loop; i++) {
 		start = stroke_edges(i, 0);
@@ -857,6 +843,25 @@ void Stroke::undo_stroke_add(Eigen::VectorXi& edge_boundary_markers, Eigen::Vect
 		}
 	}
 
+}
+
+void Stroke::switch_stroke_edges_type(Eigen::VectorXi& sharp_edge) {
+	Eigen::MatrixXi EV, FE, EF;
+	igl::edge_topology(V, F, EV, FE, EF);
+
+	int start, end, equal_pos;
+	Eigen::VectorXi col1Equals, col2Equals;
+
+	for (int i = 0; i < stroke_edges.rows() - !is_loop; i++) {
+		start = stroke_edges(i, 0);
+		end = stroke_edges(i, 1);
+		col1Equals = EV.col(0).cwiseEqual(min(start, end)).cast<int>();
+		col2Equals = EV.col(1).cwiseEqual(max(start, end)).cast<int>();
+		int maxval = (col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
+		if (maxval == 2) { //Make sure that the 2 sequential stroke3DPoints are actually connected (because we might have interrupted strokes)
+			sharp_edge[equal_pos] = !sharp_edge[equal_pos];
+		}
+	}
 }
 
 //Only works for strokes that have valid stroke2DPoints (e.g. cut, extrusion base and extrusion silhouette strokes). Naive implementation in O(n^2)
