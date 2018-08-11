@@ -421,11 +421,10 @@ Eigen::VectorXi SurfaceSmoothing::points_on_border(Mesh& m) {
 
 	Eigen::VectorXi point_on_border(m.V.rows());
 	point_on_border.setZero();
-	std::cout << "sharp edge inside: " << std::endl << m.sharp_edge.transpose() << std::endl;
 
+	std::vector<int> tmp(m.mesh_to_patch_indices.data(), m.mesh_to_patch_indices.data() + m.mesh_to_patch_indices.size());
 	for (int i = 0; i < m.sharp_edge.rows(); i++) {
-		if (m.sharp_edge[i]) {
-			std::cout << "cake "<< i << "   " << m.V.row(EV(i, 0)) << "  " << m.V.row(EV(i, 1)) << std::endl;
+		if (m.sharp_edge[i]) {	
 			point_on_border[EV(i, 0)] = 1;
 			point_on_border[EV(i, 1)] = 1;
 		}

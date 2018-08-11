@@ -241,7 +241,7 @@ void Stroke::addSegmentCut(Eigen::Vector3f& pos) {
 			return;
 		}
 		if (stroke2DPoints.rows() == 1 && dir_before_cut.isZero()) { //There is a intersecting stroke point before the vars for the 0th (off-mesh) have been set
-			cout << "This shouldn't happen. Draw the first point outside of the mesh" << endl;
+			std::cerr << "This shouldn't happen. Draw the first point outside of the mesh" << endl;
 			return;
 		}
 		if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - hit_pos.transpose()).squaredNorm() < min_inter_point_distance) {

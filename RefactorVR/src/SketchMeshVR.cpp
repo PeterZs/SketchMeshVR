@@ -39,6 +39,9 @@ OculusVR tmp;
 Viewer viewer(tmp);
 igl::opengl::glfw::imgui::ImGuiMenu menu;
 
+Eigen::MatrixXd V_floor(4, 3);
+Eigen::MatrixXi F_floor(2, 3);
+
 // Vertex array, #V x3
 Eigen::MatrixXd V(0, 3);
 // Face array, #F x3
@@ -906,7 +909,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			(*base_mesh).patches.clear();
 			(*base_mesh).face_patch_map.clear();
 			(*base_mesh).patches = Patch::init_patches(*base_mesh);
-			std::cout << (*base_mesh).sharp_edge.rows() << std::endl << std::endl;
 			dirty_boundary = true;
 		
 			SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, true); //Force reset of the matrices. We might have changed a stroke type without changing the number of patches
@@ -946,6 +948,70 @@ bool callback_load_mesh(Viewer& viewer, string filename, Eigen::MatrixXd& V_floo
 	viewer.data().set_normals(N_corners);
 
 	std::cout << filename.substr(filename.find_last_of("/") + 1) << endl;
+	return true;
+}
+
+void set_floor_mesh(Viewer& viewer, Eigen::MatrixXd& V_floor, Eigen::MatrixXi& F_floor, std::string cur_dir) {
+	viewer.data().set_mesh(V_floor, F_floor);
+	Eigen::MatrixXd V_uv(V_floor.rows(), 2);
+	V_uv.col(0) = V_floor.col(0);
+	V_uv.col(1) = V_floor.col(2);
+	V_uv.col(0) = V_uv.col(0).array() - V_uv.col(0).minCoeff();
+	V_uv.col(0) = V_uv.col(0).array() / V_uv.col(0).maxCoeff();
+	V_uv.col(1) = V_uv.col(1).array() - V_uv.col(1).minCoeff();
+	V_uv.col(1) = V_uv.col(1).array() / V_uv.col(1).maxCoeff();
+	V_uv = V_uv.array() * 2;
+
+	Eigen::Matrix<unsigned char, Dynamic, Dynamic> texR, texG, texB;
+	std::string texture_file = cur_dir + "\\..\\data\\free\\floor.png";
+	int width, height, n;
+	unsigned char *data = stbi_load(texture_file.c_str(), &width, &height, &n, 4);
+
+	if (!data) {
+		std::cerr << "Could not load floor texture." << std::endl;
+	}
+	texR.resize(height, width);
+	texG.resize(height, width);
+	texB.resize(height, width);
+
+	for (unsigned j = 0; j < height; ++j) {
+		for (unsigned i = 0; i < width; ++i) {
+			// used to flip with libPNG, but I'm not sure if
+			// simply j*width + i wouldn't be better
+			// stb_image uses horizontal scanline an starts top-left corner
+			texR(i, j) = data[4 * ((width - 1 - i) + width * (height - 1 - j))];
+			texG(i, j) = data[4 * ((width - 1 - i) + width * (height - 1 - j)) + 1];
+			texB(i, j) = data[4 * ((width - 1 - i) + width * (height - 1 - j)) + 2];
+		}
+	}
+	stbi_image_free(data);
+
+	viewer.data().set_uv(V_uv);
+	viewer.data().show_texture = true;
+	viewer.data().set_texture(texR, texG, texB);
+}
+
+bool callback_load_scene(Viewer& viewer, std::string cur_dir) {
+	viewer.data().clear();
+	viewer.load_scene();
+	//TODO: do deserialize stuff
+
+	V = viewer.data().V;
+	F = viewer.data().F;
+	viewer.data().set_mesh(V, F);
+	Eigen::MatrixXd N_corners;
+	igl::per_corner_normals(V, F, 50, N_corners);
+	viewer.data().set_normals(N_corners);
+	return true;
+}
+
+bool callback_load_scene(Viewer& viewer, std::string filename, std::string cur_dir) {
+	//TODO: implement like above but without popup file selector
+	return true;
+}
+
+bool callback_save_scene(Viewer& viewer, std::string cur_dir) {
+	viewer.save_scene();
 	return true;
 }
 
@@ -989,13 +1055,11 @@ int main(int argc, char *argv[]) {
 	added_stroke = new Stroke(V, F, viewer, 1);
 	base_mesh = new Mesh(V, F, edge_boundary_markers, vertex_is_fixed, new_mapped_indices, sharp_edge, 0);
 
-	Eigen::MatrixXd V_floor(4, 3);
 	V_floor.row(0) << -10, 0, -10;
 	V_floor.row(1) << 10, 0, -10;
 	V_floor.row(2) << 10, 0, 10;
 	V_floor.row(3) << -10, 0, 10;
 
-	Eigen::MatrixXi F_floor(2, 3);
 	F_floor.row(0) << 0, 3, 1;
 	F_floor.row(1) << 3, 2, 1;
 
@@ -1005,7 +1069,7 @@ int main(int argc, char *argv[]) {
 	if (argc == 2) {
 		// Read mesh
 		igl::readOFF(argv[1], V, F);
-		callback_load_mesh(viewer, argv[1], V_floor, F_floor);
+		callback_load_scene(viewer, argv[1], std::string(cur_dir));
 	}
 	else {
 		viewer.data().set_mesh(V_floor, F_floor);
@@ -1045,13 +1109,14 @@ int main(int argc, char *argv[]) {
 		viewer.data().set_uv(V_uv);
 		viewer.data().show_texture = true;
 		viewer.data().set_texture(texR, texG, texB);
+
+		viewer.append_mesh();
+		viewer.data().set_mesh(V, F);
+		Eigen::MatrixXd N_corners;
+		igl::per_corner_normals(V, F, 50, N_corners);
+		viewer.data().set_normals(N_corners);
 	}
 
-	viewer.append_mesh();
-	viewer.data().set_mesh(V, F);
-	Eigen::MatrixXd N_corners;
-	igl::per_corner_normals(V, F, 50, N_corners);
-	viewer.data().set_normals(N_corners);
 	viewer.append_mesh(); //For laser ray/point
 	viewer.data().show_laser = false;
 	viewer.selected_data_index = 1;
@@ -1059,7 +1124,7 @@ int main(int argc, char *argv[]) {
 
 	viewer.init_oculus();
 
-	GLuint img_texture = 0, img_texture1 = 0, img_texture2 = 0, img_texture3 = 0, img_texture4 = 0, img_texture5 = 0, img_texture6 = 0;
+	GLuint img_texture = 0, img_texture1 = 0, img_texture2 = 0, img_texture3 = 0, img_texture4 = 0, img_texture5 = 0, img_texture6 = 0, img_texture7 = 0, img_texture8 = 0, img_texture9 = 0;
 	int img_width, img_height, nrChannels;
 	std::string filename = std::string(cur_dir) + "\\..\\data\\free\\draw.png";
 	unsigned char *img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
@@ -1140,6 +1205,45 @@ int main(int argc, char *argv[]) {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
 	void* im_texID_remove = (void *)(intptr_t)img_texture6;
 
+	filename = std::string(cur_dir) + "\\..\\data\\free\\save.png";
+	img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
+	if (!img_data) {
+		std::cerr << "Could not load image 7." << std::endl;
+	}
+
+	glGenTextures(1, &img_texture7);
+	glBindTexture(GL_TEXTURE_2D, img_texture7);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
+	void* im_texID_save = (void *)(intptr_t)img_texture7;
+
+	filename = std::string(cur_dir) + "\\..\\data\\free\\load.png";
+	img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
+	if (!img_data) {
+		std::cerr << "Could not load image 8." << std::endl;
+	}
+
+	glGenTextures(1, &img_texture8);
+	glBindTexture(GL_TEXTURE_2D, img_texture8);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
+	void* im_texID_load = (void *)(intptr_t)img_texture8;
+
+	filename = std::string(cur_dir) + "\\..\\data\\free\\change.png";
+	img_data = stbi_load(filename.c_str(), &img_width, &img_height, &nrChannels, 4);
+	if (!img_data) {
+		std::cerr << "Could not load image 9." << std::endl;
+	}
+
+	glGenTextures(1, &img_texture9);
+	glBindTexture(GL_TEXTURE_2D, img_texture9);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
+	void* im_texID_change = (void *)(intptr_t)img_texture9;
+
 	void* im_texID_cur = im_texID_draw;
 
 	current_tool_HUD = [&]() {
@@ -1163,8 +1267,6 @@ int main(int argc, char *argv[]) {
 		ImVec2 uv_start(0, 0);
 		ImVec2 uv_end(1, 1);
 		ImVec2 icon_size(320, 320);
-		//std::cout << "texsize" << texsize.x << "  " << texsize.y << std::endl;
-		//ImGui::SetNextWindowSize(texsize);
 		ImGuiStyle& style = ImGui::GetStyle();
 		style.WindowPadding = ImVec2(0, 0);
 		style.WindowRounding = 0.0f;
@@ -1172,8 +1274,8 @@ int main(int argc, char *argv[]) {
 		style.ItemInnerSpacing = ImVec2(0, 0);
 		style.Colors[ImGuiCol_WindowBg] = ImVec4(0.00f, 0.00f, 0.00f, 1.0f);
 
-		ImGui::SetNextWindowSize(ImVec2(1024.0f, 700.0f), ImGuiSetCond_FirstUseEver);
-		ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiSetCond_FirstUseEver);
+		ImGui::SetNextWindowSize(ImVec2(1008.0f, 1036.0f), ImGuiSetCond_FirstUseEver); //How much of the menu content is displayed
+		ImGui::SetNextWindowPos(ImVec2(2.0f, 0.0f), ImGuiSetCond_FirstUseEver);
 
 		ImGui::Begin("Selection Menu", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar);
 		int frame_padding = 5;
@@ -1260,6 +1362,30 @@ int main(int argc, char *argv[]) {
 			prev_laser_show = viewer.data().show_laser;
 			viewer.selected_data_index = 1;
 			menu_closed();
+		}
+		ImGui::PopID();
+
+		ImGui::PushID(6);
+		if (ImGui::ImageButton(im_texID_save, icon_size, uv_start, uv_end, frame_padding, icon_background_color)) {
+			std::cerr << "Please specify how you want to save the scene. " << std::endl;
+			callback_save_scene(viewer, cur_dir);
+		}
+		ImGui::PopID();
+		ImGui::SameLine();
+		ImGui::PushID(7);
+		//ImGui::SetCursorPos(ImVec2(0, 345));
+		if (ImGui::ImageButton(im_texID_load, icon_size, uv_start, uv_end, frame_padding, icon_background_color)) {
+			std::cerr << "Please select the file you want to load a scene from. " << std::endl;
+			callback_load_scene(viewer, cur_dir);
+
+		}
+		ImGui::PopID();
+		ImGui::SameLine();
+		ImGui::PushID(8);
+		//ImGui::SetCursorPos(ImVec2(379, 379));
+		if (ImGui::ImageButton(im_texID_change, icon_size, uv_start, uv_end, frame_padding, icon_background_color)) {
+			
+
 		}
 		ImGui::PopID();
 		ImGui::End();

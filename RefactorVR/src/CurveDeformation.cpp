@@ -27,6 +27,8 @@ void CurveDeformation::startPullCurve(int _moving_vertex_ID, Eigen::MatrixXd& V,
 	original_positions = V;
 	adjacency_list(F, neighbors);
 	igl::edge_topology(V, F, EV, FE, EF);
+	std::cout << "EV:  " << std::endl << EV << std::endl;
+
 	visited.resize(V.rows());
 	distance_to_vert.resize(V.rows());
 	tmp_original_pos.resize(1, 4);
