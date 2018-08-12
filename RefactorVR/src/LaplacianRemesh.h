@@ -8,8 +8,10 @@ class LaplacianRemesh {
 public:
 	static Eigen::VectorXi remesh_cut_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool & remesh_success, int cut_clicked_face, Eigen::MatrixXi & replacing_vertex_bindings);
 	static Eigen::VectorXi remesh_extrusion_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool & remesh_success, Eigen::MatrixXi & replacing_vertex_bindings);
-	static bool remesh_open_path(Mesh & m, Stroke & open_path_stroke, Eigen::MatrixXi& replacing_vertex_bindings);
-	static bool remesh_cutting_path(Mesh & m, Stroke & cut_path_stroke, Eigen::MatrixXi & replacing_vertex_bindings);
+static	bool remesh_open_path(Mesh & m, Stroke & open_path_stroke, Eigen::MatrixXi & replacing_vertex_bindings, igl::opengl::glfw::Viewer & viewer);
+static bool remesh_cutting_path(Mesh & m, Stroke & cut_path_stroke, Eigen::MatrixXi & replacing_vertex_bindings, igl::opengl::glfw::Viewer & viewer);
+	//static bool remesh_open_path(Mesh & m, Stroke & open_path_stroke, Eigen::MatrixXi& replacing_vertex_bindings);
+	//static bool remesh_cutting_path(Mesh & m, Stroke & cut_path_stroke, Eigen::MatrixXi & replacing_vertex_bindings);
 
 	static Eigen::VectorXi remesh(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool & remesh_success, int cut_clicked_face, Eigen::MatrixXi & replacing_vertex_bindings);
 

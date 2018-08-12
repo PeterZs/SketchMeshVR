@@ -8,28 +8,27 @@
 class Stroke {
 public:
 	
-	Stroke(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F,  igl::opengl::glfw::Viewer &v, int stroke_ID_);
+	Stroke();
+	Stroke(Eigen::MatrixXd *V,  Eigen::MatrixXi *F, int stroke_ID_);
 	Stroke(const Stroke& origin);
     Stroke& operator=(Stroke);
 	void swap(Stroke & tmp);
 	~Stroke();
-    
-	bool addSegment(Eigen::Vector3f& pos);
-	void addSegmentAdd(Eigen::Vector3f & pos);
-	void addSegmentCut(Eigen::Vector3f & pos);
-	void addSegmentExtrusionBase(Eigen::Vector3f & pos);
-	void addSegmentExtrusionSilhouette(Eigen::Vector3f & pos);
-	void prepend_first_point();
-	void append_final_point();
+
+	bool addSegment(Eigen::Vector3f & pos, igl::opengl::glfw::Viewer & viewer);
+	void addSegmentAdd(Eigen::Vector3f & pos, igl::opengl::glfw::Viewer & viewer);
+	void addSegmentCut(Eigen::Vector3f & pos, igl::opengl::glfw::Viewer & viewer);
+	void addSegmentExtrusionBase(Eigen::Vector3f & pos, igl::opengl::glfw::Viewer & viewer);
+	void addSegmentExtrusionSilhouette(Eigen::Vector3f & pos, igl::opengl::glfw::Viewer & viewer);
+	void prepend_first_point(igl::opengl::glfw::Viewer & viewer);
+	void append_final_point(igl::opengl::glfw::Viewer & viewer);
     void counter_clockwise();
-	void rotate_points(Eigen::Quaternionf& trackball_rot, Eigen::Vector3f& mesh_translation);
-    void strokeReset();
 	bool update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & sharp_edge, Eigen::VectorXi & vertex_is_fixed, Eigen::MatrixXi& replacing_vertex_bindings);
 	void undo_stroke_add(Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & sharp_edge, Eigen::VectorXi & vertex_is_fixed);
 	void switch_stroke_edges_type(Eigen::VectorXi & sharp_edge);
     bool empty2D() const { return stroke2DPoints.isZero(); }
 	bool toLoop();
-	std::unordered_map<int, int> generate3DMeshFromStroke(Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & vertex_is_fixed, Eigen::MatrixXd & mesh_V, Eigen::MatrixXi & mesh_F);
+	std::unordered_map<int, int> generate3DMeshFromStroke(Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & vertex_is_fixed, Eigen::MatrixXd & mesh_V, Eigen::MatrixXi & mesh_F, igl::opengl::glfw::Viewer & viewer);
 	bool has_self_intersection();
 	bool line_segments_intersect(Eigen::RowVector2d& p1, Eigen::RowVector2d& p2, Eigen::RowVector2d& p3, Eigen::RowVector2d& p4);
 	int selectClosestVertex(Eigen::Vector3f pos, double & closest_distance);
@@ -58,15 +57,10 @@ public:
 	bool has_been_reversed;
 	bool starts_on_mesh;
 	bool ends_on_mesh;
-	Eigen::RowVector3d stroke_color;
-	igl::opengl::glfw::Viewer &viewer;
-	
+	Eigen::RowVector3d stroke_color;	
 
-	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
-private:
-	const Eigen::MatrixXd &V;
-	const Eigen::MatrixXi &F;
+	Eigen::MatrixXd* V;
+	Eigen::MatrixXi* F;
 	int stroke_ID; //Non-const for the sake of copy assignment operator 
 
 	Eigen::MatrixX3d stroke3DPoints;
@@ -75,20 +69,67 @@ private:
 	Eigen::MatrixXi stroke_edges; //Indices into closest_vert_bindings, where every row contains the 2 end points of a stroke edge (looped)
 	Eigen::MatrixXi faces_hit;
 	Eigen::MatrixX3d hand_pos_at_draw; //Only used for extrusion base strokes.
-	Eigen::RowVector3d cut_stroke_final_point; //Only used for cutting strokes. First point outside of the mesh
-	Eigen::RowVectorXd cut_stroke_final_point_2D;
 	Eigen::Vector3d pos_before_cut;
 	Eigen::Vector3d dir_before_cut;
 	Eigen::Vector3d pos_after_cut;
 	Eigen::Vector3d dir_after_cut;
 	bool prev_point_was_on_mesh; //Used for cutting strokes only. Indicates whether this is the first point outside of the mesh after we've been drawing on the mesh
 	Eigen::VectorXd dep;
+	void setV(Eigen::MatrixXd* V_) { V = V_; };
+	void setF(Eigen::MatrixXi* F_) { F = F_; };
 
 	std::vector<int> closest_vert_bindings;
+
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+private:
 
 	static Eigen::MatrixXd resample_stroke2D(Eigen::MatrixXd & original_stroke2DPoints);
 	static void move_to_middle(Eigen::MatrixXd &positions, Eigen::MatrixXd &new_positions);
 	static void generate_backfaces(Eigen::MatrixXi &faces, Eigen::MatrixXi &back_faces);
 };
+
+#include <igl/serialize.h>
+namespace igl {
+	namespace serialization {
+
+		inline void serialization(bool s, Stroke& obj, std::vector<char>& buffer)
+		{
+			SERIALIZE_MEMBER(stroke_ID);
+			SERIALIZE_MEMBER(stroke3DPoints);
+			SERIALIZE_MEMBER(stroke3DPointsBack);
+			SERIALIZE_MEMBER(stroke2DPoints);
+			SERIALIZE_MEMBER(stroke_edges);
+			SERIALIZE_MEMBER(faces_hit);
+			SERIALIZE_MEMBER(hand_pos_at_draw);
+			SERIALIZE_MEMBER(pos_before_cut);
+			SERIALIZE_MEMBER(dir_before_cut);
+			SERIALIZE_MEMBER(pos_after_cut);
+			SERIALIZE_MEMBER(dir_after_cut);
+			SERIALIZE_MEMBER(prev_point_was_on_mesh);
+			SERIALIZE_MEMBER(dep);
+			SERIALIZE_MEMBER(closest_vert_bindings);
+			SERIALIZE_MEMBER(is_loop);
+			SERIALIZE_MEMBER(has_points_on_mesh);
+			SERIALIZE_MEMBER(has_been_outside_mesh);
+			SERIALIZE_MEMBER(has_been_reversed);
+			SERIALIZE_MEMBER(starts_on_mesh);
+			SERIALIZE_MEMBER(ends_on_mesh);
+			SERIALIZE_MEMBER(stroke_color);
+		}
+
+		template<>
+		inline void serialize(const Stroke& obj, std::vector<char>& buffer)
+		{
+			serialization(true, const_cast<Stroke&>(obj), buffer);
+		}
+
+		template<>
+		inline void deserialize(Stroke& obj, const std::vector<char>& buffer)
+		{
+			serialization(false, obj, const_cast<std::vector<char>&>(buffer));
+		}
+	}
+}
 
 #endif

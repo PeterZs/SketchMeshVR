@@ -31,7 +31,7 @@ Eigen::VectorXi LaplacianRemesh::remesh_extrusion_remove_inside(Mesh & m, Surfac
 	return remesh(m, surface_path, model, view, proj, viewport, remesh_success, -1, replacing_vertex_bindings);
 }
 
-bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke, Eigen::MatrixXi& replacing_vertex_bindings) {
+bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke, Eigen::MatrixXi& replacing_vertex_bindings, igl::opengl::glfw::Viewer &viewer) {
 	replacing_vertex_bindings.resize(0, 4);
 	remove_inside_faces = false;
 	SurfacePath surface_path;
@@ -150,11 +150,11 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke, Eigen:
 
 
 	Eigen::RowVector3d mean_viewpoint = compute_mean_viewpoint(m, outer_boundary_vertices);
-	Eigen::Matrix4f modelview = open_path_stroke.viewer.oculusVR.get_start_action_view() * open_path_stroke.viewer.core.get_model();
+	Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
 
 	double unit_length = compute_average_distance_between_onPolygon_vertices(path);
 	Eigen::MatrixXd resampled_path = CleanStroke3D::resample_by_length_with_fixes(path, unit_length);
-	if (!is_counter_clockwise_boundaries(resampled_path, modelview, open_path_stroke.viewer.core.get_proj(), open_path_stroke.viewer.core.viewport, mean_viewpoint, true)) {
+	if (!is_counter_clockwise_boundaries(resampled_path, modelview, viewer.core.get_proj(), viewer.core.viewport, mean_viewpoint, true)) {
 		resampled_path = resampled_path.colwise().reverse().eval();
 	}
 
@@ -197,7 +197,7 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke, Eigen:
 	col_idx2.col(0) << 0, 1, 2;
 	igl::slice(m.V, row_idx2, col_idx2, tmp_V); //Keep only the clean "boundary" vertices in the mesh
 
-	if (!is_counter_clockwise_boundaries(tmp_V, modelview, open_path_stroke.viewer.core.get_proj(), open_path_stroke.viewer.core.viewport, mean_viewpoint, !is_front_loop)) {
+	if (!is_counter_clockwise_boundaries(tmp_V, modelview, viewer.core.get_proj(), viewer.core.viewport, mean_viewpoint, !is_front_loop)) {
 		reverse(outer_boundary_vertices.begin(), outer_boundary_vertices.end());
 	}
 
@@ -226,7 +226,7 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke, Eigen:
 	return true;
 }
 
-bool LaplacianRemesh::remesh_cutting_path(Mesh& m, Stroke& cut_path_stroke, Eigen::MatrixXi& replacing_vertex_bindings) {
+bool LaplacianRemesh::remesh_cutting_path(Mesh& m, Stroke& cut_path_stroke, Eigen::MatrixXi& replacing_vertex_bindings, igl::opengl::glfw::Viewer &viewer) {
 	replacing_vertex_bindings.resize(0, 4);
 	bool remesh_success = true;
 	is_front_loop = false;
@@ -238,7 +238,7 @@ bool LaplacianRemesh::remesh_cutting_path(Mesh& m, Stroke& cut_path_stroke, Eige
 	if (!success) {
 		return false;
 	}
-	remesh(m, surface_path, cut_path_stroke.viewer.core.get_model(), cut_path_stroke.viewer.oculusVR.get_start_action_view(), cut_path_stroke.viewer.core.get_proj(), cut_path_stroke.viewer.core.viewport, remesh_success, -1, replacing_vertex_bindings);
+	remesh(m, surface_path, viewer.core.get_model(), viewer.oculusVR.get_start_action_view(), viewer.core.get_proj(), viewer.core.viewport, remesh_success, -1, replacing_vertex_bindings);
 	update_add_path_points_and_bindings(cut_path_stroke, surface_path);
 	return remesh_success;
 }

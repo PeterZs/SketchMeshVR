@@ -8,10 +8,15 @@ class MeshCut {
 
 public:
 	static bool cut_prepare(Stroke & stroke, SurfacePath & surface_path);
-	static bool cut(Mesh & m, Stroke & stroke, SurfacePath & surface_path, int clicked_face, Eigen::MatrixXi & replacing_vertex_bindings);
+	static bool cut(Mesh & m, Stroke & stroke, SurfacePath & surface_path, int clicked_face, Eigen::MatrixXi & replacing_vertex_bindings, igl::opengl::glfw::Viewer & viewer);
+	//static bool cut(Mesh & m, Stroke & stroke, SurfacePath & surface_path, int clicked_face, Eigen::MatrixXi & replacing_vertex_bindings);
+
+	//static bool cut_main(Mesh & m, SurfacePath & surface_path, Stroke & stroke, int clicked_face, Eigen::MatrixXi & replacing_vertex_bindings, igl::opengl::glfw::Viewer & viewer);
 
 private:	
-	static bool cut_main(Mesh & m, SurfacePath & surface_path, Stroke & stroke, int clicked_face, Eigen::MatrixXi & replacing_vertex_bindings);
+	static bool cut_main(Mesh & m, SurfacePath & surface_path, Stroke & stroke, int clicked_face, Eigen::MatrixXi & replacing_vertex_bindings, igl::opengl::glfw::Viewer & viewer);
+
+	//static bool cut_main(Mesh & m, SurfacePath & surface_path, Stroke & stroke, int clicked_face, Eigen::MatrixXi & replacing_vertex_bindings);
 	static bool mesh_open_hole(Eigen::VectorXi & boundary_vertices, Mesh & m);
 	static void update_edge_indicators(Mesh & m, Eigen::MatrixXi & all_sharpEV);
 	static void update_face_indices(Mesh & m, Eigen::MatrixXi & F2, Eigen::VectorXi & boundary_vertices, int original_v_size);

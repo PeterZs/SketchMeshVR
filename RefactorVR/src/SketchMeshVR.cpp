@@ -30,10 +30,13 @@
 #include "Mesh.h"
 #include "Patch.h"
 #include "LaplacianRemesh.h"
+#include "AppState.h"
 
 using namespace std;
 using Viewer = igl::opengl::glfw::Viewer;
 using OculusVR = igl::opengl::OculusVR;
+
+AppState appState;
 
 OculusVR tmp;
 Viewer viewer(tmp);
@@ -50,13 +53,10 @@ Eigen::MatrixXi F(0, 3);;
 Eigen::VectorXi vertex_is_fixed;
 //Per edge indicator of what curve (or none if == 0) each edge belongs to
 Eigen::VectorXi edge_boundary_markers;
-//Per vertex indicator of whether vertex is on original stroke (outline of shape) (on OG stroke if ==1)
-//Eigen::VectorXi part_of_original_stroke;
 //Per edge indicator of whether the edge is sharp (if == 1 then sharp, otherwise smooth)
 Eigen::VectorXi sharp_edge;
 //Takes care of index mapping from before a cut/extrusion action to after (since some vertices are removed)
 Eigen::VectorXi new_mapped_indices;
-
 //Tracker needed for updating the strokes' closest vertex bindings after a stroke edge has been split (e.g. due to stroke add, cut or extrude)
 Eigen::MatrixXi replacing_vertex_bindings(0, 4);
 
@@ -99,7 +99,6 @@ SurfacePath base_surface_path, cut_surface_path;
 Eigen::Matrix4f base_model, base_view, base_proj;
 Eigen::Vector4f base_viewport;
 
-//std::chrono::steady_clock::time_point _start_time, _end_time;
 bool has_recentered = false;
 bool draw_should_block = false;
 
@@ -277,9 +276,9 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		if (prev_tool_mode == NONE) {
 			if (has_recentered) {
 				viewer.oculusVR.set_start_action_view(viewer.core.get_view());
-				added_stroke = new Stroke(V, F, viewer, 1);
+				added_stroke = new Stroke(&V, &F, 1);
 				added_stroke->stroke_color = blue;
-				added_stroke->addSegment(pos);
+				added_stroke->addSegment(pos, viewer);
 				prev_tool_mode = DRAW;
 			}
 			else {
@@ -289,20 +288,20 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			}
 		}
 		else if (prev_tool_mode == DRAW) {
-			draw_should_block = added_stroke->addSegment(pos);
+			draw_should_block = added_stroke->addSegment(pos, viewer);
 			return;
 		}
 	}
 	else if (tool_mode == ADD) {
 		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) { //Adding a new control curve onto an existing mesh
-			added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID);
+			added_stroke = new Stroke(&V, &F, next_added_stroke_ID);
 			added_stroke->stroke_color = blue;
 			added_stroke->is_loop = false;
-			added_stroke->addSegmentAdd(pos);
+			added_stroke->addSegmentAdd(pos, viewer);
 			prev_tool_mode = ADD;
 		}
 		else if (prev_tool_mode == ADD) {
-			added_stroke->addSegmentAdd(pos);
+			added_stroke->addSegmentAdd(pos, viewer);
 		}
 	}
 	else if (tool_mode == REMOVE) {
@@ -394,7 +393,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			}
 
 			for (int i = 0; i < 18; i++) {
-				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary,false);
+				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
 			}
 
 			//initial_stroke->update_Positions(V);
@@ -417,14 +416,14 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			}
 
 			draw_all_strokes(); //Will remove a possible old black (wrong) stroke
-			added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID); //For CUT, only increase the next added stroke ID upon button release (when we know it succeeded)
+			added_stroke = new Stroke(&V, &F, next_added_stroke_ID); //For CUT, only increase the next added stroke ID upon button release (when we know it succeeded)
 			added_stroke->stroke_color = red;
 			viewer.oculusVR.set_start_action_view(viewer.core.get_view());
-			added_stroke->addSegmentCut(pos);
+			added_stroke->addSegmentCut(pos, viewer);
 		}
 		else if (prev_tool_mode == CUT) {
 			if (!cut_stroke_already_drawn) {
-				added_stroke->addSegmentCut(pos);
+				added_stroke->addSegmentCut(pos, viewer);
 			}
 		}
 	}
@@ -432,24 +431,24 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) {
 			prev_tool_mode = EXTRUDE;
 			if (extrusion_base_already_drawn) {
-				added_stroke = new Stroke(V, F, viewer, next_added_stroke_ID);
+				added_stroke = new Stroke(&V, &F, next_added_stroke_ID);
 				added_stroke->stroke_color = blue;
 				next_added_stroke_ID++;
-				added_stroke->addSegmentExtrusionSilhouette(pos);
+				added_stroke->addSegmentExtrusionSilhouette(pos, viewer);
 			}
 			else {
-				extrusion_base = new Stroke(V, F, viewer, next_added_stroke_ID);
+				extrusion_base = new Stroke(&V, &F, next_added_stroke_ID);
 				extrusion_base->stroke_color = red;
 				next_added_stroke_ID++;
-				extrusion_base->addSegmentExtrusionBase(pos);
+				extrusion_base->addSegmentExtrusionBase(pos, viewer);
 			}
 		}
 		else if (prev_tool_mode == EXTRUDE) {
 			if (extrusion_base_already_drawn) {
-				added_stroke->addSegmentExtrusionSilhouette(pos);
+				added_stroke->addSegmentExtrusionSilhouette(pos, viewer);
 			}
 			else {
-				extrusion_base->addSegmentExtrusionBase(pos);
+				extrusion_base->addSegmentExtrusionBase(pos, viewer);
 			}
 		}
 	}
@@ -509,7 +508,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			draw_should_block = false;
 
 			if (added_stroke->toLoop()) { //Returns false if the stroke only consists of 1 point (user just clicked)
-				added_stroke->generate3DMeshFromStroke(edge_boundary_markers, vertex_is_fixed, V, F);
+				added_stroke->generate3DMeshFromStroke(edge_boundary_markers, vertex_is_fixed, V, F, viewer);
 
 				if (!igl::is_edge_manifold(F)) { //Check if the drawn stroke results in an edge-manifold mesh, otherwise sound a beep and revert
 					sound_error_beep();
@@ -570,15 +569,15 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 			bool success;
 			if (added_stroke->starts_on_mesh && added_stroke->ends_on_mesh && !added_stroke->has_been_outside_mesh) {
-				success = LaplacianRemesh::remesh_open_path(*base_mesh, *added_stroke, replacing_vertex_bindings);
+				success = LaplacianRemesh::remesh_open_path(*base_mesh, *added_stroke, replacing_vertex_bindings, viewer);
 			}
 			else if (!added_stroke->starts_on_mesh && !added_stroke->ends_on_mesh) { //Stroke like a cut stroke (starts and ends off mesh to wrap around)
 			   //Need to remesh like it's a cut but without removing the inside faces (we get 2 loops of boundary vertices that both need to be stitched, so can't use remesh_open_path)
-				added_stroke->prepend_first_point();
-				added_stroke->append_final_point();
+				added_stroke->prepend_first_point(viewer);
+				added_stroke->append_final_point(viewer);
 				added_stroke->toLoop();
 
-				success = LaplacianRemesh::remesh_cutting_path(*base_mesh, *added_stroke, replacing_vertex_bindings);
+				success = LaplacianRemesh::remesh_cutting_path(*base_mesh, *added_stroke, replacing_vertex_bindings, viewer);
 			}
 			else {
 				std::cerr << "An added stroke either needs both the end- & startpoint to be outside of the mesh, or all points to be on the mesh. Please try again. " << std::endl;
@@ -586,7 +585,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			}
 
 			if (!success) {
-				//next_added_stroke_ID--; //Undo ID increment since stroke didn't actually get pushed back
 				prev_tool_mode = NONE;
 				sound_error_beep();
 				viewer.data().set_points(Eigen::MatrixXd(), black); //Will remove the drawn stroke
@@ -614,7 +612,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			}
 
 			for (int i = 0; i < 8; i++) {
-				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary,false);
+				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
 			}
 
 			//Update the stroke positions, will update with resampled stroke points
@@ -651,7 +649,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		}
 		else if (prev_tool_mode == PULL && handleID != -1) {
 			for (int i = 0; i < 20; i++) {
-				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary,false);
+				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
 			}
 
 			for (int i = 0; i < stroke_collection.size(); i++) {
@@ -678,7 +676,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 					return;
 				}
 				int clicked_face = hits[0].id;			
-				bool cut_success = MeshCut::cut(*base_mesh, *added_stroke, cut_surface_path, clicked_face, replacing_vertex_bindings);
+				bool cut_success = MeshCut::cut(*base_mesh, *added_stroke, cut_surface_path, clicked_face, replacing_vertex_bindings, viewer);
 				if (!cut_success) { //Catches the following cases: when the cut removes all mesh vertices/faces, when the first/last cut point aren't correct (face -1 in SurfacePath) or when sorting takes "infinite" time
 					cut_stroke_already_drawn = false;
 					prev_tool_mode = NONE;
@@ -739,8 +737,8 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 					return;
 				}
 
-				added_stroke->prepend_first_point();
-				added_stroke->append_final_point();
+				added_stroke->prepend_first_point(viewer);
+				added_stroke->append_final_point(viewer);
 				added_stroke->toLoop();
 
 				bool success_cut_prepare = MeshCut::cut_prepare(*added_stroke, cut_surface_path);
@@ -809,7 +807,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				}
 
 				for (int i = 0; i < 10; i++) {
-						SurfaceSmoothing::smooth(*base_mesh, dirty_boundary,false);
+						SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
 				}
 
 				//Update the stroke positions after smoothing, also updates resampled stroke points
@@ -871,10 +869,14 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 				extrusion_base_already_drawn = true;
 
-				base_model = extrusion_base->viewer.core.get_model();
+			/*	base_model = extrusion_base->viewer.core.get_model();
 				base_view = extrusion_base->viewer.core.get_view();
 				base_proj = extrusion_base->viewer.core.get_proj();
-				base_viewport = extrusion_base->viewer.core.viewport;
+				base_viewport = extrusion_base->viewer.core.viewport;*/
+				base_model = viewer.core.get_model();
+				base_view = viewer.core.get_view();
+				base_proj = viewer.core.get_proj();
+				base_viewport = viewer.core.viewport;
 
 				draw_all_strokes();
 				draw_extrusion_base(); //Need to draw the extrusion base separately, since it isn't added to the stroke_collection yet.
@@ -991,13 +993,56 @@ void set_floor_mesh(Viewer& viewer, Eigen::MatrixXd& V_floor, Eigen::MatrixXi& F
 	viewer.data().set_texture(texR, texG, texB);
 }
 
+bool load_scene(std::string fname) {
+	igl::deserialize(appState, "AppState", fname.c_str());
+
+	stroke_collection.resize(appState.stroke_collection_size);
+	for (int i = 0; i < appState.stroke_collection_size; i++) {
+		igl::deserialize(stroke_collection[i], "obj"+ std::to_string(i), fname.c_str());
+		stroke_collection[i].setV(&V);
+		stroke_collection[i].setF(&F);
+	}
+	
+
+	edge_boundary_markers = appState.edge_boundary_markers;
+	vertex_is_fixed = appState.vertex_is_fixed;
+	sharp_edge = appState.sharp_edge;
+	new_mapped_indices = appState.new_mapped_indices;
+	replacing_vertex_bindings = appState.replacing_vertex_bindings;
+	draw_all_strokes();
+
+	return true;
+}
+
+bool save_scene(igl::opengl::glfw::Viewer& viewer, std::string fname) {
+	viewer.save_scene(fname);
+	igl::serialize(appState, "AppState", fname.c_str());
+
+	for (int i = 0; i < stroke_collection.size(); i++) {
+		igl::serialize(stroke_collection[i], "obj" + std::to_string(i), fname.c_str(), false);
+	}
+	return true;
+}
+
 bool callback_load_scene(Viewer& viewer, std::string cur_dir) {
 	viewer.data().clear();
-	viewer.load_scene();
-	//TODO: do deserialize stuff
-
+	std::string fname = igl::file_dialog_open();
+	if (fname.length() == 0) {
+		//TODO: file selection went wrong (user pressed cancel?) -> Handle nicely
+	}
+	viewer.load_scene(fname);
 	V = viewer.data().V;
 	F = viewer.data().F;
+
+	load_scene(fname);
+
+
+
+	base_mesh = new Mesh(V, F, edge_boundary_markers, vertex_is_fixed, new_mapped_indices, sharp_edge, 0);
+	(*base_mesh).patches.clear();
+	(*base_mesh).face_patch_map.clear();
+	(*base_mesh).patches = Patch::init_patches(*base_mesh);
+
 	viewer.data().set_mesh(V, F);
 	Eigen::MatrixXd N_corners;
 	igl::per_corner_normals(V, F, 50, N_corners);
@@ -1011,7 +1056,11 @@ bool callback_load_scene(Viewer& viewer, std::string filename, std::string cur_d
 }
 
 bool callback_save_scene(Viewer& viewer, std::string cur_dir) {
-	viewer.save_scene();
+	std::string fname = igl::file_dialog_save();
+	if (fname.length() == 0) {
+		//TODO: file selection went wrong (user pressed cancel?) -> Handle nicely
+	}
+	save_scene(viewer, fname);
 	return true;
 }
 
@@ -1052,7 +1101,7 @@ void reset_trackers() {
 
 int main(int argc, char *argv[]) {
 	//Init stroke selector
-	added_stroke = new Stroke(V, F, viewer, 1);
+	added_stroke = new Stroke(&V, &F, 1);
 	base_mesh = new Mesh(V, F, edge_boundary_markers, vertex_is_fixed, new_mapped_indices, sharp_edge, 0);
 
 	V_floor.row(0) << -10, 0, -10;
@@ -1296,7 +1345,6 @@ int main(int argc, char *argv[]) {
 		ImGui::PopID();
 		ImGui::SameLine();
 		ImGui::PushID(1);
-		//ImGui::SetCursorPos(ImVec2(0, 345));
 		if (ImGui::ImageButton(im_texID_pull, icon_size, uv_start, uv_end, frame_padding, icon_background_color)) {
 			reset_trackers();
 			selected_tool_mode = PULL;
@@ -1310,7 +1358,6 @@ int main(int argc, char *argv[]) {
 		ImGui::PopID();
 		ImGui::SameLine();
 		ImGui::PushID(2);
-		//ImGui::SetCursorPos(ImVec2(379, 379));
 		if (ImGui::ImageButton(im_texID_add, icon_size, uv_start, uv_end, frame_padding, icon_background_color)) {
 			reset_trackers();
 			selected_tool_mode = ADD;
@@ -1337,7 +1384,6 @@ int main(int argc, char *argv[]) {
 		ImGui::PopID();
 		ImGui::SameLine();
 		ImGui::PushID(4);
-		//ImGui::SetCursorPos(ImVec2(0, 345));
 		if (ImGui::ImageButton(im_texID_extrude, icon_size, uv_start, uv_end, frame_padding, icon_background_color)) {
 			reset_trackers();
 			selected_tool_mode = EXTRUDE;
@@ -1351,11 +1397,9 @@ int main(int argc, char *argv[]) {
 		ImGui::PopID();
 		ImGui::SameLine();
 		ImGui::PushID(5);
-		//ImGui::SetCursorPos(ImVec2(379, 379));
 		if (ImGui::ImageButton(im_texID_remove, icon_size, uv_start, uv_end, frame_padding, icon_background_color)) {
 			reset_trackers();
-			//selected_tool_mode = REMOVE;
-			selected_tool_mode = CHANGE;
+			selected_tool_mode = REMOVE;
 			im_texID_cur = im_texID_remove;
 			viewer.selected_data_index = 2;
 			viewer.data().show_laser = true;
@@ -1367,25 +1411,47 @@ int main(int argc, char *argv[]) {
 
 		ImGui::PushID(6);
 		if (ImGui::ImageButton(im_texID_save, icon_size, uv_start, uv_end, frame_padding, icon_background_color)) {
+			reset_trackers();
+			appState.init(vertex_is_fixed, edge_boundary_markers, sharp_edge, new_mapped_indices, replacing_vertex_bindings, stroke_collection.size());
+			selected_tool_mode = NONE;
 			std::cerr << "Please specify how you want to save the scene. " << std::endl;
 			callback_save_scene(viewer, cur_dir);
+			im_texID_cur = im_texID_save;
+			viewer.selected_data_index = 2;
+			viewer.data().show_laser = true;
+			prev_laser_show = viewer.data().show_laser;
+			viewer.selected_data_index = 1;
+			menu_closed();
 		}
 		ImGui::PopID();
 		ImGui::SameLine();
 		ImGui::PushID(7);
-		//ImGui::SetCursorPos(ImVec2(0, 345));
 		if (ImGui::ImageButton(im_texID_load, icon_size, uv_start, uv_end, frame_padding, icon_background_color)) {
+			viewer.oculusVR.request_recenter();
+			reset_trackers();
+			selected_tool_mode = NONE;
 			std::cerr << "Please select the file you want to load a scene from. " << std::endl;
 			callback_load_scene(viewer, cur_dir);
-
+			dirty_boundary = true;
+			im_texID_cur = im_texID_load;
+			viewer.selected_data_index = 2;
+			viewer.data().show_laser = true;
+			prev_laser_show = viewer.data().show_laser;
+			viewer.selected_data_index = 1;
+			menu_closed();
 		}
 		ImGui::PopID();
 		ImGui::SameLine();
 		ImGui::PushID(8);
-		//ImGui::SetCursorPos(ImVec2(379, 379));
 		if (ImGui::ImageButton(im_texID_change, icon_size, uv_start, uv_end, frame_padding, icon_background_color)) {
-			
-
+			reset_trackers();
+			selected_tool_mode = CHANGE;
+			im_texID_cur = im_texID_change;
+			viewer.selected_data_index = 2;
+			viewer.data().show_laser = true;
+			prev_laser_show = viewer.data().show_laser;
+			viewer.selected_data_index = 1;
+			menu_closed();
 		}
 		ImGui::PopID();
 		ImGui::End();
