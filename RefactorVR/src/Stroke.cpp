@@ -11,14 +11,12 @@
 
 #include <igl/per_vertex_normals.h>
 #include <igl/slice.h>
-#include <igl/dijkstra.h>
 #include "Plane.h"
 #include <ctime>
 using namespace igl;
 using namespace std;
 
-//std::chrono::steady_clock::time_point _time2, _time1;
-double min_inter_point_distance = 2.0*0.00005625;
+double min_inter_point_distance = 0.00005625;
 Eigen::RowVector3d red_color(1, 0, 0);
 Eigen::RowVector3d blue_color(0, 0, 1);
 
@@ -120,7 +118,6 @@ bool Stroke::addSegment(Eigen::Vector3f& pos, igl::opengl::glfw::Viewer &viewer)
 	if (stroke3DPoints.rows() > 10 && (stroke3DPoints.bottomRows(1) - stroke3DPoints.row(0)).squaredNorm() < (stroke3DPoints.row(1) - stroke3DPoints.row(0)).squaredNorm()*8.0) { //Show the closing line if the current point is close enough the first point (and we have already at least 10 samples)
 		viewer.data().add_edges(stroke3DPoints.bottomRows(1), stroke3DPoints.row(0), blue_color);
 	}
-	//_time1 = std::chrono::high_resolution_clock::now();
 	return false;
 }
 

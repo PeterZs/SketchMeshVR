@@ -23,7 +23,7 @@ Eigen::MatrixX3d SurfaceSmoothing::vertex_normals(0, 3);
 std::vector<Eigen::SparseLU<Eigen::SparseMatrix<double>>*> solver1_array;
 std::vector<Eigen::SparseLU<Eigen::SparseMatrix<double>>*> solver2_array;
 
-Eigen::VectorXd initial_curvature;
+Eigen::VectorXd initial_curvature, average_edge_lengths;
 Eigen::VectorXd SurfaceSmoothing::curvatures(ptrdiff_t(0));
 int ID = 0, iteration = 0;
 int no_boundary_vertices, no_boundary_adjacent_vertices;
@@ -107,7 +107,6 @@ void SurfaceSmoothing::smooth_main(Mesh &m, bool BOUNDARY_IS_DIRTY) {
 		no_boundary_adjacent_vertices = 0;
 		for(int i = 0; i < m.V.rows(); i++) {
 			if (m.vertex_is_fixed[i] > 0) {
-
 				for(int j = 0; j < neighbors[i].size(); j++) {
 					if (m.vertex_is_fixed[neighbors[i][j]] == 0) {
 						no_boundary_adjacent_vertices++;
@@ -115,6 +114,16 @@ void SurfaceSmoothing::smooth_main(Mesh &m, bool BOUNDARY_IS_DIRTY) {
 				}
 			}
 		}
+	}
+
+	double total;
+	average_edge_lengths.resize(m.V.rows());
+	for (int i = 0; i < m.V.rows(); i++) {
+		total = 0.0;
+		for (int j = 0; j < neighbors[i].size(); j++) {
+			total += (m.V.row(i) - m.V.row(neighbors[i][j])).norm();
+		}
+		average_edge_lengths[i] = total / neighbors[i].size();
 	}
 	//std::cout << "get to fiwawe" << std::endl;
 
@@ -238,6 +247,9 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 		initial_curvature = compute_initial_curvature_test(m);
     }else{
         current_curvatures = get_curvatures(m);
+		for (int i = 0; i < current_curvatures.rows(); i++) {
+			current_curvatures[i] /= (average_edge_lengths[i] * average_edge_lengths[i]); //TODO: remove this devision?
+		}
     }
 
 	Eigen::VectorXd b = Eigen::VectorXd::Zero(m.V.rows()*2);
@@ -297,6 +309,11 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_edge_lengths(Mesh &m, Eigen::Ma
 }
 
 void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eigen::VectorXd &target_LMs, Eigen::VectorXd &target_edge_lengths, bool BOUNDARY_IS_DIRTY) {
+	Eigen::MatrixXd target_laplacians(m.V.rows(), 3);
+	for (int i = 0; i < target_LMs.rows(); i++) {
+		target_laplacians.row(i) = vertex_normals.row(i) * target_LMs[i] * (average_edge_lengths[i] * average_edge_lengths[i]);
+	}
+	
 	Eigen::SparseMatrix<double> A = get_precompute_matrix_for_positions(m);
     Eigen::SparseMatrix<double> AT = get_AT_for_positions(m);
 	Eigen::VectorXd laplacian_weights = get_precomputed_laplacian_weights(m);
@@ -349,8 +366,8 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 	int count = 0, count2 = 0;
 	Eigen::Vector3d delta;
 	for(int i = 0; i < m.V.rows(); i++) {
-        delta = target_LMs[i] * vertex_normals.row(i);
-
+      //  delta = target_LMs[i] * vertex_normals.row(i);
+		delta = target_laplacians.row(i);
 		bx[i] = delta(0) * laplacian_weights[i];
 		by[i] = delta(1) * laplacian_weights[i];
 		bz[i] = delta(2) * laplacian_weights[i];
@@ -409,8 +426,9 @@ Eigen::VectorXd SurfaceSmoothing::get_curvatures(Mesh &m) {
 	Eigen::MatrixX3d laplacians = compute_vertex_laplacians(m);
     int sign;
 	for (int i = 0; i < m.V.rows(); i++) {
-		sign = (laplacians.row(i).dot(vertex_normals.row(i).transpose()) > 0) ? 1 : -1;
-		curvatures[i] = laplacians.row(i).norm()*sign;
+	//	sign = (laplacians.row(i).dot(vertex_normals.row(i).transpose()) > 0) ? 1 : -1;
+		//curvatures[i] = laplacians.row(i).norm()*sign;
+		curvatures[i] = laplacians.row(i).dot(vertex_normals.row(i).transpose()); //TODO: CHECK HERE
 	}
 	return curvatures;
 }

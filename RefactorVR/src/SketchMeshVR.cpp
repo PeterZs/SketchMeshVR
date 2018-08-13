@@ -16,6 +16,7 @@
 #include <iostream>
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/per_corner_normals.h>
+#include <igl/upsample.h>
 
 #include <igl/opengl/glfw/imgui/ImGuiMenu.h>
 #include <igl/opengl/glfw/imgui/ImGuiHelpers.h>
@@ -538,6 +539,11 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				}
 
 				stroke_collection.back().update_Positions(V, true);
+			//	Eigen::MatrixXd newV;
+			//	Eigen::MatrixXi newF;
+			//	igl::upsample(V, F, newV, newF);
+			//	V = newV;
+			//	F = newF;
 				viewer.data().clear();
 				viewer.data().set_mesh(V, F);
 				Eigen::MatrixXd N_corners;
@@ -1463,7 +1469,6 @@ int main(int argc, char *argv[]) {
 	viewer.oculusVR.callback_menu_closed = menu_closed;
 	viewer.data().point_size = 15;
 	viewer.data().show_lines = true; //TODO change
-	viewer.data().show_vertid = true;
 	viewer.launch_oculus();
 }
 
