@@ -324,6 +324,18 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		}
 	}
 
+	//Catches case where a surface path enters and exits a triangle through the same edge. This triangle will be marked a dirty face but one of its vertices won't be added to the outer boundary vertices, and thus won't be stitched -> leads to holes.
+	for (int i = 0; i < dirty_face.size(); i++) {
+		if (dirty_face[i]) {
+			for (int j = 0; j < 3; j++) {
+				if (dirty_vertices[m.F(i, j)] == 0) {
+					dirty_vertices[m.F(i, j)] = 1;
+					outer_boundary_vertices.push_back(m.F(i, j)); 
+				}
+			}					
+		}
+	}
+
 	if (remove_inside_faces) {
 		for (int i = 0; i < m.V.rows(); i++) {
 			if (dirty_vertices[i] < 0) {
@@ -335,7 +347,6 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 			}
 		}
 	}
-
 
 	//Revert dirty/clean faces and vertices in case the user clicked on the "clean" part when cutting
 	if (cut_clicked_face >= 0 && !dirty_face[cut_clicked_face] && remove_inside_faces) {
@@ -406,6 +417,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	igl::slice(m.F, row_idx, col_idx, tmp_F); //Keep only the clean faces in the mesh
 	m.F = tmp_F;
 
+	
 	//NOTE: Output from sort_boundary_vertices is not necessarily counter-clockwise
 	try {
 		outer_boundary_vertices = sort_boundary_vertices(path[0].get_vertex(), outer_boundary_vertices, m);
@@ -488,7 +500,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 
 	Eigen::MatrixXd resampled_path = CleanStroke3D::resample_by_length_with_fixes(path, unit_length);
 	Eigen::Matrix4f modelview = view * model;
-	if (!is_counter_clockwise_boundaries(resampled_path, modelview, proj, viewport, mean_viewpoint_inner, true)) {
+	if (!is_counter_clockwise_boundaries(resampled_path, modelview, proj, viewport, mean_viewpoint_inner, !is_front_loop)) {
 		resampled_path = resampled_path.colwise().reverse().eval();
 	}
 
@@ -533,8 +545,8 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	if (!is_counter_clockwise_boundaries(tmp_V, modelview, proj, viewport, mean_viewpoint_inner, !is_front_loop)) {
 		reverse(outer_boundary_vertices.begin(), outer_boundary_vertices.end());
 	}
-
-	stitch(path_vertices, outer_boundary_vertices, m, false); //TODO: need to fix that stitching sometimes fails
+	
+	stitch(path_vertices, outer_boundary_vertices, m, false);
 	if (!remove_inside_faces) {
 		for (int i = 0; i < inner_boundary_vertices.size(); i++) {
 			inner_boundary_vertices[i] = m.new_mapped_indices[inner_boundary_vertices[i]];
@@ -694,7 +706,7 @@ vector<int> LaplacianRemesh::sort_boundary_vertices(Eigen::Vector3d start_vertex
 				tmp1 = EV.col(0).cwiseEqual(min_idx).cast<int>();
 				tmp2 = EV.col(1).cwiseEqual(max_idx).cast<int>();
 				max_val = (tmp1 + tmp2).maxCoeff(&equal_pos); //Tmp1 and tmp2 will contain a 1 on the positions where they equal the min and max_idx. When adding them, we'll get 2 on the row that contains both of them
-				if (max_val == 2 && EF(equal_pos, v_pos) == -1) { //An edge between these vertices still exists and has a NULL face on the correct side of the edge, so proceed to adjacent vertex
+				if (max_val == 2 && EF(equal_pos, v_pos) == -1 && EF(equal_pos, !v_pos) != -1) { //An edge between these vertices still exists and has a NULL face on the correct side of the edge (but not on both sides), so proceed to adjacent vertex
 					prev = v;
 					v = VV[v][i];
 					disconnected_option_available = false; //Remove the disconnected edge option

@@ -379,7 +379,6 @@ void MeshExtrusion::update_edge_indicators(Mesh& m, Eigen::MatrixXi& edges_to_up
 
 	int start, end, equal_pos;
 	Eigen::VectorXi col1Equals, col2Equals;
-	std::cout << "Test one: " << std::endl;
 	for (int i = 0; i < edges_to_update.rows(); i++) {
 		/*start = m.new_mapped_indices(edges_to_update(i, 0));
 		end = m.new_mapped_indices(edges_to_update(i, 1));
@@ -395,39 +394,8 @@ void MeshExtrusion::update_edge_indicators(Mesh& m, Eigen::MatrixXi& edges_to_up
 
 		m.edge_boundary_markers[equal_pos] = edges_to_update(i, 2);
 		m.sharp_edge[equal_pos] = edges_to_update(i, 3);
-		std::cout << EV.row(equal_pos) << "   " << edges_to_update(i, 2) << "    " << edges_to_update(i, 3) << std::endl;
 	}
-	std::cout << std::endl;
 }
-
-/** Adds new edges (already with new vertex indices) after the extrusion's interior has been meshed. Does not reset previous indicators (this is done by update_edge_indicators). **/
-/*void MeshExtrusion::update_added_edges_indicators(Mesh& m, Eigen::MatrixXi& edges_to_update) {
-	if (!igl::is_edge_manifold(m.F)) {
-		throw - 1;
-		return;
-	}
-	Eigen::MatrixXi EV, FE, EF;
-	igl::edge_topology(m.V, m.F, EV, FE, EF);
-	m.sharp_edge.conservativeResize(EV.rows());
-	m.edge_boundary_markers.conservativeResize(EV.rows());
-	std::cout << "Test two: " << std::endl;
-	int start, end, equal_pos;
-	Eigen::VectorXi col1Equals, col2Equals;
-	for (int i = 0; i < edges_to_update.rows(); i++) {
-		start = edges_to_update(i, 0);
-		end = edges_to_update(i, 1);
-
-		col1Equals = EV.col(0).cwiseEqual(min(start, end)).cast<int>();
-		col2Equals = EV.col(1).cwiseEqual(max(start, end)).cast<int>();
-		(col1Equals + col2Equals).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
-
-		m.edge_boundary_markers[equal_pos] = edges_to_update(i, 2);
-		m.sharp_edge[equal_pos] = edges_to_update(i, 3);
-		std::cout << EV.row(equal_pos) << "   " << edges_to_update(i, 2) << "    " << edges_to_update(i, 3) << std::endl;
-
-	}
-	std::cout << std::endl;
-}*/
 
 /** Updates the old face indices with the new indexing and inserts new faces that are made in triangulation. **/
 void MeshExtrusion::update_face_indices(Mesh& m, Eigen::MatrixXi& F2, vector<int> sil_original_indices, vector<int> loop_base_original_indices, int nr_silhouette_vert, int size_before_gen, int loop2D_size) {

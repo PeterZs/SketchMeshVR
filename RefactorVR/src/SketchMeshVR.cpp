@@ -1463,6 +1463,7 @@ int main(int argc, char *argv[]) {
 	viewer.oculusVR.callback_menu_closed = menu_closed;
 	viewer.data().point_size = 15;
 	viewer.data().show_lines = true; //TODO change
+	viewer.data().show_vertid = true;
 	viewer.launch_oculus();
 }
 
