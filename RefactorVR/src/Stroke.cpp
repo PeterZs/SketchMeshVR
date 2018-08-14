@@ -398,25 +398,6 @@ void Stroke::append_final_point(igl::opengl::glfw::Viewer &viewer) {
 	faces_hit.row(faces_hit.rows() - 1) << -1, -1;
 }
 
-/*void Stroke::strokeReset() {
-	stroke2DPoints.resize(1, 2);
-	stroke2DPoints.setZero();
-	stroke3DPoints.resize(1, 3);
-	stroke3DPoints.setZero();
-	stroke3DPointsBack.resize(1, 3);
-	stroke3DPointsBack.setZero();
-	stroke_edges.resize(0, 2);
-	faces_hit.resize(1, 2);
-	faces_hit.setZero();
-	hand_pos_at_draw.resize(1, 3);
-	hand_pos_at_draw.setZero();
-	dep.resize(1);
-	dep.setZero();
-	_time1 = std::chrono::high_resolution_clock::now();
-	closest_vert_bindings.clear();
-	has_been_reversed = false;
-}
-*/
 bool Stroke::toLoop() {
 	if (stroke3DPoints.rows() > 2) { //Don't do anything if we have only 1 line segment
 		stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
@@ -713,7 +694,7 @@ void Stroke::update_Positions(Eigen::MatrixXd V, bool structure_changed) {
 
 /** Remaps the stroke's vertex bindings after the mesh topology has changed. If a stroke becomes non-continous (can only happen to strokes that were non-looped at the start and that did not have their first and/or last point removed) the stroke will be removed and its boundary_vertex_markers unset. Looped strokes always stay continuous, since we can ony remove one continuous piece of them.
 	Note that this method does not update the stroke3DPoints, use update_Positions() for that. **/
-bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::VectorXi& edge_boundary_markers, Eigen::VectorXi& sharp_edge, Eigen::VectorXi& vertex_is_fixed, Eigen::MatrixXi& replacing_vertex_bindings) {
+bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::MatrixXi& replacing_vertex_bindings) {
 	vector<int> new_bindings;
 	int first_included_after_remove = -1;
 	bool points_were_removed = false, no_tracked_point_yet = true, stays_continuous = false, originally_is_loop = is_loop;

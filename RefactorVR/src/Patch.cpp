@@ -53,9 +53,6 @@ void Patch::create_mesh_structure(Mesh& m, Eigen::VectorXi& faces) {
 			int edge = FE(faces[i], j);
 			get_patch_edge(edge, patch_edge_is_init, patch_vertex_is_init, faces[i], patch_vertices, m.sharp_edge, tmp_sharp_edge, m.edge_boundary_markers, tmp_edge_boundary_markers, m.V, m.vertex_is_fixed, m.new_mapped_indices, mesh_to_patch_indices);
 		}
-
-		//parent_faces.conservativeResize(parent_faces.rows() + 1, Eigen::NoChange);
-	//	parent_faces[i] = faces[i];
 	}
 
 	for (int i = 0; i < faces.rows(); i++) {

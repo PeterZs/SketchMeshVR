@@ -17,7 +17,7 @@ void LaplacianCurveEdit::setup_for_update_curve(std::vector<int> vertices_, std:
 	fixed_edges = fixed_edges_;
 	vertex_triplets = vertex_triplets_;
 	edge_triplets = edge_triplets_;
-	//A.resize(edges.rows() * 3 + edge_triplets.rows() * 9 + fixed_vertices.size() * 3 + fixed_edges.size() * 3, vertices.size() * 3 + edges.rows() * 3);
+
 	B.resize(edges.rows() * 3 + edge_triplets.rows() * 9 + fixed_vertices.size() * 3 + fixed_edges.size() * 3);
 	Rot.resize(edges.rows());
 	original_L0.resize(edges.rows(), 3);
@@ -39,9 +39,6 @@ void LaplacianCurveEdit::setup_for_update_curve(std::vector<int> vertices_, std:
 	is_fixed.setZero();
 	for (int i = 0; i < fixed_vertices.size(); i++) { //Create a copy with local indexing for fixed_vertices, and also keep the global indexing
 		auto loc = std::find(vertices.begin(), vertices.end(), fixed_vertices[i]);
-		if (loc == vertices.end()) {
-			std::cout << "Something wrong" << std::endl;
-		}
 		idx = distance(vertices.begin(), loc);
 		fixed_vertices_local[i] = idx;
 		is_fixed[idx] = 1;
@@ -103,12 +100,6 @@ void LaplacianCurveEdit::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
 	for (int i = 0; i < edges.rows(); i++) { //Laplacian of the position: v1' - v0' = dR * R * L(v1 - v0)
 		v0 = vertex_global_to_local.at(edges(i, 0));
 		v1 = vertex_global_to_local.at(edges(i, 1));
-		if (vertex_global_to_local.at(edges(i, 0)) - vertex_global_to_local.find(edges(i, 0))->second > 0) {
-			std::cout << "wrong indexing4" << std::endl;
-		}
-		if (vertex_global_to_local.at(edges(i, 1)) - vertex_global_to_local.find(edges(i, 1))->second > 0) {
-			std::cout << "wrong indexing5" << std::endl;
-		}
 
 		tripletList.push_back(T(i * 3 + 0, v0 * 3, -1)); //L0
 		tripletList.push_back(T(i * 3 + 0, v1 * 3, 1)); //L0
@@ -197,10 +188,9 @@ void LaplacianCurveEdit::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
 	A = Eigen::SparseMatrix<double>(edges.rows() * 3 + edge_triplets.rows() * 9 + fixed_vertices_local.size() * 3 + fixed_edges.size() * 3, vertices.size() *3 + edges.rows() * 3);
 	A.setFromTriplets(tripletList.begin(), tripletList.end());
 	Eigen::SparseMatrix<double> A_before = A;
-	//A.prune(0.0);
+	A.prune(0.0);
 	//A.prune([](int i, int j, double val) {return val != 0.0; });//Will prune everything that is 0 but keep the rest
 	Eigen::SparseMatrix<double> AT = A.transpose();
-//	solverPosRot.compute(AT*A);
 	if (curve_structure_was_updated) {
 		solverPosRot.analyzePattern(AT*A);
 		curve_structure_was_updated = false;

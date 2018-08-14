@@ -17,11 +17,6 @@ bool MeshCut::cut_prepare(Stroke& stroke, SurfacePath& surface_path) {
 }
 
 bool MeshCut::cut(Mesh& m, Stroke& stroke, SurfacePath& surface_path, int clicked_face, Eigen::MatrixXi& replacing_vertex_bindings, igl::opengl::glfw::Viewer &viewer){
-	/*SurfacePath surface_path;
-	bool success = surface_path.create_from_stroke_cut(stroke); //Prepares the drawn stroke (inserts extra points at the edges that it crosses)
-	if (!success) {
-		return false;
-	}*/
 	bool success = cut_main(m, surface_path, stroke, clicked_face, replacing_vertex_bindings, viewer);
 	if (!success) {
 		return false;

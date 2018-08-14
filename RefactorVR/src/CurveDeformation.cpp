@@ -89,11 +89,7 @@ bool CurveDeformation::update_ROI_test(double drag_size, Eigen::MatrixXd& V, Eig
 	}
 	prev_range_size = vertices_in_range.size();
 	sort_by_distance(vertices_in_range);
-/*	std::cout << "Vertices in range: ";
-	for (int i = 0; i < vertices_in_range.size(); i++) {
-		std::cout << vertices_in_range[i] << "   ";
-	}
-	std::cout << std::endl;*/
+
 	//Collect vertices in each each curve and construct cuve hierarchy
 	Eigen::VectorXi edge_consumed(EV.rows()), fixed(V.rows());
 	edge_consumed.setZero();

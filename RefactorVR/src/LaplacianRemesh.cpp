@@ -201,8 +201,7 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke, Eigen:
 		reverse(outer_boundary_vertices.begin(), outer_boundary_vertices.end());
 	}
 
-	stitch(path_vertices, outer_boundary_vertices, m, false); //TODO: need to fix that stitching sometimes fails
-
+	stitch(path_vertices, outer_boundary_vertices, m, false); 
 
 	Eigen::MatrixXi new_edge_indicators = igl::cat(1, original_sharp_or_boundary_edges, replacing_edges);
 	new_edge_indicators = igl::cat(1, new_edge_indicators, added_edges);
@@ -493,7 +492,7 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	}
 
 	double unit_length = (is_front_loop) ? compute_average_distance_between_onPolygon_vertices(path) : compute_average_length_of_crossing_edges(path, startV, startEV);
-	if (CleanStroke3D::get_stroke_length(path, 0, path.size() - 1) / unit_length < 12) { //We'd end up with less than 12 samples
+	if (CleanStroke3D::get_stroke_length(path, 0, path.size() - 1) / unit_length < 12) {
 		unit_length = CleanStroke3D::get_stroke_length(path, 0, path.size() - 1) / 12; //Adapt length such that we get 12 samples
 	}
 

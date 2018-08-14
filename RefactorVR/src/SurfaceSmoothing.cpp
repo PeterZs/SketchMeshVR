@@ -206,23 +206,6 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 		set_precompute_matrix_for_LM_and_edges(m, A);
         set_AT_for_LM_and_edges(m, AT);
 	}
-	/*else if(BOUNDARY_IS_DIRTY && iteration == 0) {
-		int nr_V = m.V.rows();
-		A.prune([nr_V](int i, int j, float) {return i < nr_V; }); //Keeps the first #V rows (which contains L, which didn't change) and prunes the rest
-		A.conservativeResize(m.V.rows() * 2, m.V.rows());
-		for(int i = 0; i < m.V.rows(); i++) {
-			if (m.vertex_is_fixed[i] > 0) { //Constrain only the current boundary in the first iteration
-				A.insert(m.V.rows() + i, i) = 1;
-			//	A.coeffRef(m.V.rows() + i, i) = 1; //For target LM'/edge length'
-			}
-		}
-		A.prune(0.0);
-		AT = A.transpose();
-		(*solver1_array[m.ID - 1]).compute(AT*A); //Take ID-1 because ID 0 is reserved for the basemesh and patches start from 1
-
-		set_precompute_matrix_for_LM_and_edges(m, A);
-		set_AT_for_LM_and_edges(m, AT);
-	}*/
 	
 	if(iteration == 1) { //Constrain all vertices after the first iteration
 		std::vector<T> tripletList;
@@ -248,7 +231,7 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
     }else{
         current_curvatures = get_curvatures(m);
 		for (int i = 0; i < current_curvatures.rows(); i++) {
-			current_curvatures[i] /= (average_edge_lengths[i] * average_edge_lengths[i]); //TODO: remove this devision?
+			current_curvatures[i] /= (average_edge_lengths[i] * average_edge_lengths[i]);
 		}
     }
 
@@ -366,7 +349,6 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 	int count = 0, count2 = 0;
 	Eigen::Vector3d delta;
 	for(int i = 0; i < m.V.rows(); i++) {
-      //  delta = target_LMs[i] * vertex_normals.row(i);
 		delta = target_laplacians.row(i);
 		bx[i] = delta(0) * laplacian_weights[i];
 		by[i] = delta(1) * laplacian_weights[i];
@@ -426,9 +408,7 @@ Eigen::VectorXd SurfaceSmoothing::get_curvatures(Mesh &m) {
 	Eigen::MatrixX3d laplacians = compute_vertex_laplacians(m);
     int sign;
 	for (int i = 0; i < m.V.rows(); i++) {
-	//	sign = (laplacians.row(i).dot(vertex_normals.row(i).transpose()) > 0) ? 1 : -1;
-		//curvatures[i] = laplacians.row(i).norm()*sign;
-		curvatures[i] = laplacians.row(i).dot(vertex_normals.row(i).transpose()); //TODO: CHECK HERE
+		curvatures[i] = laplacians.row(i).dot(vertex_normals.row(i).transpose());
 	}
 	return curvatures;
 }

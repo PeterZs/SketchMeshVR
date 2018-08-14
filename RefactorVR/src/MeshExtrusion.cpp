@@ -172,7 +172,6 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 
 
     //Update tracking variables with new vertex indices
-	//post_extrude_main_update_points(stroke, silhouette_vertices); //TODO: check that this now works
 	post_extrude_main_update_bindings(base, surface_path);
 
 	Eigen::MatrixXi new_edge_indicators = original_sharp_or_boundary_edges;
@@ -282,7 +281,7 @@ void MeshExtrusion::generate_mesh(Mesh& m, Eigen::MatrixXd loop3D, Eigen::Vector
 			m.V.conservativeResize(m.V.rows() + 1, Eigen::NoChange);
 			m.V.row(m.V.rows() - 1) = vert;
 			m.vertex_is_fixed.conservativeResize(m.vertex_is_fixed.rows() + 1);
-			m.vertex_is_fixed(m.vertex_is_fixed.rows() - 1) = 0; //Interior mesh vertex, so non-fixed
+			m.vertex_is_fixed(m.vertex_is_fixed.rows() - 1) = 0;
 		}
 	}
 	update_face_indices(m, F2, sil_original_indices, loop_base_original_indices, nr_silhouette_vert, size_before_gen, loop2D.rows());
@@ -380,11 +379,6 @@ void MeshExtrusion::update_edge_indicators(Mesh& m, Eigen::MatrixXi& edges_to_up
 	int start, end, equal_pos;
 	Eigen::VectorXi col1Equals, col2Equals;
 	for (int i = 0; i < edges_to_update.rows(); i++) {
-		/*start = m.new_mapped_indices(edges_to_update(i, 0));
-		end = m.new_mapped_indices(edges_to_update(i, 1));
-		if (start == -1 || end == -1) { //Edge no longer exists
-			continue;
-		}*/
 		start = edges_to_update(i, 0);
 		end = edges_to_update(i, 1); //TODO: check that this indeeds work here. Reasoning is that the only edges that get added are between higher indexed vertices or between existing & higher indexed vertices, so they show up lower in EV (and our structure of existing markers won't change, just get elongated)
 
