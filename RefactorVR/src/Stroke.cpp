@@ -799,7 +799,11 @@ void Stroke::switch_stroke_edges_type(Eigen::VectorXi& sharp_edge) {
 }
 
 //Only works for strokes that have valid stroke2DPoints (e.g. cut, extrusion base and extrusion silhouette strokes). Naive implementation in O(n^2)
-bool Stroke::has_self_intersection() {
+bool Stroke::has_self_intersection(bool make_looped) {
+	if (make_looped) {
+		stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
+		stroke2DPoints.bottomRows(1) = stroke2DPoints.row(0);
+	}
 	Eigen::RowVector2d p1, p2, p3, p4;
 	for (int i = 0; i < stroke2DPoints.rows() - 1; i++) {
 		p1 = stroke2DPoints.row(i);
@@ -811,6 +815,10 @@ bool Stroke::has_self_intersection() {
 				return true;
 			}
 		}
+	}
+
+	if (make_looped) {
+		stroke2DPoints = stroke2DPoints.topRows(stroke2DPoints.rows() - 1);
 	}
 	return false;
 }

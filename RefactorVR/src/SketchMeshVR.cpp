@@ -110,6 +110,15 @@ Eigen::RowVector3d blue(0, 0, 1);
 Eigen::RowVector3d laser_end_point;
 bool prev_laser_show;
 
+
+void sound_error_beep() {
+#ifdef _WIN32
+	Beep(500, 200);
+#else
+	beep();
+#endif		
+}
+
 void draw_all_strokes() {
 	viewer.data().set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), red); //Clear the non-original stroke edges
 	Eigen::MatrixXd added_points;
@@ -166,12 +175,12 @@ void handle_failed_cut() {
 	viewer.update_screen_while_computing = false;
 }
 
-void handle_failed_extrusion_base() {
+void handle_failed_extrusion_base(bool hold_back) {
 	sound_error_beep();
 	prev_tool_mode = NONE;
 	draw_all_strokes(); //Removes the drawn base stroke
 	Eigen::MatrixXd drawn_points = extrusion_base->get3DPoints();
-	int nr_edges = drawn_points.rows(); //TODO: Have to add -1 here?
+	int nr_edges = drawn_points.rows() - hold_back; //TODO: Have to add -1 here?
 	viewer.data().add_edges(drawn_points.topRows(nr_edges), drawn_points.middleRows(1, nr_edges), black); //Display the stroke in black to show that it went wrong
 	viewer.update_screen_while_computing = false;
 }
@@ -232,14 +241,6 @@ void reset_before_draw() {
 	viewer.data().clear();
 	stroke_collection.clear();
 	next_added_stroke_ID = 2;
-}
-
-void sound_error_beep() {
-#ifdef _WIN32
-	Beep(500, 200);
-#else
-	beep();
-#endif		
 }
 
 void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
@@ -629,7 +630,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 			int nr_removed = 0, original_collection_size = stroke_collection.size();
 			for (int i = 0; i < original_collection_size - 1; i++) { //Don't update the added stroke, as this is done inside the remeshing already
-				if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed, replacing_vertex_bindings)) { //Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist
+				if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, replacing_vertex_bindings)) { //Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist
 					stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
 					nr_removed++;
 					dirty_boundary = true;
@@ -723,7 +724,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 				int nr_removed = 0, original_collection_size = stroke_collection.size();
 				for (int i = 0; i < original_collection_size; i++) {
-					if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed, replacing_vertex_bindings)) { //Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist
+					if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, replacing_vertex_bindings)) { //Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist
 						stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
 						nr_removed++;
 						dirty_boundary = true;
@@ -749,7 +750,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				draw_all_strokes();
 			}
 			else { //We're finished drawing the cut stroke, prepare for when user draws the final stroke to remove the part
-				if (added_stroke->has_self_intersection()) {
+				if (added_stroke->has_self_intersection(false)) {
 					std::cerr << "Cut stroke contains a loop which is illegal. Please try again. " << std::endl;
 					/*prev_tool_mode = NONE;
 					sound_error_beep();
@@ -804,7 +805,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 					//prev_tool_mode = NONE;
 					next_added_stroke_ID -= 2;
 					extrusion_base_already_drawn = false;
-					handle_failed_extrusion_base();
+					handle_failed_extrusion_base(true);
 					//sound_error_beep();
 					//draw_all_strokes(); //Will remove the drawn base & silhouette strokes
 					//Eigen::MatrixXd drawn_points = extrusion_base->get3DPoints();
@@ -828,7 +829,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 				int nr_removed = 0, original_collection_size = stroke_collection.size();
 				for (int i = 0; i < original_collection_size - 1; i++) { //Skip the newly added stroke since it is already updated inside extrude_main()
-					if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, edge_boundary_markers, sharp_edge, vertex_is_fixed, replacing_vertex_bindings)) {
+					if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, replacing_vertex_bindings)) {
 						//Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist (or in case of non-loop strokes that have a middle portion removed, the undo_stroke_add is done inside of the update_vert_bindings)
 						stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
 						nr_removed++;
@@ -858,13 +859,14 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				extrusion_base_already_drawn = false;
 			}
 			else { //mouse released after extrusion base drawn
+				extrusion_base->toLoop();
 				if (!extrusion_base->has_points_on_mesh) {
 					viewer.update_screen_while_computing = false;
 					prev_tool_mode = NONE;
 					return;
 				}
-				else if (extrusion_base->has_been_outside_mesh || extrusion_base->has_self_intersection()) {
-					if (extrusion_base->has_self_intersection()) {
+				else if (extrusion_base->has_been_outside_mesh || extrusion_base->has_self_intersection(true)) {
+					if (extrusion_base->has_self_intersection(true)) {
 						std::cerr << "Extrusion base contains a loop which is illegal. Please try again. " << std::endl;
 					}
 					else {
@@ -877,17 +879,18 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 					int nr_edges = drawn_points.rows() - 1;
 					viewer.data().add_edges(drawn_points.topRows(nr_edges), drawn_points.middleRows(1, nr_edges), black); //Display the stroke in black to show that it went wrong
 					viewer.update_screen_while_computing = false;*/
-					handle_failed_extrusion_base();
+					//extrusion_base->toLoop();
+					handle_failed_extrusion_base(true);
 					return;
 				}
 
 				dirty_boundary = true;
-				extrusion_base->toLoop();
 
 				bool succes_extrude_prepare = MeshExtrusion::extrude_prepare(*extrusion_base, base_surface_path); //Don't need to update all strokes here, since it didn't remove any vertices
 				if (!succes_extrude_prepare) { //Catches the case that face == -1 in SurfacePath
+					std::cout << "ERror here" << std::endl;
 					next_added_stroke_ID--;
-					handle_failed_extrusion_base();
+					handle_failed_extrusion_base(true);
 					return;
 				}
 

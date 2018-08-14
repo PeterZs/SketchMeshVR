@@ -29,7 +29,7 @@ public:
     bool empty2D() const { return stroke2DPoints.isZero(); }
 	bool toLoop();
 	std::unordered_map<int, int> generate3DMeshFromStroke(Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & vertex_is_fixed, Eigen::MatrixXd & mesh_V, Eigen::MatrixXi & mesh_F, igl::opengl::glfw::Viewer & viewer);
-	bool has_self_intersection();
+	bool has_self_intersection(bool make_looped);
 	bool line_segments_intersect(Eigen::RowVector2d& p1, Eigen::RowVector2d& p2, Eigen::RowVector2d& p3, Eigen::RowVector2d& p4);
 	int selectClosestVertex(Eigen::Vector3f pos, double & closest_distance);
 	double compute_stroke_diag();
