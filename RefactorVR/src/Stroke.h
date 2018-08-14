@@ -20,21 +20,20 @@ public:
 	void addSegmentCut(Eigen::Vector3f & pos, igl::opengl::glfw::Viewer & viewer);
 	void addSegmentExtrusionBase(Eigen::Vector3f & pos, igl::opengl::glfw::Viewer & viewer);
 	void addSegmentExtrusionSilhouette(Eigen::Vector3f & pos, igl::opengl::glfw::Viewer & viewer);
+
 	void prepend_first_point(igl::opengl::glfw::Viewer & viewer);
 	void append_final_point(igl::opengl::glfw::Viewer & viewer);
     void counter_clockwise();
+	bool toLoop();
+
 	bool update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::MatrixXi & replacing_vertex_bindings);
 	void undo_stroke_add(Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & sharp_edge, Eigen::VectorXi & vertex_is_fixed);
 	void switch_stroke_edges_type(Eigen::VectorXi & sharp_edge);
-    bool empty2D() const { return stroke2DPoints.isZero(); }
-	bool toLoop();
+	void update_Positions(Eigen::MatrixXd V, bool structure_changed);
+
 	std::unordered_map<int, int> generate3DMeshFromStroke(Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & vertex_is_fixed, Eigen::MatrixXd & mesh_V, Eigen::MatrixXi & mesh_F, igl::opengl::glfw::Viewer & viewer);
 	bool has_self_intersection(bool make_looped);
-	bool line_segments_intersect(Eigen::RowVector2d& p1, Eigen::RowVector2d& p2, Eigen::RowVector2d& p3, Eigen::RowVector2d& p4);
 	int selectClosestVertex(Eigen::Vector3f pos, double & closest_distance);
-	double compute_stroke_diag();
-
-	void update_Positions(Eigen::MatrixXd V, bool structure_changed);
     
     int get_vertex_idx_for_point(int i);
     int get_ID();
@@ -49,19 +48,20 @@ public:
 	::std::vector<int> get_closest_vert_bindings();
     void set3DPoints(Eigen::MatrixX3d new_3DPoints);
     void set_closest_vert_bindings(::std::vector<int> new_vert_bindings);
+	void setV(Eigen::MatrixXd* V_) { V = V_; };
+	void setF(Eigen::MatrixXi* F_) { F = F_; };
 
-
+	
+	Eigen::MatrixXd* V;
+	Eigen::MatrixXi* F;
+	int stroke_ID; //Non-const for the sake of copy assignment operator 
 	bool is_loop;
 	bool has_points_on_mesh;
 	bool has_been_outside_mesh;
 	bool has_been_reversed;
 	bool starts_on_mesh;
 	bool ends_on_mesh;
-	Eigen::RowVector3d stroke_color;	
-
-	Eigen::MatrixXd* V;
-	Eigen::MatrixXi* F;
-	int stroke_ID; //Non-const for the sake of copy assignment operator 
+	Eigen::RowVector3d stroke_color;
 
 	Eigen::MatrixX3d stroke3DPoints;
 	Eigen::MatrixX3d stroke3DPointsBack;
@@ -73,10 +73,8 @@ public:
 	Eigen::Vector3d dir_before_cut;
 	Eigen::Vector3d pos_after_cut;
 	Eigen::Vector3d dir_after_cut;
-	bool prev_point_was_on_mesh; //Used for cutting strokes only. Indicates whether this is the first point outside of the mesh after we've been drawing on the mesh
 	Eigen::VectorXd dep;
-	void setV(Eigen::MatrixXd* V_) { V = V_; };
-	void setF(Eigen::MatrixXi* F_) { F = F_; };
+	bool prev_point_was_on_mesh; //Used for cutting strokes only. Indicates whether this is the first point outside of the mesh after we've been drawing on the mesh
 
 	std::vector<int> closest_vert_bindings;
 
@@ -87,6 +85,10 @@ private:
 	static Eigen::MatrixXd resample_stroke2D(Eigen::MatrixXd & original_stroke2DPoints);
 	static void move_to_middle(Eigen::MatrixXd &positions, Eigen::MatrixXd &new_positions);
 	static void generate_backfaces(Eigen::MatrixXi &faces, Eigen::MatrixXi &back_faces);
+	bool line_segments_intersect(Eigen::RowVector2d& p1, Eigen::RowVector2d& p2, Eigen::RowVector2d& p3, Eigen::RowVector2d& p4);
+	double compute_stroke_diag();
+	bool empty2D() const { return stroke2DPoints.isZero(); }
+
 };
 
 #include <igl/serialize.h>

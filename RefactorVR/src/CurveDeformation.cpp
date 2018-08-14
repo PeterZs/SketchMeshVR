@@ -20,7 +20,6 @@ std::unordered_map<int, int> local_to_global_edge_ID, global_to_local_edge_ID;
 
 void CurveDeformation::startPullCurve(int _moving_vertex_ID, Eigen::MatrixXd& V, Eigen::MatrixXi& F) {
 	moving_vertex_ID = _moving_vertex_ID;
-	std::cout << "moving vertex id: " << moving_vertex_ID << std::endl;
 	start_pos = V.row(moving_vertex_ID);
 	prev_range_size = -1;
 	prev_drag_size = 0.0;

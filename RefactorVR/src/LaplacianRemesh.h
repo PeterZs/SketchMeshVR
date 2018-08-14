@@ -6,14 +6,12 @@
 class LaplacianRemesh {
 
 public:
-	static Eigen::VectorXi remesh_cut_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool & remesh_success, int cut_clicked_face, Eigen::MatrixXi & replacing_vertex_bindings);
-	static Eigen::VectorXi remesh_extrusion_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool & remesh_success, Eigen::MatrixXi & replacing_vertex_bindings);
-static	bool remesh_open_path(Mesh & m, Stroke & open_path_stroke, Eigen::MatrixXi & replacing_vertex_bindings, igl::opengl::glfw::Viewer & viewer);
-static bool remesh_cutting_path(Mesh & m, Stroke & cut_path_stroke, Eigen::MatrixXi & replacing_vertex_bindings, igl::opengl::glfw::Viewer & viewer);
-	//static bool remesh_open_path(Mesh & m, Stroke & open_path_stroke, Eigen::MatrixXi& replacing_vertex_bindings);
-	//static bool remesh_cutting_path(Mesh & m, Stroke & cut_path_stroke, Eigen::MatrixXi & replacing_vertex_bindings);
+	static Eigen::VectorXi remesh_extrusion_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, int & remesh_success, Eigen::MatrixXi & replacing_vertex_bindings);
+	static Eigen::VectorXi remesh_cut_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, int & remesh_success, int cut_clicked_face, Eigen::MatrixXi & replacing_vertex_bindings);
+	static bool remesh_open_path(Mesh & m, Stroke & open_path_stroke, Eigen::MatrixXi & replacing_vertex_bindings, igl::opengl::glfw::Viewer & viewer);
+	static int remesh_cutting_path(Mesh & m, Stroke & cut_path_stroke, Eigen::MatrixXi & replacing_vertex_bindings, igl::opengl::glfw::Viewer & viewer);
 
-	static Eigen::VectorXi remesh(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool & remesh_success, int cut_clicked_face, Eigen::MatrixXi & replacing_vertex_bindings);
+	static Eigen::VectorXi remesh(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, int & remesh_success, int cut_clicked_face, Eigen::MatrixXi & replacing_vertex_bindings);
 
 private:
 	static bool is_front_loop;
@@ -33,7 +31,6 @@ private:
 	static Eigen::RowVector3d compute_mean_viewpoint(Mesh & m, std::vector<int> inner_boundary_vertices);
 	static void propagate_dirty_faces(int face, std::vector<bool>& dirty_face);
 	static void update_edge_indicators(Mesh & m, Eigen::MatrixXi & all_sharpEV);
-	//static void update_mesh_values(Mesh & m, Eigen::MatrixXd path, int stroke_ID, int new_mapped_start, bool hold_back_due_to_loop);
 	static void update_face_indices(Mesh & m);
 
 	static void update_mesh_values(Mesh & m, Eigen::MatrixXd path, int stroke_ID, int new_mapped_start, bool hold_back_due_to_loop, Eigen::MatrixXi & added_edges);

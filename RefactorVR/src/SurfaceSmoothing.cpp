@@ -27,9 +27,9 @@ Eigen::VectorXd initial_curvature, average_edge_lengths;
 Eigen::VectorXd SurfaceSmoothing::curvatures(ptrdiff_t(0));
 int ID = 0, iteration = 0;
 int no_boundary_vertices, no_boundary_adjacent_vertices;
-double SurfaceSmoothing::vertex_weight =  1000.0;// 10.0;
-double SurfaceSmoothing::edge_weight = 0.1;// 1.0;
-double SurfaceSmoothing::factor =  0.8;// 1.9;
+double SurfaceSmoothing::vertex_weight = 10.0;// 1000.0;// 10.0;
+double SurfaceSmoothing::edge_weight = 0.00001;// 1.0;
+double SurfaceSmoothing::factor = 0.1;// 1.9;
 vector<vector<int>> neighbors;
 
 
@@ -47,8 +47,6 @@ void SurfaceSmoothing::smooth(Mesh& base_mesh, bool& BOUNDARY_IS_DIRTY, bool for
 	}
 
 	if(force_update || (prev_vertex_count != base_mesh.V.rows()) || (prev_patch_count != base_mesh.patches.size())) { //The mesh topology has changed, so we need to reset the precomputed matrices. If only boundary constraints got added, we can reuse part of the matrices so don't clear it all out but instead overwrite certain parts
-       // ID++;
-		std::cout << "patch size was" << prev_patch_count << "  now is " << base_mesh.patches.size() << std::endl;
 		clear_precomputed_matrices();
 		prev_vertex_count = base_mesh.V.rows();
 		prev_patch_count = base_mesh.patches.size();
@@ -64,10 +62,7 @@ void SurfaceSmoothing::smooth(Mesh& base_mesh, bool& BOUNDARY_IS_DIRTY, bool for
 
 	for (int i = 0; i < base_mesh.patches.size(); i++) {
 		Patch* patch = (base_mesh.patches[i]);
-	//	std::cout << "get to here" << std::endl;
 		smooth_main((*patch).mesh, BOUNDARY_IS_DIRTY);
-	//	std::cout << "get to after" << std::endl;
-
 		(*patch).update_parent_vertex_positions(base_mesh.V);
 		prev_mesh_ID = (*patch).mesh.ID;
 	}
@@ -90,6 +85,18 @@ void SurfaceSmoothing::clear_precomputed_matrices() {
 	precompute_matrix_for_positions.clear(); 
 }
 
+void get_average_edge_lengths(Eigen::MatrixXd& V) {
+	double total;
+	average_edge_lengths.resize(V.rows());
+	for (int i = 0; i < V.rows(); i++) {
+		total = 0.0;
+		for (int j = 0; j < neighbors[i].size(); j++) {
+			total += (V.row(i) - V.row(neighbors[i][j])).squaredNorm();
+		}
+		average_edge_lengths[i] = sqrt(total) / neighbors[i].size();
+	}
+}
+
 void SurfaceSmoothing::smooth_main(Mesh &m, bool BOUNDARY_IS_DIRTY) {
 	Eigen::MatrixXd L = get_precomputed_L(m);
 	if(L.rows()==0 && L.cols()==0) { //Stuff that gets computed once, when we get a new mesh topology
@@ -100,7 +107,6 @@ void SurfaceSmoothing::smooth_main(Mesh &m, bool BOUNDARY_IS_DIRTY) {
 	else if (m.ID != prev_mesh_ID){
 		adjacency_list(m.F, neighbors);
 	}
-//	std::cout << "get to flo" << std::endl;
 
 	if(BOUNDARY_IS_DIRTY || m.ID != prev_mesh_ID) {
 		no_boundary_vertices = (m.vertex_is_fixed.array() > 0).count();
@@ -115,30 +121,12 @@ void SurfaceSmoothing::smooth_main(Mesh &m, bool BOUNDARY_IS_DIRTY) {
 			}
 		}
 	}
-
-	double total;
-	average_edge_lengths.resize(m.V.rows());
-	for (int i = 0; i < m.V.rows(); i++) {
-		total = 0.0;
-		for (int j = 0; j < neighbors[i].size(); j++) {
-			total += (m.V.row(i) - m.V.row(neighbors[i][j])).norm();
-		}
-		average_edge_lengths[i] = total / neighbors[i].size();
-	}
-	//std::cout << "get to fiwawe" << std::endl;
-
+	
+	get_average_edge_lengths(m.V);
 	igl::per_vertex_normals(m.V, m.F, PER_VERTEX_NORMALS_WEIGHTING_TYPE_UNIFORM, vertex_normals);
-	//std::cout << "get to aewfa" << std::endl;
-
 	Eigen::VectorXd target_LMs = compute_target_LMs(m, L, BOUNDARY_IS_DIRTY);
-	//std::cout << "get to w232" << std::endl;
-
 	Eigen::VectorXd target_edge_lengths = compute_target_edge_lengths(m, L);
-	//std::cout << "get to 1234" << std::endl;
-
 	compute_target_vertices(m, L, target_LMs, target_edge_lengths, BOUNDARY_IS_DIRTY);
-	//std::cout << "get to 678" << std::endl;
-
 }
 
 Eigen::MatrixXd SurfaceSmoothing::compute_laplacian_matrix(Mesh &m) {
@@ -190,7 +178,9 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 		tripletList.reserve(m.V.rows()*(m.V.rows() + 1));
 		for(int i = 0; i < m.V.rows(); i++) {
 			for (int j = 0; j < m.V.rows(); j++) {
-				tripletList.push_back(T(i, j, L(i, j)));
+				if (L(i, j) > 0) {
+					tripletList.push_back(T(i, j, L(i, j)));
+				}
 			}
 		
 			if (m.vertex_is_fixed[i] > 0) { //Constrain only the boundary in the first iteration
@@ -212,7 +202,9 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 		tripletList.reserve(m.V.rows()*(m.V.rows() + 1));
 		for (int i = 0; i < m.V.rows(); i++) {
 			for (int j = 0; j < m.V.rows(); j++) {
-				tripletList.push_back(T(i, j, L(i, j)));
+				if (L(i, j) != 0) {
+					tripletList.push_back(T(i, j, L(i, j)));
+				}
 			}
 			tripletList.push_back(T(m.V.rows() + i, i, 1)); 
 		}
@@ -316,7 +308,9 @@ void SurfaceSmoothing::compute_target_vertices(Mesh &m, Eigen::MatrixXd &L, Eige
 
 		for(int i = 0; i < m.V.rows(); i++) {
 			for(int j = 0; j < m.V.rows(); j++) {
-				tripletList.push_back(T(i, j, L(i, j)*laplacian_weights[i]));
+				if (L(i, j) != 0) {
+					tripletList.push_back(T(i, j, L(i, j)*laplacian_weights[i]));
+				}
 			}
 			if (m.vertex_is_fixed[i] > 0) { //Constrain only the boundary LMs and edges
 				tripletList.push_back(T(m.V.rows() + count, i, vertex_weight));

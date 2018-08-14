@@ -31,7 +31,7 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 	Eigen::VectorXi start_new_mapped_indices = m.new_mapped_indices;
 
 	stroke.counter_clockwise();
-	bool remesh_success = true;
+	int remesh_success = 1;
 	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_extrusion_remove_inside(m, surface_path, model, view, proj, viewport, remesh_success, replacing_vertex_bindings);
 
 	if (!remesh_success) {
@@ -71,6 +71,12 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 	remove_out_of_bounds_silhouette(silhouette_vertices, center, m.V.row(boundary_vertices[most_left_vertex_idx]), m.V.row(boundary_vertices[most_right_vertex_idx]), dir);
 
 	if(silhouette_vertices.rows() == 0) {
+		m.F = start_F;
+		m.V = start_V;
+		m.new_mapped_indices = start_new_mapped_indices;
+		m.edge_boundary_markers = start_edge_boundary_markers;
+		m.vertex_is_fixed = start_vertex_is_fixed;
+		m.sharp_edge = start_sharp_edge;
 		std::cerr << "No valid silhouette vertices. Try again." << endl;
 		return false;
 	}

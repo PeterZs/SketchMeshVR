@@ -17,14 +17,14 @@ bool LaplacianRemesh::remove_inside_faces = true;
 Eigen::MatrixXi LaplacianRemesh::EV, LaplacianRemesh::FE, LaplacianRemesh::EF;
 vector<vector<int>> LaplacianRemesh::VV;
 
-Eigen::VectorXi LaplacianRemesh::remesh_cut_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success, int cut_clicked_face, Eigen::MatrixXi& replacing_vertex_bindings) {
+Eigen::VectorXi LaplacianRemesh::remesh_cut_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, int& remesh_success, int cut_clicked_face, Eigen::MatrixXi& replacing_vertex_bindings) {
 	is_front_loop = false;
 	remove_inside_faces = true;
 	adjacency_list(m.F, VV);
 	return remesh(m, surface_path, model, view, proj, viewport, remesh_success, cut_clicked_face, replacing_vertex_bindings);
 }
 
-Eigen::VectorXi LaplacianRemesh::remesh_extrusion_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success, Eigen::MatrixXi& replacing_vertex_bindings) {
+Eigen::VectorXi LaplacianRemesh::remesh_extrusion_remove_inside(Mesh & m, SurfacePath & surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, int& remesh_success, Eigen::MatrixXi& replacing_vertex_bindings) {
 	is_front_loop = true;
 	remove_inside_faces = true;
 	adjacency_list(m.F, VV);
@@ -225,9 +225,9 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke, Eigen:
 	return true;
 }
 
-bool LaplacianRemesh::remesh_cutting_path(Mesh& m, Stroke& cut_path_stroke, Eigen::MatrixXi& replacing_vertex_bindings, igl::opengl::glfw::Viewer &viewer) {
+int LaplacianRemesh::remesh_cutting_path(Mesh& m, Stroke& cut_path_stroke, Eigen::MatrixXi& replacing_vertex_bindings, igl::opengl::glfw::Viewer &viewer) {
 	replacing_vertex_bindings.resize(0, 4);
-	bool remesh_success = true;
+	int remesh_success = 1;
 	is_front_loop = false;
 	remove_inside_faces = false;
 	adjacency_list(m.F, VV);
@@ -235,14 +235,14 @@ bool LaplacianRemesh::remesh_cutting_path(Mesh& m, Stroke& cut_path_stroke, Eige
 	SurfacePath surface_path;
 	bool success = surface_path.create_from_stroke_cut(cut_path_stroke);
 	if (!success) {
-		return false;
+		return 0;
 	}
 	remesh(m, surface_path, viewer.core.get_model(), viewer.oculusVR.get_start_action_view(), viewer.core.get_proj(), viewer.core.viewport, remesh_success, -1, replacing_vertex_bindings);
 	update_add_path_points_and_bindings(cut_path_stroke, surface_path);
 	return remesh_success;
 }
 
-Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, bool& remesh_success, int cut_clicked_face, Eigen::MatrixXi& replacing_vertex_bindings) {
+Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eigen::Matrix4f model, Eigen::Matrix4f view, Eigen::Matrix4f proj, Eigen::Vector4f viewport, int& remesh_success, int cut_clicked_face, Eigen::MatrixXi& replacing_vertex_bindings) {
 	replacing_vertex_bindings.resize(0, 4);
 	Eigen::MatrixXi start_F = m.F;
 	Eigen::MatrixXd start_V = m.V;
@@ -333,6 +333,13 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 				}
 			}					
 		}
+	}
+
+	//User clicked on one of the faces that the cutline goes through. Ignore & let them click again
+	if (cut_clicked_face >= 0 && dirty_face[cut_clicked_face] && remove_inside_faces) {
+		std::cerr << "You clicked too close to the cut line. Please try again. " << std::endl;
+		remesh_success = -1;
+		return Eigen::VectorXi::Zero(1);
 	}
 
 	if (remove_inside_faces) {

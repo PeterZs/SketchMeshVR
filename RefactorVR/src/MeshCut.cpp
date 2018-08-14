@@ -16,28 +16,27 @@ bool MeshCut::cut_prepare(Stroke& stroke, SurfacePath& surface_path) {
 	return true;
 }
 
-bool MeshCut::cut(Mesh& m, Stroke& stroke, SurfacePath& surface_path, int clicked_face, Eigen::MatrixXi& replacing_vertex_bindings, igl::opengl::glfw::Viewer &viewer){
-	bool success = cut_main(m, surface_path, stroke, clicked_face, replacing_vertex_bindings, viewer);
-	if (!success) {
-		return false;
+int MeshCut::cut(Mesh& m, Stroke& stroke, SurfacePath& surface_path, int clicked_face, Eigen::MatrixXi& replacing_vertex_bindings, igl::opengl::glfw::Viewer &viewer){
+	int success = cut_main(m, surface_path, stroke, clicked_face, replacing_vertex_bindings, viewer);
+	if (success <= 0) {
+		return success;
 	}
-
 	post_cut_update_points(stroke, surface_path);
 
-	return true;
+	return 1;
 }
 
-bool MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke, int clicked_face, Eigen::MatrixXi& replacing_vertex_bindings, igl::opengl::glfw::Viewer &viewer) {
-	bool remesh_success = true;
+int MeshCut::cut_main(Mesh& m, SurfacePath& surface_path, Stroke& stroke, int clicked_face, Eigen::MatrixXi& replacing_vertex_bindings, igl::opengl::glfw::Viewer &viewer) {
+	int remesh_success = 1;
 	Eigen::VectorXi boundary_vertices = LaplacianRemesh::remesh_cut_remove_inside(m, surface_path, viewer.core.get_model(), viewer.oculusVR.get_start_action_view(), viewer.core.get_proj(), viewer.core.viewport, remesh_success, clicked_face, replacing_vertex_bindings);
-	if (!remesh_success) {
-		return false;
+	if (remesh_success <= 0) {
+		return remesh_success;
 	}
 
 	return mesh_open_hole(boundary_vertices, m);
 }
 
-bool MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
+int MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 	Eigen::MatrixXi start_F = m.F;
 	Eigen::MatrixXd start_V = m.V;
 	Eigen::VectorXi start_edge_boundary_markers = m.edge_boundary_markers;
@@ -96,10 +95,10 @@ bool MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 			m.V = start_V;
 			m.edge_boundary_markers = start_edge_boundary_markers;
 			m.vertex_is_fixed = start_vertex_is_fixed;
-			return false;
+			return 0;
 		}
 	}
-	return true;
+	return 1;
 }
 
 /** Updates the old indicators for sharp edges and edge_boundary_markers after the cutting surface has been meshed (new sharp/boundary edges are already added in LaplacianRemesh, just increase the size here). **/
