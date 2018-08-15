@@ -301,7 +301,6 @@ int SurfacePath::find_next_edge_cut(pair<int, int> strokeEdge, int prev_edge, in
 		}
 	}
 
-
 	return -1;
 }
 

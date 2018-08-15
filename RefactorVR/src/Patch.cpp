@@ -121,7 +121,6 @@ void Patch::get_patch_edge(int edge, Eigen::VectorXi& patch_edge_is_init, Eigen:
 	patch_edge_is_init[edge] = 1;
 }
 
-
 void Patch::get_patch_vertex(int v_idx, int face, Eigen::MatrixXd& patch_vertices, Eigen::VectorXi& patch_vertex_is_init, Eigen::MatrixXd& V_orig, Eigen::VectorXi& vertex_is_fixed_orig, Eigen::VectorXi& new_mapped_indices_orig, Eigen::VectorXi& mesh_to_patch_indices) {
 	if (patch_vertex_is_init[v_idx]) {
 		return;

@@ -14,7 +14,6 @@ public:
 	bool create_from_stroke_extrude(const Stroke & stroke);
 	bool create_from_stroke_cut(const Stroke& stroke);
 	int get_origin_stroke_ID();
-	//void rotate(Eigen::MatrixXd & V);
 	void set_rotated_points(Eigen::MatrixXd & V);
 	Eigen::MatrixXd get3DPoints();
 	std::vector<PathElement> get_path();
@@ -55,7 +54,7 @@ public:
 	int get_ID() { return ID; };
 	int get_v_idx() { return corresponding_vertex_idx; };
 	void set_v_idx(int idx) { corresponding_vertex_idx = idx; };
-	bool fixed = false; //TODO: implement this
+	bool fixed = false;
 
 private:
 	int ID;

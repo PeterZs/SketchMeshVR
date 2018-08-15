@@ -84,7 +84,12 @@ void LaplacianCurveEdit::update_curve(Eigen::MatrixXd& V) {
 	}
 
 	for (int i = 0; i < 2; i++) {
-		solve_for_pos_and_rot(V);
+		try {
+			solve_for_pos_and_rot(V);
+		}
+		catch (int ex) {
+			throw -1;
+		}
 		update_rot();
 	}
 	final_L1_pos(V);
@@ -189,7 +194,7 @@ void LaplacianCurveEdit::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
 	A.setFromTriplets(tripletList.begin(), tripletList.end());
 	Eigen::SparseMatrix<double> A_before = A;
 	A.prune(0.0);
-	//A.prune([](int i, int j, double val) {return val != 0.0; });//Will prune everything that is 0 but keep the rest
+
 	Eigen::SparseMatrix<double> AT = A.transpose();
 	if (curve_structure_was_updated) {
 		solverPosRot.analyzePattern(AT*A);
@@ -197,7 +202,9 @@ void LaplacianCurveEdit::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
 	} 
 	solverPosRot.factorize(AT*A);
 	if (solverPosRot.info() != Eigen::Success) {
+		//TODO: remove all this stuff and handle gracefully?
 		std::cout << "Check if any non-zero entries were removed" << std::endl << A_before << std::endl << std::endl << std::endl << A << std::endl;
+		throw -1;
 		std::cout << A.rows() << " " << A.cols() << std::endl;
 		std::cout << "vertices: ";
 		for (int i = 0; i < vertices.size(); i++) {

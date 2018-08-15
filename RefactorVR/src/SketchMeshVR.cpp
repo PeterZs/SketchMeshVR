@@ -32,6 +32,7 @@
 #include "Patch.h"
 #include "LaplacianRemesh.h"
 #include "AppState.h"
+#include "CurveRub.h"
 
 using namespace std;
 using Viewer = igl::opengl::glfw::Viewer;
@@ -74,10 +75,11 @@ Stroke* extrusion_base;
 vector<Stroke> stroke_collection;
 
 //For smoothing
-int initial_smooth_iter = 60;
+int initial_smooth_iter = 120;
 
 //For selecting vertices
 int handleID = -1;
+int rub_seamID = -1;
 
 //Variables for pulling a curve (and removing added control curves)
 bool dirty_boundary = false;
@@ -184,6 +186,7 @@ void handle_failed_extrusion_base(bool hold_back) {
 	viewer.data().add_edges(drawn_points.topRows(nr_edges), drawn_points.middleRows(1, nr_edges), black); //Display the stroke in black to show that it went wrong
 	viewer.update_screen_while_computing = false;
 }
+
 void select_dragging_handle(Eigen::Vector3f& pos) {
 	double closest_dist = INFINITY;
 	double current_closest = closest_dist;
@@ -263,7 +266,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			prev_laser_show = viewer.data().show_laser;
 		}
 		viewer.data().show_laser = false;
-		viewer.selected_data_index = 1;		
+		viewer.selected_data_index = 1;
 		V = viewer.data().V;
 		for (int i = 0; i < stroke_collection.size(); i++) {
 			stroke_collection[i].update_Positions(V, false);
@@ -377,7 +380,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			if (remove_stroke_clicked == 2) { //Mechanism to force the user to click twice on the same stroke before removing it (safeguard)
 				stroke_was_removed = true;
 				stroke_collection[closest_stroke_idx].undo_stroke_add(edge_boundary_markers, sharp_edge, vertex_is_fixed);
-	
+
 				//We might have changed the patch structure (e.g. when removing a sharp cut stroke), so request new patches
 				(*base_mesh).patches.clear();
 				(*base_mesh).face_patch_map.clear();
@@ -397,7 +400,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 	else if (tool_mode == PULL) { //Dragging an existing curve
 		//FAIL below is needed when initialy hand position is too far away from the curves. Switch to FAIL instead of NONE to ensure proper button-release handling
 		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) {
-			//viewer.data().set_points(Eigen::MatrixXd(), black); //Will remove any previous unfinished strokes (e.g. unfinished cut)
 			draw_all_strokes();
 			select_dragging_handle(pos);
 
@@ -410,18 +412,18 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		}
 		else if (prev_tool_mode == PULL) {
 			CurveDeformation::pullCurve(pos.transpose().cast<double>(), (*base_mesh).V, (*base_mesh).edge_boundary_markers);
+
 			for (int i = 0; i < (*base_mesh).patches.size(); i++) {
 				(*base_mesh).patches[i]->update_patch_vertex_positions((*base_mesh).V);
 			}
 
-			for (int i = 0; i < 10; i++) {
+			int mesh_dependent_smoothing_iter = (int)(12500 / V.rows() + 1);
+			for (int i = 0; i < mesh_dependent_smoothing_iter; i++) {
 				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
+				for (int i = 0; i < stroke_collection.size(); i++) {
+					stroke_collection[i].update_Positions(V, false);
+				}
 			}
-
-			for (int i = 0; i < stroke_collection.size(); i++) {
-				stroke_collection[i].update_Positions(V, false);
-			}
-
 			viewer.data().set_mesh(V, F);
 			Eigen::MatrixXd N_corners;
 			igl::per_corner_normals(V, F, 50, N_corners);
@@ -432,7 +434,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 	else if (tool_mode == CUT) {
 		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) {
 			prev_tool_mode = CUT;
-			if (cut_stroke_already_drawn) { //clicked while cut stroke already drawn
+			if (cut_stroke_already_drawn) { //Clicked while cut stroke already drawn
 				return;
 			}
 
@@ -474,7 +476,32 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		}
 	}
 	else if (tool_mode == SMOOTH) {
-		prev_tool_mode = SMOOTH;
+		if (prev_tool_mode == NONE) {		
+			prev_tool_mode = SMOOTH;
+			select_dragging_handle(pos);
+			if (handleID == -1) { //Perform general mesh smooth
+				return;
+			}
+			rub_seamID = stroke_collection[closest_stroke_ID].stroke_ID;
+			CurveRub::start_rubbing(handleID, V, F, edge_boundary_markers);
+		}
+		else if (prev_tool_mode == SMOOTH) {
+			if (handleID == -1) {
+				return;
+			}
+			Eigen::Vector3d double_pos = pos.cast<double>();
+			Eigen::MatrixXd prevV = V;
+			CurveRub::rubbing(double_pos, rub_seamID, V);
+			for (int i = 0; i < stroke_collection.size(); i++) {
+				stroke_collection[i].update_Positions(V, false);
+			}
+		/*	viewer.data().set_mesh(V, F);
+			Eigen::MatrixXd N_corners;
+			igl::per_corner_normals(V, F, 50, N_corners);
+			viewer.data().set_normals(N_corners);*/
+			draw_all_strokes();
+
+		}
 	}
 	else if (tool_mode == CHANGE) {
 		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) {
@@ -507,7 +534,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				prev_tool_mode = FAIL;
 				return;
 			}
-			else{
+			else {
 				stroke_collection[closest_stroke_idx].stroke_color = stroke_collection[closest_stroke_idx].stroke_color == red ? blue : red;
 				stroke_collection[closest_stroke_idx].switch_stroke_edges_type(sharp_edge);
 				draw_all_strokes();
@@ -553,19 +580,19 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				(*base_mesh).patches = Patch::init_patches(*base_mesh);
 
 				dirty_boundary = true;
+				stroke_collection.back().update_Positions(V, true);
+				viewer.data().clear();
+				draw_all_strokes();
 				for (int j = 0; j < 10; j++) {
 					for (int i = 0; i < initial_smooth_iter / 10; i++) {
 						SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
 					}
 
-					viewer.data().clear();
 					viewer.data().set_mesh(V, F);
 					Eigen::MatrixXd N_corners;
 					igl::per_corner_normals(V, F, 50, N_corners);
 					viewer.data().set_normals(N_corners);
 				}
-				stroke_collection.back().update_Positions(V, true);
-				draw_all_strokes();
 				std::cerr << "Created a mesh with " << V.rows() << " vertices, and " << F.rows() << " faces." << std::endl;
 			}
 		}
@@ -609,7 +636,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			if (!success) {
 				prev_tool_mode = NONE;
 				sound_error_beep();
-			//	viewer.data().set_points(Eigen::MatrixXd(), black); //Will remove the drawn stroke
 				draw_all_strokes();
 				Eigen::MatrixXd drawn_points = added_stroke->get3DPoints();
 				int nr_edges = drawn_points.rows() - 1;
@@ -633,7 +659,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				}
 			}
 
-			for (int i = 0; i <  initial_smooth_iter / 3; i++) {
+			for (int i = 0; i < initial_smooth_iter / 3; i++) {
 				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
 			}
 
@@ -653,7 +679,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		else if (prev_tool_mode == REMOVE && stroke_was_removed) { //Only redraw if we actually removed a stroke (otherwise we draw unnecessary)
 			dirty_boundary = true;
 			for (int i = 0; i < initial_smooth_iter / 3; i++) {
-				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary,false);
+				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
 			}
 
 			for (int i = 0; i < stroke_collection.size(); i++) {
@@ -697,7 +723,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 					prev_tool_mode = NONE;
 					return;
 				}
-				int clicked_face = hits[0].id;			
+				int clicked_face = hits[0].id;
 				int cut_success = MeshCut::cut(*base_mesh, *added_stroke, cut_surface_path, clicked_face, replacing_vertex_bindings, viewer);
 				if (cut_success == 0) { //Catches the following cases: when the cut removes all mesh vertices/faces, when the first/last cut point aren't correct (face -1 in SurfacePath) or when sorting takes "infinite" time
 					cut_stroke_already_drawn = false;
@@ -726,8 +752,8 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 					}
 				}
 
-				for (int i = 0; i < initial_smooth_iter/2; i++) {
-					SurfaceSmoothing::smooth(*base_mesh, dirty_boundary,false);
+				for (int i = 0; i < initial_smooth_iter / 2; i++) {
+					SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
 				}
 
 				//Update the stroke positions after smoothing, will also add resampled points
@@ -761,6 +787,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 					return;
 				}
 				draw_all_strokes();
+
 				//Overlay the pink cut stroke
 				Eigen::MatrixXd drawn_points = added_stroke->get3DPoints();
 				int nr_edges = drawn_points.rows() - 1;
@@ -770,7 +797,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		}
 		else if (prev_tool_mode == EXTRUDE) {
 			if (extrusion_base_already_drawn) { //User has drawn the silhouette stroke for extrusion
-				dirty_boundary = true;				
+				dirty_boundary = true;
 				added_stroke->toLoop();
 				added_stroke->is_loop = false; //Set to false manually, because we don't want curveDeformation to consider it as a loop (but we do need looped 3DPoints)
 
@@ -802,7 +829,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				int nr_removed = 0, original_collection_size = stroke_collection.size();
 				for (int i = 0; i < original_collection_size - 1; i++) { //Skip the newly added stroke since it is already updated inside extrude_main()
 					if (!stroke_collection[i - nr_removed].update_vert_bindings(new_mapped_indices, replacing_vertex_bindings)) {
-						//Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist (or in case of non-loop strokes that have a middle portion removed, the undo_stroke_add is done inside of the update_vert_bindings)
+						//Stroke dies, don't need to do stroke.undo_stroke_add, cause all its vertices also cease to exist
 						stroke_collection.erase(stroke_collection.begin() + i - nr_removed);
 						nr_removed++;
 						dirty_boundary = true;
@@ -810,7 +837,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				}
 
 				for (int i = 0; i < initial_smooth_iter / 2; i++) {
-						SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
+					SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
 				}
 
 				//Update the stroke positions after smoothing, also updates resampled stroke points
@@ -877,26 +904,32 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			viewer.update_screen_while_computing = false;
 		}
 		else if (prev_tool_mode == SMOOTH) {
-			if (V.rows() == 0) {
-				prev_tool_mode = NONE;
-				viewer.update_screen_while_computing = false;
-				return;
-			}
-			for (int i = 0; i < 5; i++) {
-				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
-			}
-			for (int i = 0; i < stroke_collection.size(); i++) {
-				stroke_collection[i].update_Positions(V, false);
-			}
-		//	viewer.data().show_lines = !viewer.data().show_lines; //TODO change
+				if (V.rows() == 0) {
+					prev_tool_mode = NONE;
+					viewer.update_screen_while_computing = false;
+					return;
+				}
 
+				for (int i = 0; i < (*base_mesh).patches.size(); i++) {
+					(*base_mesh).patches[i]->update_patch_vertex_positions((*base_mesh).V);
+				}
 
-			viewer.data().set_mesh(V, F);
-			Eigen::MatrixXd N_corners;
-			igl::per_corner_normals(V, F, 50, N_corners);
-			viewer.data().set_normals(N_corners);
+				for (int i = 0; i < 5; i++) {
+					SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
+				}
+				for (int i = 0; i < stroke_collection.size(); i++) {
+					stroke_collection[i].update_Positions(V, false);
+				}
 
-			draw_all_strokes();
+				viewer.data().set_mesh(V, F);
+				Eigen::MatrixXd N_corners;
+				igl::per_corner_normals(V, F, 50, N_corners);
+				viewer.data().set_normals(N_corners);
+
+				draw_all_strokes();
+			
+				
+			
 		}
 		else if (prev_tool_mode == CHANGE) {
 			//We might have changed the patch structure (e.g. when removing a sharp boundary stroke), so request new patches
@@ -904,7 +937,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			(*base_mesh).face_patch_map.clear();
 			(*base_mesh).patches = Patch::init_patches(*base_mesh);
 			dirty_boundary = true;
-		
+
 			SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, true); //Force reset of the matrices. We might have changed a stroke type without changing the number of patches
 			for (int i = 0; i < initial_smooth_iter / 2; i++) {
 				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
@@ -979,7 +1012,7 @@ bool load_scene(std::string fname) {
 
 	stroke_collection.resize(appState.stroke_collection_size);
 	for (int i = 0; i < appState.stroke_collection_size; i++) {
-		igl::deserialize(stroke_collection[i], "obj"+ std::to_string(i), fname.c_str());
+		igl::deserialize(stroke_collection[i], "obj" + std::to_string(i), fname.c_str());
 		stroke_collection[i].setV(&V);
 		stroke_collection[i].setF(&F);
 	}
@@ -1008,7 +1041,7 @@ bool callback_load_scene(Viewer& viewer, std::string cur_dir) {
 	std::string fname = igl::file_dialog_open();
 	if (fname.length() == 0) {
 		return false;
-	}	
+	}
 	viewer.data().clear();
 	viewer.load_scene(fname);
 	V = viewer.data().V;
@@ -1067,8 +1100,6 @@ void reset_trackers() {
 		prev_closest_stroke_ID = -1;
 	}
 	remove_stroke_clicked = 0;
-
-	//viewer.data().set_points(Eigen::MatrixXd(), black); //Will remove a possible pink cut stroke
 	draw_all_strokes();
 }
 

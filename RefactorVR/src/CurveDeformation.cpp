@@ -38,7 +38,7 @@ void CurveDeformation::pullCurve(const Eigen::RowVector3d& pos, Eigen::MatrixXd&
 	bool ROI_is_updated = false;
 	Eigen::MatrixXd prev_V;
 
-	if (prev_drag_size < drag_size) { //Take the current drag_size and current_ROI_size relative to the size of the stroke we're pulling on. //TODO: test if we want to take it relative to the size of the whole mesh instead (we have access to V after all)?
+	if (prev_drag_size < drag_size) {
 		prev_V = V;
 		ROI_is_updated = update_ROI_test(drag_size, V, edge_boundary_markers);
 	}
@@ -59,7 +59,7 @@ void CurveDeformation::pullCurve(const Eigen::RowVector3d& pos, Eigen::MatrixXd&
 				}
 			}
 			V = prev_V;*/
-		V = original_positions;
+			V = original_positions;
 
 			for (int i = 0; i < curves.size(); i++) {
 				curves[i].laplacian_curve_edit.setup_for_update_curve(curves[i].vertices, curves[i].fixed_vertices, curves[i].edges, curves[i].fixed_edges, curves[i].vertex_triplets, curves[i].edge_triplets, V, EV);
@@ -68,7 +68,15 @@ void CurveDeformation::pullCurve(const Eigen::RowVector3d& pos, Eigen::MatrixXd&
 		V.row(moving_vertex_ID) = pos;
 		for (int i = 0; i < curves.size(); i++) {
 			if (curves[i].fixed_vertices.size() < curves[i].vertices.size()) { //Don't do any updating if all vertices are fixed
-				curves[i].laplacian_curve_edit.update_curve(V);
+				try {
+					curves[i].laplacian_curve_edit.update_curve(V);
+				}
+				catch (int ex) {
+					if (ex == -1) {
+						//TODO: Do nothing?
+						std::cerr << "Factorization of the system went wrong. Positions have not been updated. " << std::endl;
+					}
+				}
 			}
 		}
 

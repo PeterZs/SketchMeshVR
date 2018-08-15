@@ -309,6 +309,7 @@ void MeshExtrusion::get_normal_and_center(Eigen::RowVector3d& center, Eigen::Vec
 	normal.normalize();
 }
 
+/** Finds the leftmost and rightmost vertex of the extrusion base (according to some local set of axes). **/
 void MeshExtrusion::find_left_and_right(int& most_left_vertex_idx, int& most_right_vertex_idx, Mesh& m, Eigen::VectorXi &boundary_vertices, const Eigen::RowVector3d& sil_start, const Eigen::RowVector3d& sil_end, Eigen::RowVector3d& center) {
 	Eigen::Vector3d dir = sil_end - sil_start;
 	dir.normalize();
@@ -386,7 +387,7 @@ void MeshExtrusion::update_edge_indicators(Mesh& m, Eigen::MatrixXi& edges_to_up
 	Eigen::VectorXi col1Equals, col2Equals;
 	for (int i = 0; i < edges_to_update.rows(); i++) {
 		start = edges_to_update(i, 0);
-		end = edges_to_update(i, 1); //TODO: check that this indeeds work here. Reasoning is that the only edges that get added are between higher indexed vertices or between existing & higher indexed vertices, so they show up lower in EV (and our structure of existing markers won't change, just get elongated)
+		end = edges_to_update(i, 1); 
 
 		col1Equals = EV.col(0).cwiseEqual(min(start, end)).cast<int>();
 		col2Equals = EV.col(1).cwiseEqual(max(start, end)).cast<int>();
@@ -439,12 +440,10 @@ void MeshExtrusion::post_extrude_main_update_points(Stroke &stroke, Eigen::Matri
 	}
 	new_3DPoints.row(new_3DPoints.rows() - 1) = new_positions.row(0); //Make looped
 
-
 	stroke.set3DPoints(new_3DPoints);
 }
 
 /** Update the vertex bindings for the extrusion base stroke. Assumes indexing in m.V before any vertices are removed, so it will become the correct indexing after stroke.update_vert_bindings() is called. **/
-//TODO: extending this loop to the entire path size might give other side effects (maybe we need to make the surface_path a loop in LaplacianRemesh in the first place)???
 void MeshExtrusion::post_extrude_main_update_bindings(Stroke& base, SurfacePath& surface_path) {
 	vector<PathElement> path = surface_path.get_path();
 	vector<int> new_closest_vertex_indices(path.size());

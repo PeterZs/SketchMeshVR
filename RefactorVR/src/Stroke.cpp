@@ -16,7 +16,7 @@
 using namespace igl;
 using namespace std;
 
-double min_inter_point_distance = 0.0001125;//0.00005625;
+double min_inter_point_distance = 0.0001125;
 Eigen::RowVector3d red_color(1, 0, 0);
 Eigen::RowVector3d blue_color(0, 0, 1);
 
@@ -88,9 +88,8 @@ void Stroke::swap(Stroke & tmp) {//The pointers to V and F will always be the sa
 Stroke::Stroke() : V(&Eigen::MatrixXd(0, 3)), F(&Eigen::MatrixXi(0, 3)) {}
 Stroke::~Stroke() {}
 
-/** Used for DRAW. Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon). After adding the new point it will restart the timer. **/
+/** Used for DRAW. Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon). **/
 bool Stroke::addSegment(Eigen::Vector3f& pos, igl::opengl::glfw::Viewer &viewer) {
-
 	if (!stroke3DPoints.isZero()) {
 		if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < min_inter_point_distance) {
 			return false;
@@ -100,7 +99,6 @@ bool Stroke::addSegment(Eigen::Vector3f& pos, igl::opengl::glfw::Viewer &viewer)
 				return true; //Block DRAW mode till the buttons are released again
 			}
 		}
-
 	}
 
 	if (stroke3DPoints.rows() == 1 && stroke3DPoints.isZero()) {
@@ -121,9 +119,8 @@ bool Stroke::addSegment(Eigen::Vector3f& pos, igl::opengl::glfw::Viewer &viewer)
 	return false;
 }
 
-/** Used for ADD. Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon). After adding the new point it will restart the timer. **/
+/** Used for ADD. Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon). **/
 void Stroke::addSegmentAdd(Eigen::Vector3f& pos, igl::opengl::glfw::Viewer &viewer) {
-
 	vector<igl::Hit> hits;
 
 	if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), *V, *F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
@@ -195,8 +192,8 @@ void Stroke::addSegmentAdd(Eigen::Vector3f& pos, igl::opengl::glfw::Viewer &view
 	return;
 }
 
-/** Used for CUT. Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its projection as a 2D point. The indices of the front and backside faces that are hit will also be stored.
-If the ray doesn't intersect the mesh, we will store its origin and direction and later possible use it to compute the start or end point. After adding the new point it will restart the timer. **/
+/** Used for CUT. Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its projection on the mesh as a 2D point. The indices of the front and backside faces that are hit will also be stored.
+If the ray doesn't intersect the mesh, we will store its origin and direction and later possible use it to compute the start or end point. **/
 void Stroke::addSegmentCut(Eigen::Vector3f& pos, igl::opengl::glfw::Viewer &viewer) {
 
 	vector<igl::Hit> hits;
@@ -214,7 +211,7 @@ void Stroke::addSegmentCut(Eigen::Vector3f& pos, igl::opengl::glfw::Viewer &view
 			return;
 		}
 		if (stroke2DPoints.rows() == 1 && dir_before_cut.isZero()) { //There is a intersecting stroke point before the vars for the 0th (off-mesh) have been set
-			std::cerr << "This shouldn't happen. Draw the first point outside of the mesh" << endl;
+			std::cerr << "Please draw the first point outside of the mesh" << endl;
 			return;
 		}
 		if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - hit_pos.transpose()).squaredNorm() < min_inter_point_distance) {
@@ -267,7 +264,7 @@ void Stroke::addSegmentCut(Eigen::Vector3f& pos, igl::opengl::glfw::Viewer &view
 }
 
 /** Used for EXTRUDE. Extrusion base strokes need to be drawn entirely on the mesh (points outside of it will be ignored) and needs to surround at least one vertex.
-Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its projection as a 2D point. After adding the new point it will restart the timer. Will also store the indices of the faces that are hit. The closest vertex bindings are handled in SurfacePath. **/
+Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its projection on the mesh as a 2D point. Will also store the indices of the faces that are hit. The closest vertex bindings are handled in SurfacePath. **/
 void Stroke::addSegmentExtrusionBase(Eigen::Vector3f& pos, igl::opengl::glfw::Viewer &viewer) {
 	vector<igl::Hit> hits;
 
@@ -321,10 +318,9 @@ void Stroke::addSegmentExtrusionBase(Eigen::Vector3f& pos, igl::opengl::glfw::Vi
 	if (stroke3DPoints.rows() > 1) {
 		viewer.data().add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0, 0, 1));
 	}
-
 }
 
-/** Used for EXTRUDE. Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its projection as a 2D point. After adding the new point it will restart the timer. The closest vertex bindings are handled in SurfacePath. **/
+/** Used for EXTRUDE. Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its projection as a 2D point. The closest vertex bindings are handled in SurfacePath. **/
 void Stroke::addSegmentExtrusionSilhouette(Eigen::Vector3f& pos, igl::opengl::glfw::Viewer &viewer) {
 	Eigen::RowVector3d pt2D;
 	Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
@@ -409,11 +405,11 @@ bool Stroke::toLoop() {
 			stroke_edges.conservativeResize(stroke_edges.rows() + 1, Eigen::NoChange);
 			stroke_edges.bottomRows(1) << closest_vert_bindings[closest_vert_bindings.size() - 2], closest_vert_bindings.back();
 		}
-		if (hand_pos_at_draw.rows() > 1) { //Only loop if it actually contains data
+		if (hand_pos_at_draw.rows() > 1) {
 			hand_pos_at_draw.conservativeResize(hand_pos_at_draw.rows() + 1, Eigen::NoChange);
 			hand_pos_at_draw.bottomRows(1) << hand_pos_at_draw.row(0);
 		}
-		if (faces_hit.rows() > 1) { //Only loop if it actually contains data
+		if (faces_hit.rows() > 1) {
 			faces_hit.conservativeResize(faces_hit.rows() + 1, Eigen::NoChange);
 			faces_hit.bottomRows(1) << faces_hit.row(0);
 		}
@@ -435,17 +431,9 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_b
 	closing_stroke3DPoints.row(1) = stroke3DPoints.row(0);
 	Eigen::MatrixXd resampled_3DPoints = CleanStroke3D::resample_by_length_sub(closing_stroke3DPoints, 0, 1, mean_sample_dist);
 
-	/*	closest_vert_bindings.pop_back();
-		int size_before = closest_vert_bindings.size();
-		for (int i = 0; i < resampled_3DPoints.rows(); i++) { //The last resampled point is a copy of the first element of the original stroke, so add it to create a loop again
-			closest_vert_bindings.push_back(size_before + i);
-		}*/
-
 	Eigen::MatrixXd new_3DPoints = stroke3DPoints.topRows(stroke3DPoints.rows() - 1);
 	new_3DPoints.conservativeResize(new_3DPoints.rows() + resampled_3DPoints.rows(), Eigen::NoChange);
 	new_3DPoints.bottomRows(resampled_3DPoints.rows()) = resampled_3DPoints;
-
-
 
 	Eigen::MatrixXd resampled_new_3DPoints = CleanStroke3D::resample_by_length_sub(new_3DPoints, 0, new_3DPoints.rows() - 1, sqrt(min_inter_point_distance));
 	closest_vert_bindings.clear();
@@ -457,11 +445,9 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_b
 	Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
 	Eigen::MatrixX3d projected_points;
 	igl::project(stroke3DPoints, modelview, viewer.core.get_proj(), viewer.core.viewport, projected_points);
-	//dep = projected_points.col(2).topRows(projected_points.rows() - 1);
 	dep = projected_points.col(2);
 
 	stroke2DPoints = projected_points;
-	//	stroke2DPoints = projected_points.topRows(projected_points.rows() - 1);
 	Eigen::MatrixXd original_stroke2DPoints = stroke2DPoints.leftCols(2);
 	stroke2DPoints = resample_stroke2D(original_stroke2DPoints); //Enabling this might give a discrepancy between what is drawn and the result you get but does give smoother meshes
 
@@ -479,11 +465,10 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_b
 	mean_squared_sample_dist /= stroke2DPoints.rows();
 
 
-	//Set a sample-distance_to_vert dependent maximum triangle area. Setting this too small will result in inflation in the wrong direction.
+	//Set a inter-sample distance dependent maximum triangle area. Setting this too small will result in inflation in the wrong direction.
 	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq25a" + to_string(0.5*(mean_squared_sample_dist)), V2_tmp, F2, vertex_markers, edge_markers);
 	double mean_Z = stroke3DPoints.col(2).mean();
 	V2 = Eigen::MatrixXd::Constant(V2_tmp.rows(), V2_tmp.cols() + 1, mean_Z);
-	//V2.block(0, 0, V2_tmp.rows(), 2) = V2_tmp;
 	V2.leftCols(2) = V2_tmp;
 
 	generate_backfaces(F2, F2_back);
@@ -517,7 +502,6 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_b
 	Eigen::MatrixXd N_Faces, N_Vertices;
 	igl::per_vertex_normals(V2, F2, PER_VERTEX_NORMALS_WEIGHTING_TYPE_UNIFORM, N_Vertices);
 
-	//vertex_boundary_markers.resize(V2.rows());
 	vertex_is_fixed.resize(V2.rows());
 	for (int i = 0; i < V2.rows(); i++) {
 		if (i >= vertex_markers.rows()) { //vertex can't be boundary (it's on backside)
@@ -528,7 +512,6 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_b
 			if (vertex_markers(i) == 1) { //Don't change boundary vertices
 				vertex_is_fixed[i] = 1;
 				//Don't need to change stroke3DPoints here because they're the same as V2's points.
-
 				continue;
 			}
 			V2.row(i) = V2.row(i) + 0.1*N_Vertices.row(i);
@@ -546,7 +529,7 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_b
 
 	igl::unproject(V2_with_dep, modelview, viewer.core.get_proj(), viewer.core.viewport, V2_unproj);
 	V2.leftCols(2) = V2_unproj.leftCols(2);
-	V2.block(0, 2, stroke2DPoints.rows(), 1) = V2_unproj.block(0, 2, stroke2DPoints.rows(), 1); //Use actual z-value of drawn stroke 
+	//V2.block(0, 2, stroke2DPoints.rows(), 1) = V2_unproj.block(0, 2, stroke2DPoints.rows(), 1); //Use actual z-value of drawn stroke 
 
 	mesh_V = V2;
 	mesh_F = F2;
@@ -692,7 +675,7 @@ void Stroke::update_Positions(Eigen::MatrixXd V, bool structure_changed) {
 	}
 }
 
-/** Remaps the stroke's vertex bindings after the mesh topology has changed. If a stroke becomes non-continous (can only happen to strokes that were non-looped at the start and that did not have their first and/or last point removed) the stroke will be removed and its boundary_vertex_markers unset. Looped strokes always stay continuous, since we can ony remove one continuous piece of them.
+/** Remaps the stroke's vertex bindings after the mesh topology has changed.
 	Note that this method does not update the stroke3DPoints, use update_Positions() for that. **/
 bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::MatrixXi& replacing_vertex_bindings) {
 	vector<int> new_bindings;
@@ -731,7 +714,7 @@ bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::M
 		return false; //Stroke ceases to exist.
 	}
 
-	if (first_included_after_remove != -1) {	//Check that we didn't remove ALL points in the stroke and that we actually need to reorder (because point 0 was removed)
+	if (first_included_after_remove != -1) { //Check that we didn't remove ALL points in the stroke and that we actually need to reorder (because point 0 was removed)
 		rotate(new_bindings.begin(), new_bindings.begin() + first_included_after_remove, new_bindings.end()); //Makes the stroke "continuous" again
 	}
 
@@ -776,7 +759,6 @@ void Stroke::undo_stroke_add(Eigen::VectorXi& edge_boundary_markers, Eigen::Vect
 			}
 		}
 	}
-
 }
 
 void Stroke::switch_stroke_edges_type(Eigen::VectorXi& sharp_edge) {

@@ -63,15 +63,14 @@ int MeshCut::mesh_open_hole(Eigen::VectorXi& boundary_vertices, Mesh& m) {
 
 	Eigen::MatrixXd V2;
 	Eigen::MatrixXi F2, vertex_markers, edge_markers;
-	//TODO: Have a look at the factor below. Right now the new cut-plane triangles are rather large. Can we go lower without concave surfaces?
-	//The 2D points are multiplied by a factor 1000 because otherwise triangulate runs out of precision. Multiply max. allowed triangle area with a factor because we need to accomodate for largest edge triangles in order to prevent the new surface from becoming concave during smoothing, and the average distance_to_vert gets pulled down a lot because of edge-crossing sample parts.
+
+	//The 2D points are multiplied by a factor 1000 because otherwise triangulate runs out of precision. 
 	igl::triangle::triangulate(boundary_vertices_2D.leftCols(2), stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(boundary_vertices_2D.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq25a" + to_string(0.5 * mean_squared_sample_dist), V2, F2, vertex_markers, edge_markers); //Capital Q silences triangle's output in cmd line. Also retrieves markers to indicate whether or not an edge/vertex is on the mesh boundary
 	V2 /= 1000.0; //Undo previous multiplication (to prevent triangle from running out of precision)
 
 	int original_v_size = m.V.rows() - boundary_vertices.rows();
 	m.V.conservativeResize(original_v_size + V2.rows(), Eigen::NoChange);
 	m.vertex_is_fixed.conservativeResize(original_v_size + V2.rows());
-
 
 	//project back to 3D
 	for (int i = 0; i < V2.rows(); i++) {
