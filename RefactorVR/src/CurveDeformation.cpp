@@ -42,8 +42,6 @@ void CurveDeformation::pullCurve(const Eigen::RowVector3d& pos, Eigen::MatrixXd&
 		prev_V = V;
 		ROI_is_updated = update_ROI_test(drag_size, V, edge_boundary_markers);
 	}
-	//V = original_positions; //TODO: see if we need this/whether it makes any difference in stability
-	
 
 	if (prev_range_size <= 1) {
 		V.row(moving_vertex_ID) = pos;
@@ -51,14 +49,6 @@ void CurveDeformation::pullCurve(const Eigen::RowVector3d& pos, Eigen::MatrixXd&
 	else {
 
 		if (ROI_is_updated) {
-		/*	for (int i = 0; i < curves.size(); i++) {
-				for (int j = 0; j < curves[i].vertices.size(); j++) {
-				//	V.row(curves[i].vertices[j]) = original_positions.row(curves[i].vertices[j]);
-					tmp_original_pos.conservativeResize(tmp_original_pos.rows() + 1, Eigen::NoChange);
-					tmp_original_pos.bottomRows(1) << curves[i].vertices[j], V.row(curves[i].vertices[j]);
-				}
-			}
-			V = prev_V;*/
 			V = original_positions;
 
 			for (int i = 0; i < curves.size(); i++) {
@@ -73,7 +63,6 @@ void CurveDeformation::pullCurve(const Eigen::RowVector3d& pos, Eigen::MatrixXd&
 				}
 				catch (int ex) {
 					if (ex == -1) {
-						//TODO: Do nothing?
 						std::cerr << "Factorization of the system went wrong. Positions have not been updated. " << std::endl;
 					}
 				}
@@ -85,10 +74,6 @@ void CurveDeformation::pullCurve(const Eigen::RowVector3d& pos, Eigen::MatrixXd&
 
 bool CurveDeformation::update_ROI_test(double drag_size, Eigen::MatrixXd& V, Eigen::VectorXi& edge_boundary_markers) {
 	prev_drag_size = drag_size;
-
-	/*for (int i = 0; i < tmp_original_pos.rows(); i++) {
-		V.row(tmp_original_pos(i, 0)) = tmp_original_pos.row(i).rightCols(3);
-	}*/
 
 	vector<int> vertices_in_range = collect_vertices_within_drag_length(drag_size, V, edge_boundary_markers);
 	if (vertices_in_range.size() == prev_range_size) {
@@ -119,21 +104,6 @@ bool CurveDeformation::update_ROI_test(double drag_size, Eigen::MatrixXd& V, Eig
 				}
 				fixed[curve.vertices[j]] = 1;
 			}
-
-			/*if (curves.back().fixed_vertices.size() == 1 && curves.back().vertices.size()>=3) { //Means that there is only 1 fixed vertex, which is the handle. All other vertices are free (so we'll end up dragging the mesh around instead of pulling on it)
-				int count = 0;
-				if (std::find(curves.back().vertices.begin(), curves.back().vertices.end(), vertices_in_range[vertices_in_range.size() - 1]) != curves.back().vertices.end() && std::find(curves.back().fixed_vertices.begin(), curves.back().fixed_vertices.end(), vertices_in_range[vertices_in_range.size()-1]) == curves.back().fixed_vertices.end()) { //If the last available vertex (furthest away) is part of this curve, but it is not fixed (means we have a loop?)
-					curves.back().fixed_vertices.push_back(vertices_in_range[vertices_in_range.size() - 1]);
-					count++;
-				}
-				if (std::find(curves.back().vertices.begin(), curves.back().vertices.end(), vertices_in_range[vertices_in_range.size() - 2]) != curves.back().vertices.end() && std::find(curves.back().fixed_vertices.begin(), curves.back().fixed_vertices.end(), vertices_in_range[vertices_in_range.size() - 2]) == curves.back().fixed_vertices.end()) {
-					curves.back().fixed_vertices.push_back(vertices_in_range[vertices_in_range.size() - 2]);
-					count++;
-				}
-				/*if (count == 2) {
-					curves.back().fixed_edges.push_back(find_edge(curves.back().fixed_vertices[curves.back().fixed_vertices.size() - 1], curves.back().fixed_vertices[curves.back().fixed_vertices.size() - 2]));
-				}
-			}*/
 
 			if (curves.back().edges.rows() == (edge_boundary_markers.array() == edge_boundary_markers[local_to_global_edge_ID[0]]).count() && curves.back().fixed_vertices.size()==1 && curves.back().fixed_edges.size()==0){ //If this curve contains all edges that exist with that boundary marker, and the curve has only 1 fixed vertex and no fixed edges, it means that we have an entire loop in the ROI. This means there is too little constraints for deterministic behaviour
 				int edge = find_next_edge(curves.back().fixed_vertices[0], -1, edge_boundary_markers[local_to_global_edge_ID[0]], edge_boundary_markers);

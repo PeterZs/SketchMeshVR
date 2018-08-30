@@ -419,7 +419,6 @@ void MeshExtrusion::update_face_indices(Mesh& m, Eigen::MatrixXi& F2, vector<int
 	}
 }
 
-//TODO: check how FiberMesh does this. Should we resample the base stroke in extrude_prepare already?
 /** Updates the base stroke's 3DPoints with the new vertices. PathElements of the type FACE stay in the same position, but PathElements of the type EDGE get added. **/
 void MeshExtrusion::post_extrude_prepare_update_points(Stroke& stroke, SurfacePath& surface_path) {
 	vector<PathElement> path = surface_path.get_path();

@@ -202,33 +202,7 @@ void LaplacianCurveEdit::solve_for_pos_and_rot(Eigen::MatrixXd& V) {
 	} 
 	solverPosRot.factorize(AT*A);
 	if (solverPosRot.info() != Eigen::Success) {
-		//TODO: remove all this stuff and handle gracefully?
-		std::cout << "Check if any non-zero entries were removed" << std::endl << A_before << std::endl << std::endl << std::endl << A << std::endl;
 		throw -1;
-		std::cout << A.rows() << " " << A.cols() << std::endl;
-		std::cout << "vertices: ";
-		for (int i = 0; i < vertices.size(); i++) {
-			std::cout << vertices[i] << "  ";
-		}
-		std::cout << std::endl << "fixed vert: " << std::endl;
-		for (int i = 0; i < fixed_vertices.size(); i++) {
-			std::cout << fixed_vertices[i] << "   " << fixed_vertices_local[i] << std::endl;
-		}
-		std::cout << std::endl << "edges: "<< std::endl;
-		for (int i = 0; i < edges.rows(); i++) {
-			std::cout << edges.row(i) << std::endl;
-		}
-		std::cout << "Fixed edges: ";
-		for (int i = 0; i < fixed_edges.size(); i++) {
-			std::cout << fixed_edges[i] << "   ";
-		}
-		std::cout << std::endl;
-		std::cout << solverPosRot.lastErrorMessage() << std::endl;
-
-		std::cout << "AT*A: " << std::endl << AT*A << std::endl << std::endl << std::endl << std::endl;
-		std::cout << "AT: " << std::endl << (Eigen::MatrixXd)AT << std::endl << std::endl << std::endl << std::endl;
-		std::cout << "A: " << std::endl << (Eigen::MatrixXd)A << std::endl << std::endl << std::endl << std::endl;
-		system("pause");
 	}
 	PosRot = solverPosRot.solve(AT*B);
 }

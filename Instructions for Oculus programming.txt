@@ -1,0 +1,10 @@
+NOTE: for the instructions below, your path names might be a little different. Search for something similar. You might need to do the instructions below for both the Release and Debug configuration.
+- For SDK usage you need to go to Visual Studio -> right click on the project and go to Properties -> C/C++ -> Additional Include Directories. Add ...\OculusSDK\LibOVR\Include and ...\OculusSDK\LibOVR\Src. Then from inside the project properties go to Linker -> Input -> Additional Dependencies and add ...\OculusSDK\LibOVR\Lib\Windows\x64\Release\VS2015\LibOVR.lib.
+- For Avatar usage you need to go to Visual Studio -> right click on the project and go to Properties -> C/C++ -> Additional Include Directories. Here add the location of ...\OVRAvatarSDK\Include. Then from inside the project properties go to Linker -> Input -> Additional Dependencies and add ...\OVRAvatarSDK\Windows\libovravatar.lib.
+- For Platform usage (for user's customized avatars) go to Visual Studio -> right click on the project and go to Properties -> C/C++ -> Additional Include Directions. Here add the location of ...\OVRPlatformSDK\Include. Then from inside the project properties go to Linker -> Input -> Additional Dependencies and add ...\OVRPlatformSDK\Windows\libOVRPlatform64_1.lib
+
+
+Make sure you have libigl as a 64-bit version.
+You might need to rebuild your project or the Oculus SDKs to MT or MD (via project properties -> C/C++ -> Code Generation -> Runtime Library) if Visual Studio complains about any mismatches.
+The origin of the coordinate system that Oculus uses is initially at the center of the viewing frustrum (based on the sensors). You can reset this via recenterTrackingOrigin() -> this will set the origin to the position of the Rift at the time it is called. The position of the headset and the Touch controllers will then be reported relatively to this position.
+You can specify whether the origin of the z-axis should be at floor or eye level. The coordinate system has a positive  x-axis pointing to the right, a positive y-axis pointing upwards and a positive z-axis pointing to your back.
