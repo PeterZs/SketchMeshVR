@@ -42,7 +42,6 @@ namespace igl {
 
 		inline void serialization(bool s, AppState& obj, std::vector<char>& buffer)
 		{
-			std::cout << "Insidee" << std::endl;
 			SERIALIZE_MEMBER(vertex_is_fixed);
 			SERIALIZE_MEMBER(edge_boundary_markers);
 			SERIALIZE_MEMBER(sharp_edge);
