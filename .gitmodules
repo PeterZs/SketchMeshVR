@@ -2,10 +2,6 @@
 	path = libigl
 	url = https://github.com/FloorVerhoeven/libigl_old.git
 	branch = master
-
-[submodule "VR"]
-	path = VR-Viewer
-	url = https://gitlab.com/FloorVerhoeven/VR-Viewer.git
 [submodule "libiglVR"]
 	path = libiglVR
 	url = https://github.com/FloorVerhoeven/libiglVR.git
