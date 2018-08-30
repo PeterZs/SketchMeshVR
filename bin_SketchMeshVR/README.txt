@@ -2,7 +2,14 @@ All editing actions are performed by pressing and holding down the trigger butto
 The default action is the "draw" mode, which allows you to create a mesh.
 Press A to bring up the menu. Point with the right controller and select a different action by either pressing the B button or the right trigger. Pressing A again will close the menu.
 To rotate the mesh, use the right thumbstick. 
-When you want to start a new mesh, simply start drawing over the current one, it will be removed as soon as you start.
+When you want to start a new mesh, simply start drawing over the current one, it will be removed as soon as you start. 
+Pressing the B button while holding your hand away from the mesh will smooth the entire mesh. Individual curves can also be smoothed. In order to do this, hold the B button while your hand is close to the curve, and rub over it.
 
-NOTE: due to the fact that the tip of the index finger is used as "drawing point", drawing valid extrusion silhouettes is very hard and extrusion will almost certainly crash the program. Stay away from it for now.
- 
+Load/Save: The load and save buttons will bring up a dialog box on the screen of the PC that the Oculus Rift is attached to. In order to select the location to save to/load from, the user has to take of the headset and input the information via the keyboard and mouse. 
+Type change: Selecting the type change mode allows the user to change the curves that make up the mesh from sharp to smooth and vice versa by clicking on them.
+Extrusion: Selecting the extrusion mode allows the user to add extrusions to the existing mesh. First the user draws an extrusion base using the laser ray. When this is successful, it will show up in blue. If anything is wrong with the extrusion base, it will show up in black and the user can try again.
+After drawing the extrusion base, the user can draw the extrusion silhouette, using the position of his/her hand. If everything was successful, the new mesh with the extrusion will be shown. If anything went wrong, the strokes will be displayed in black and an error message will show up in the terminal.
+Cut: Selecting the cut mode allows the user to cut away parts of the mesh. The user should draw a cutting line that starts and ends outside of the mesh, as if they were cutting with a laser sword. A successful cutting stroke will show up in pink. The user can now click on the part of the mesh that should be removed. If anything goes wrong, the cut stroke will show in black and an error message will be displayed in the terminal.
+Add curve: Selecting the add curve mode allows the user to add additional control curves to the mesh. This can be done in the following 2 ways: either the user can draw a stroke that is entirely on the mesh surface or the user can draw a stroke that starts and ends outside of the mesh. The latter option will result in a new curve that wraps around over the backside of the mesh.
+Remove curve: Selecting the remove curve mode allows the user to remove curves that define the mesh. This is done by pointing at the curve that should be removed and clicking twice. 
+Pulling a curve: Selecting the pull curve mode allows the user to deform control curves that are part of the mesh. This is done by holding the user's hand close to the curve that they want to deform, pressing the grip button and moving their hand to the desired new position.
