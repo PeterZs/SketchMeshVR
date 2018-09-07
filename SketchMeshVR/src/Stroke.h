@@ -30,8 +30,7 @@ public:
 	void undo_stroke_add(Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & sharp_edge, Eigen::VectorXi & vertex_is_fixed);
 	void switch_stroke_edges_type(Eigen::VectorXi & sharp_edge);
 	void update_Positions(Eigen::MatrixXd V, bool structure_changed);
-
-	std::unordered_map<int, int> generate3DMeshFromStroke(Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & vertex_is_fixed, Eigen::MatrixXd & mesh_V, Eigen::MatrixXi & mesh_F, igl::opengl::glfw::Viewer & viewer);
+	void generate3DMeshFromStroke(Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & vertex_is_fixed, Eigen::MatrixXd & mesh_V, Eigen::MatrixXi & mesh_F, igl::opengl::glfw::Viewer & viewer);
 	bool has_self_intersection(bool make_looped);
 	int selectClosestVertex(Eigen::Vector3f pos, double & closest_distance);
     

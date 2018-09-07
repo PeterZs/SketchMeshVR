@@ -420,7 +420,7 @@ bool Stroke::toLoop() {
 	return false;
 }
 
-unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Eigen::VectorXi& vertex_is_fixed, Eigen::MatrixXd& mesh_V, Eigen::MatrixXi& mesh_F, igl::opengl::glfw::Viewer &viewer) {
+void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Eigen::VectorXi& vertex_is_fixed, Eigen::MatrixXd& mesh_V, Eigen::MatrixXi& mesh_F, igl::opengl::glfw::Viewer &viewer) {
 	double mean_sample_dist = 0.0;
 	for (int i = 0; i < stroke3DPoints.rows() - 1; i++) {
 		mean_sample_dist += (stroke3DPoints.row(i) - stroke3DPoints.row((i + 1) % stroke3DPoints.rows())).norm();
@@ -442,9 +442,32 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_b
 	}
 	set3DPoints(resampled_new_3DPoints);
 
-	Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
 	Eigen::MatrixX3d projected_points;
+	/*Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
 	igl::project(stroke3DPoints, modelview, viewer.core.get_proj(), viewer.core.viewport, projected_points);
+	dep = projected_points.col(2);*/
+
+	Eigen::RowVector3d center = stroke3DPoints.colwise().mean();
+	stroke3DPoints = stroke3DPoints.rowwise() - center; //Zero mean
+	//std::cout << (1.0 / (stroke3DPoints.rows()-1)) << std::endl << stroke3DPoints.transpose() * stroke3DPoints << std::endl << std::endl;
+	Eigen::MatrixXd cov = (1.0/(stroke3DPoints.rows()-1)) * (stroke3DPoints.transpose()*stroke3DPoints);
+	//std::cout << cov << std::endl;
+	EigenSolver<MatrixXd> es;
+	es.compute(cov);
+	Eigen::VectorXd eigenvals = es.eigenvalues().real();
+
+	std::vector<int> idx(eigenvals.rows());
+	size_t n(0);
+	std::generate(std::begin(idx), std::end(idx), [&] {return n++; }); //Fill the vector idx with increasing integers starting from 0
+	std::sort(std::begin(idx), std::end(idx), [&](int i1, int i2) {return eigenvals[i1] > eigenvals[i2]; }); //Sort the vector of indices based on the descending values of eigenvalues
+//	std::cout << es.eigenvectors() << std::endl;
+	Eigen::Vector3d xvec = es.eigenvectors().real().col(idx[0]);
+	Eigen::Vector3d yvec = es.eigenvectors().real().col(idx[1]);
+	Eigen::Vector3d zvec = es.eigenvectors().real().col(idx[2]);
+	Eigen::MatrixXd new_axes(3, 3);
+	new_axes << xvec, yvec, zvec;
+
+	projected_points = stroke3DPoints * new_axes;
 	dep = projected_points.col(2);
 
 	stroke2DPoints = projected_points;
@@ -467,9 +490,27 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_b
 
 	//Set a inter-sample distance dependent maximum triangle area. Setting this too small will result in inflation in the wrong direction.
 	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq25a" + to_string(0.5*(mean_squared_sample_dist)), V2_tmp, F2, vertex_markers, edge_markers);
-	double mean_Z = stroke3DPoints.col(2).mean();
-	V2 = Eigen::MatrixXd::Constant(V2_tmp.rows(), V2_tmp.cols() + 1, mean_Z);
-	V2.leftCols(2) = V2_tmp;
+//	double mean_Z = stroke3DPoints.col(2).mean();
+//	V2 = Eigen::MatrixXd::Constant(V2_tmp.rows(), V2_tmp.cols() + 1, mean_Z);
+//	V2.leftCols(2) = V2_tmp;
+
+
+	V2 = center.replicate(V2_tmp.rows(), 1);
+/*	V2 += xvec.transpose().replicate(V2_tmp.rows(), 1).cwiseProduct(V2_tmp.col(0));
+//	V2 += xvec.transpose()*V2_tmp.col(0);
+	V2 += yvec.transpose()*V2_tmp.col(1);
+	V2 += zvec.transpose()*V2_tmp.col(2);
+	*/
+	for (int i = 0; i < V2_tmp.rows(); i++) {
+		V2.row(i) += xvec.transpose()*V2_tmp(i, 0);
+		V2.row(i) += yvec.transpose()*V2_tmp(i, 1);
+	//	V2.row(i) += zvec.transpose();
+	}
+
+	std::cout << "Center: " << center << std::endl;
+	std::cout << "xvec: " << xvec.transpose() << std::endl;
+	std::cout << "yvec: " << yvec.transpose() << std::endl;
+	std::cout << "zvec: " << zvec.transpose() << std::endl;
 
 	generate_backfaces(F2, F2_back);
 	int nr_boundary_vertices = (vertex_markers.array() == 1).count();
@@ -499,9 +540,12 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_b
 		}
 	}
 
+
+
+
 	Eigen::MatrixXd N_Faces, N_Vertices;
 	igl::per_vertex_normals(V2, F2, PER_VERTEX_NORMALS_WEIGHTING_TYPE_UNIFORM, N_Vertices);
-
+	std::cout << "here" << std::endl;
 	vertex_is_fixed.resize(V2.rows());
 	for (int i = 0; i < V2.rows(); i++) {
 		if (i >= vertex_markers.rows()) { //vertex can't be boundary (it's on backside)
@@ -519,6 +563,7 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_b
 		}
 	}
 
+/** Old code that projects to the XY-plane
 
 	Eigen::VectorXd dep_tmp = Eigen::VectorXd::Constant(V2.rows(), dep.mean());
 	dep_tmp.topRows(stroke2DPoints.rows()) = dep;
@@ -529,14 +574,27 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_b
 
 	igl::unproject(V2_with_dep, modelview, viewer.core.get_proj(), viewer.core.viewport, V2_unproj);
 	V2.leftCols(2) = V2_unproj.leftCols(2);
+	//Below is old code that unprojects to the actual original z-values of the drawn stroke
 	//V2.block(0, 2, stroke2DPoints.rows(), 1) = V2_unproj.block(0, 2, stroke2DPoints.rows(), 1); //Use actual z-value of drawn stroke 
+
+	**/
+
 
 	mesh_V = V2;
 	mesh_F = F2;
 
+	std::cout << "here2" << std::endl;
 
+	if (!is_edge_manifold(*F)) {
+		stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
+		stroke3DPoints.bottomRows(1) = stroke3DPoints.row(0);
+		stroke3DPoints.rowwise() += center;
+		return;
+	}
 	Eigen::MatrixXi EV, FE, EF;
-	igl::edge_topology(*V, *F, EV, FE, EF);
+	igl::edge_topology(*V, *F, EV, FE, EF);	
+	std::cout << "here3" << std::endl;
+
 	edge_boundary_markers.conservativeResize(EV.rows());
 	edge_boundary_markers.setZero();
 	for (int i = 0; i < EV.rows(); i++) {
@@ -548,9 +606,10 @@ unordered_map<int, int> Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_b
 	//Make vertex bindings and 3DPoints looped again
 	stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
 	stroke3DPoints.bottomRows(1) = stroke3DPoints.row(0);
+	stroke3DPoints.rowwise() += center;
 	closest_vert_bindings.push_back(closest_vert_bindings[0]);
 
-	return backside_vertex_map;
+	return;
 }
 
 /** Makes the stroke counter clockwise. **/
