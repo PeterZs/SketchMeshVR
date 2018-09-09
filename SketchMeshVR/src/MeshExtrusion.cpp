@@ -55,6 +55,7 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 	Eigen::Vector3d normal(0, 0, 0);
 	get_normal_and_center(center, normal, m, boundary_vertices);
 
+	stroke.project_with_PCA();
 	Eigen::MatrixX3d sil_3D_points = stroke.get3DPoints();
 	Eigen::MatrixXd silhouette_vertices(sil_3D_points.rows() - 1, 3);
 	if (stroke.has_been_reversed) {

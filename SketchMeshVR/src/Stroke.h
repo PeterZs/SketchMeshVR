@@ -31,6 +31,7 @@ public:
 	void switch_stroke_edges_type(Eigen::VectorXi & sharp_edge);
 	void update_Positions(Eigen::MatrixXd V, bool structure_changed);
 	void generate3DMeshFromStroke(Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & vertex_is_fixed, Eigen::MatrixXd & mesh_V, Eigen::MatrixXi & mesh_F, igl::opengl::glfw::Viewer & viewer);
+	void project_with_PCA();
 	bool has_self_intersection(bool make_looped);
 	int selectClosestVertex(Eigen::Vector3f pos, double & closest_distance);
     

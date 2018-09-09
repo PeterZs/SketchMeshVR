@@ -559,6 +559,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 				if (!igl::is_edge_manifold(F)) { //Check if the drawn stroke results in an edge-manifold mesh, otherwise sound a beep and revert
 					sound_error_beep();
+					added_stroke->update_Positions(V, false);
 					Eigen::MatrixXd drawn_points = added_stroke->get3DPoints();
 					vertex_is_fixed.resize(0);
 					edge_boundary_markers.resize(0);

@@ -437,6 +437,7 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 
 	Eigen::MatrixXd resampled_new_3DPoints = CleanStroke3D::resample_by_length_sub(new_3DPoints, 0, new_3DPoints.rows() - 1, sqrt(min_inter_point_distance));
 	closest_vert_bindings.clear();
+
 	for (int i = 0; i < resampled_new_3DPoints.rows(); i++) {
 		closest_vert_bindings.push_back(i);
 	}
@@ -449,9 +450,7 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 
 	Eigen::RowVector3d center = stroke3DPoints.colwise().mean();
 	stroke3DPoints = stroke3DPoints.rowwise() - center; //Zero mean
-	//std::cout << (1.0 / (stroke3DPoints.rows()-1)) << std::endl << stroke3DPoints.transpose() * stroke3DPoints << std::endl << std::endl;
 	Eigen::MatrixXd cov = (1.0/(stroke3DPoints.rows()-1)) * (stroke3DPoints.transpose()*stroke3DPoints);
-	//std::cout << cov << std::endl;
 	EigenSolver<MatrixXd> es;
 	es.compute(cov);
 	Eigen::VectorXd eigenvals = es.eigenvalues().real();
@@ -460,7 +459,7 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 	size_t n(0);
 	std::generate(std::begin(idx), std::end(idx), [&] {return n++; }); //Fill the vector idx with increasing integers starting from 0
 	std::sort(std::begin(idx), std::end(idx), [&](int i1, int i2) {return eigenvals[i1] > eigenvals[i2]; }); //Sort the vector of indices based on the descending values of eigenvalues
-//	std::cout << es.eigenvectors() << std::endl;
+
 	Eigen::Vector3d xvec = es.eigenvectors().real().col(idx[0]);
 	Eigen::Vector3d yvec = es.eigenvectors().real().col(idx[1]);
 	Eigen::Vector3d zvec = es.eigenvectors().real().col(idx[2]);
@@ -496,11 +495,7 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 
 
 	V2 = center.replicate(V2_tmp.rows(), 1);
-/*	V2 += xvec.transpose().replicate(V2_tmp.rows(), 1).cwiseProduct(V2_tmp.col(0));
-//	V2 += xvec.transpose()*V2_tmp.col(0);
-	V2 += yvec.transpose()*V2_tmp.col(1);
-	V2 += zvec.transpose()*V2_tmp.col(2);
-	*/
+
 	for (int i = 0; i < V2_tmp.rows(); i++) {
 		V2.row(i) += xvec.transpose()*V2_tmp(i, 0);
 		V2.row(i) += yvec.transpose()*V2_tmp(i, 1);
@@ -545,7 +540,6 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 
 	Eigen::MatrixXd N_Faces, N_Vertices;
 	igl::per_vertex_normals(V2, F2, PER_VERTEX_NORMALS_WEIGHTING_TYPE_UNIFORM, N_Vertices);
-	std::cout << "here" << std::endl;
 	vertex_is_fixed.resize(V2.rows());
 	for (int i = 0; i < V2.rows(); i++) {
 		if (i >= vertex_markers.rows()) { //vertex can't be boundary (it's on backside)
@@ -583,17 +577,17 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 	mesh_V = V2;
 	mesh_F = F2;
 
-	std::cout << "here2" << std::endl;
 
 	if (!is_edge_manifold(*F)) {
 		stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
 		stroke3DPoints.bottomRows(1) = stroke3DPoints.row(0);
 		stroke3DPoints.rowwise() += center;
+		closest_vert_bindings.push_back(closest_vert_bindings[0]);
+
 		return;
 	}
 	Eigen::MatrixXi EV, FE, EF;
 	igl::edge_topology(*V, *F, EV, FE, EF);	
-	std::cout << "here3" << std::endl;
 
 	edge_boundary_markers.conservativeResize(EV.rows());
 	edge_boundary_markers.setZero();
@@ -610,6 +604,35 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 	closest_vert_bindings.push_back(closest_vert_bindings[0]);
 
 	return;
+}
+
+void Stroke::project_with_PCA() {
+	Eigen::MatrixX3d projected_points;
+	Eigen::RowVector3d center = stroke3DPoints.colwise().mean();
+	stroke3DPoints = stroke3DPoints.rowwise() - center; //Zero mean
+	Eigen::MatrixXd cov = (1.0 / (stroke3DPoints.rows() - 1)) * (stroke3DPoints.transpose()*stroke3DPoints);
+	EigenSolver<MatrixXd> es;
+	es.compute(cov);
+	Eigen::VectorXd eigenvals = es.eigenvalues().real();
+
+	std::vector<int> idx(eigenvals.rows());
+	size_t n(0);
+	std::generate(std::begin(idx), std::end(idx), [&] {return n++; }); //Fill the vector idx with increasing integers starting from 0
+	std::sort(std::begin(idx), std::end(idx), [&](int i1, int i2) {return eigenvals[i1] > eigenvals[i2]; }); //Sort the vector of indices based on the descending values of eigenvalues
+
+	Eigen::Vector3d xvec = es.eigenvectors().real().col(idx[0]);
+	Eigen::Vector3d yvec = es.eigenvectors().real().col(idx[1]);
+	Eigen::Vector3d zvec = es.eigenvectors().real().col(idx[2]);
+	Eigen::MatrixXd new_axes(3, 3);
+	new_axes << xvec, yvec, zvec;
+
+	projected_points = stroke3DPoints * new_axes;
+
+	for (int i = 0; i < stroke3DPoints.rows(); i++) {
+		stroke3DPoints.row(i) = center;
+		stroke3DPoints.row(i) += xvec.transpose()*projected_points(i, 0);
+		stroke3DPoints.row(i) += yvec.transpose()*projected_points(i, 1);
+	}
 }
 
 /** Makes the stroke counter clockwise. **/
