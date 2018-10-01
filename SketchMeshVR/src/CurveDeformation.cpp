@@ -63,7 +63,7 @@ void CurveDeformation::pullCurve(const Eigen::RowVector3d& pos, Eigen::MatrixXd&
 				}
 				catch (int ex) {
 					if (ex == -1) {
-						std::cerr << "Factorization of the system went wrong. Positions have not been updated. " << std::endl;
+					//	std::cerr << "Factorization of the system went wrong. Positions have not been updated. " << std::endl;
 					}
 				}
 			}

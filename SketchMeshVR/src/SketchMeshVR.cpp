@@ -806,6 +806,9 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				if (added_stroke->get3DPoints().rows() > 6) {
 					success_extrude = MeshExtrusion::extrude_main(*base_mesh, base_surface_path, *added_stroke, *extrusion_base, base_model, base_view, base_proj, base_viewport, replacing_vertex_bindings);
 				}
+				else {
+					std::cerr << "Drawn stroke has too little sample points. Please try again." << std::endl;
+				}
 
 				if (!success_extrude) { //Catches the case that the extrusion base removes all faces/vertices or that the extrusion silhouette has too little samples/is just a click
 					next_added_stroke_ID -= 2;

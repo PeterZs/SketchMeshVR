@@ -278,7 +278,7 @@ void Stroke::addSegmentExtrusionBase(Eigen::Vector3f& pos, igl::opengl::glfw::Vi
 		if (!stroke3DPoints.isZero() && hit_pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && hit_pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && hit_pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
 			return;
 		}
-		else if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - hit_pos.transpose()).squaredNorm() < min_inter_point_distance) {
+		else if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - hit_pos.transpose()).squaredNorm() < 0.25*min_inter_point_distance) {
 			return;
 		}
 
@@ -332,7 +332,7 @@ void Stroke::addSegmentExtrusionSilhouette(Eigen::Vector3f& pos, igl::opengl::gl
 	if (!stroke2DPoints.isZero() && pt2D[0] == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && pt2D[1] == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) {//Check that the point is new compared to last time
 		return;
 	}
-	else if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < 0.01*min_inter_point_distance) {
+	else if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < 0.25*min_inter_point_distance) {
 		return;
 	}
 
@@ -502,11 +502,6 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 	//	V2.row(i) += zvec.transpose();
 	}
 
-	std::cout << "Center: " << center << std::endl;
-	std::cout << "xvec: " << xvec.transpose() << std::endl;
-	std::cout << "yvec: " << yvec.transpose() << std::endl;
-	std::cout << "zvec: " << zvec.transpose() << std::endl;
-
 	generate_backfaces(F2, F2_back);
 	int nr_boundary_vertices = (vertex_markers.array() == 1).count();
 	int original_size = V2.rows();
@@ -606,7 +601,7 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 	return;
 }
 
-void Stroke::project_with_PCA() {
+void Stroke::project_with_PCA_given_target(Eigen::Vector3d target_vec) {
 	Eigen::MatrixX3d projected_points;
 	Eigen::RowVector3d center = stroke3DPoints.colwise().mean();
 	stroke3DPoints = stroke3DPoints.rowwise() - center; //Zero mean
@@ -619,10 +614,25 @@ void Stroke::project_with_PCA() {
 	size_t n(0);
 	std::generate(std::begin(idx), std::end(idx), [&] {return n++; }); //Fill the vector idx with increasing integers starting from 0
 	std::sort(std::begin(idx), std::end(idx), [&](int i1, int i2) {return eigenvals[i1] > eigenvals[i2]; }); //Sort the vector of indices based on the descending values of eigenvalues
+	
 
-	Eigen::Vector3d xvec = es.eigenvectors().real().col(idx[0]);
-	Eigen::Vector3d yvec = es.eigenvectors().real().col(idx[1]);
-	Eigen::Vector3d zvec = es.eigenvectors().real().col(idx[2]);
+	double proj, max_proj = 0.0;
+	int max_idx;
+	for (int i = 0; i < 3; i++) {
+		proj = abs(target_vec.dot(es.eigenvectors().real().col(idx[i])));
+		if (proj > max_proj) {
+			max_proj = proj;
+			max_idx = i;
+		}
+	}
+
+	Eigen::Vector3d xvec = es.eigenvectors().real().col(idx[max_idx]);
+	Eigen::Vector3d yvec = (max_idx == 0) ? es.eigenvectors().real().col(idx[1]) : es.eigenvectors().real().col(idx[0]);
+	Eigen::Vector3d zvec = (max_idx == 0) ? es.eigenvectors().real().col(idx[2]) : es.eigenvectors().real().col(!(max_idx - 1) + 1);
+
+//	Eigen::Vector3d xvec = es.eigenvectors().real().col(idx[0]);
+//	Eigen::Vector3d yvec = es.eigenvectors().real().col(idx[1]);
+//	Eigen::Vector3d zvec = es.eigenvectors().real().col(idx[2]);
 	Eigen::MatrixXd new_axes(3, 3);
 	new_axes << xvec, yvec, zvec;
 

@@ -55,7 +55,7 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 	Eigen::Vector3d normal(0, 0, 0);
 	get_normal_and_center(center, normal, m, boundary_vertices);
 
-	stroke.project_with_PCA();
+	stroke.project_with_PCA_given_target(normal);
 	Eigen::MatrixX3d sil_3D_points = stroke.get3DPoints();
 	Eigen::MatrixXd silhouette_vertices(sil_3D_points.rows() - 1, 3);
 	if (stroke.has_been_reversed) {
@@ -98,6 +98,8 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 
 	silhouette_vertices = CleanStroke3D::resample(silhouette_vertices); //Resample, including the space between the outer silhouette vertices and the left- and right-most base vertices
 	Eigen::MatrixXd silhouette_vertices_smoothed = smooth_stroke(silhouette_vertices);
+//	Eigen::MatrixXd silhouette_vertices_smoothed = silhouette_vertices;
+
 	tmp_sil = silhouette_vertices_smoothed.middleRows(1, silhouette_vertices_smoothed.rows() - 2); //Remove the left- and right-most vertices again
 	silhouette_vertices = tmp_sil;
 
@@ -315,13 +317,13 @@ void MeshExtrusion::find_left_and_right(int& most_left_vertex_idx, int& most_rig
 	Eigen::Vector3d dir = sil_end - sil_start;
 	dir.normalize();
 	Eigen::Vector3d center_to_vertex;
-	double dot_prod = dir.dot(m.V.row(boundary_vertices[0]) - center);
+	double dot_prod = dir.dot((m.V.row(boundary_vertices[0]) - center).normalized());
 	double min = dot_prod, max = dot_prod;
 	most_left_vertex_idx = 0;
 	most_right_vertex_idx = 0;
 
 	for (int i = 1; i < boundary_vertices.rows(); i++) {
-		center_to_vertex = (m.V.row(boundary_vertices[i]) - center);
+		center_to_vertex = (m.V.row(boundary_vertices[i]) - center).normalized();
 		dot_prod = dir.dot(center_to_vertex);
 		if (dot_prod > max) {
 			max = dot_prod;
