@@ -562,11 +562,12 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 				if (!igl::is_edge_manifold(F)) { //Check if the drawn stroke results in an edge-manifold mesh, otherwise sound a beep and revert
 					sound_error_beep();
+					added_stroke->update_Positions(V, false);
 					Eigen::MatrixXd drawn_points = added_stroke->get3DPoints();
 					vertex_is_fixed.resize(0);
 					edge_boundary_markers.resize(0);
 					dirty_boundary = true;
-
+					viewer.data().set_edges(Eigen::MatrixXd(), Eigen::MatrixXi(), red); //Clear the non-original stroke edges
 					viewer.data().add_edges(drawn_points.block(0, 0, drawn_points.rows() - 1, 3), drawn_points.block(1, 0, drawn_points.rows() - 1, 3), black); //Display the stroke in black to show that it went wrong
 					prev_tool_mode = NONE;
 					std::cerr << "This stroke results in a mesh that is not edge manifold. Will not be able to process, try again (don't use self-intersecting strokes)." << std::endl;
@@ -807,6 +808,9 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				bool success_extrude = false;
 				if (added_stroke->get3DPoints().rows() > 6) {
 					success_extrude = MeshExtrusion::extrude_main(*base_mesh, base_surface_path, *added_stroke, *extrusion_base, base_model, base_view, base_proj, base_viewport, replacing_vertex_bindings);
+				}
+				else {
+					std::cerr << "Drawn stroke has too little sample points. Please try again." << std::endl;
 				}
 
 				if (!success_extrude) { //Catches the case that the extrusion base removes all faces/vertices or that the extrusion silhouette has too little samples/is just a click
