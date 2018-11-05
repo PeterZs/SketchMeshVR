@@ -20,6 +20,7 @@
 
 #include <igl/opengl/glfw/imgui/ImGuiMenu.h>
 #include <igl/opengl/glfw/imgui/ImGuiHelpers.h>
+#include <igl/material_colors.h>
 #include <igl/slice.h>
 #include <SketchMeshVR.h>
 #include <Stroke.h>
@@ -44,8 +45,8 @@ OculusVR tmp;
 Viewer viewer(tmp);
 igl::opengl::glfw::imgui::ImGuiMenu menu;
 
-Eigen::MatrixXd V_floor(4, 3);
-Eigen::MatrixXi F_floor(2, 3);
+Eigen::MatrixXd V_floor(4, 3), V_roof(4,3), V_left_wall(4,3), V_front_wall(4,3), V_right_wall(4,3), V_back_wall(4,3);
+Eigen::MatrixXi F_floor(2, 3), F_roof(2,3), F_left_wall(2,3), F_front_wall(2,3), F_right_wall(2,3), F_back_wall(2,3);
 
 // Vertex array, #V x3
 Eigen::MatrixXd V(0, 3);
@@ -63,6 +64,8 @@ Eigen::VectorXi new_mapped_indices;
 Eigen::MatrixXi replacing_vertex_bindings(0, 4);
 
 Mesh* base_mesh;
+
+int base_mesh_index, pointer_mesh_index;
 
 std::function<void()> current_tool_HUD;
 std::function<void(void)> menu_HUD;
@@ -219,14 +222,14 @@ void set_laser_points(Eigen::Vector3f& pos) {
 		else {
 			laser_end_point = (pos + 10 * viewer.oculusVR.get_right_touch_direction()).cast<double>();
 		}
-		viewer.selected_data_index = 1;
+		viewer.selected_data_index = base_mesh_index;
 	}
-	viewer.selected_data_index = 2;
+	viewer.selected_data_index = pointer_mesh_index;
 	LP.row(0) = pos.cast<double>();
 	LP.row(1) = laser_end_point;
 	laser_color.setZero();
 	viewer.data().set_laser_points(LP, laser_color);
-	viewer.selected_data_index = 1;
+	viewer.selected_data_index = base_mesh_index;
 }
 
 void reset_before_draw() {
@@ -261,12 +264,12 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		}
 	}
 	else if (pressed == OculusVR::ButtonCombo::THUMB_MOVE) {
-		viewer.selected_data_index = 2;
+		viewer.selected_data_index = pointer_mesh_index;
 		if (prev_tool_mode != NAVIGATE) {
 			prev_laser_show = viewer.data().show_laser;
 		}
 		viewer.data().show_laser = false;
-		viewer.selected_data_index = 1;
+		viewer.selected_data_index = base_mesh_index;
 		V = viewer.data().V;
 		for (int i = 0; i < stroke_collection.size(); i++) {
 			stroke_collection[i].update_Positions(V, false);
@@ -813,9 +816,9 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 					Eigen::MatrixXd drawn_points = added_stroke->get3DPoints();
 					int nr_edges = drawn_points.rows() - 1;
 					viewer.data().add_edges(drawn_points.topRows(nr_edges - 1), drawn_points.middleRows(1, nr_edges - 1), black); //Display the stroke in black to show that it went wrong
-					viewer.selected_data_index = 2;
+					viewer.selected_data_index = pointer_mesh_index;
 					viewer.data().show_laser = true;
-					viewer.selected_data_index = 1;
+					viewer.selected_data_index = base_mesh_index;
 					return;
 				}
 
@@ -852,9 +855,9 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				viewer.data().set_normals(N_corners);
 
 				draw_all_strokes();
-				viewer.selected_data_index = 2;
+				viewer.selected_data_index = pointer_mesh_index;
 				viewer.data().show_laser = true;
-				viewer.selected_data_index = 1;
+				viewer.selected_data_index = base_mesh_index;
 				extrusion_base_already_drawn = false;
 			}
 			else { //mouse released after extrusion base drawn
@@ -895,9 +898,9 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 				draw_all_strokes();
 				draw_extrusion_base(); //Need to draw the extrusion base separately, since it isn't added to the stroke_collection yet.
-				viewer.selected_data_index = 2;
+				viewer.selected_data_index = pointer_mesh_index;
 				viewer.data().show_laser = false;
-				viewer.selected_data_index = 1;
+				viewer.selected_data_index = base_mesh_index;
 			}
 		}
 		else if (prev_tool_mode == FAIL) {
@@ -951,9 +954,9 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			draw_all_strokes();
 		}
 		else if (prev_tool_mode == NAVIGATE) {
-			viewer.selected_data_index = 2;
+			viewer.selected_data_index = pointer_mesh_index;
 			viewer.data().show_laser = prev_laser_show;
-			viewer.selected_data_index = 1;
+			viewer.selected_data_index = base_mesh_index;
 		}
 
 		prev_tool_mode = NONE;
@@ -976,10 +979,10 @@ void set_floor_mesh(Viewer& viewer, Eigen::MatrixXd& V_floor, Eigen::MatrixXi& F
 	V_uv.col(0) = V_uv.col(0).array() / V_uv.col(0).maxCoeff();
 	V_uv.col(1) = V_uv.col(1).array() - V_uv.col(1).minCoeff();
 	V_uv.col(1) = V_uv.col(1).array() / V_uv.col(1).maxCoeff();
-	V_uv = V_uv.array() * 2;
+	V_uv = V_uv.array() * 2; //Amount of repetitions of the texture
 
 	Eigen::Matrix<unsigned char, Dynamic, Dynamic> texR, texG, texB;
-	std::string texture_file = cur_dir + "\\..\\data\\free\\floor.png";
+	std::string texture_file = cur_dir + "\\..\\data\\free\\floor6square.png";
 	int width, height, n;
 	unsigned char *data = stbi_load(texture_file.c_str(), &width, &height, &n, 4);
 
@@ -1004,6 +1007,49 @@ void set_floor_mesh(Viewer& viewer, Eigen::MatrixXd& V_floor, Eigen::MatrixXi& F
 
 	viewer.data().set_uv(V_uv);
 	viewer.data().show_texture = true;
+	viewer.data().show_lines = false;
+	viewer.data().set_texture(texR, texG, texB);
+}
+
+void set_wall_mesh(Viewer& viewer, Eigen::MatrixXd& V_wall, Eigen::MatrixXi& F_wall, Eigen::Vector2d& cols_to_use, std::string cur_dir) {
+	viewer.data().set_mesh(V_wall, F_wall);
+	Eigen::MatrixXd V_uv(V_wall.rows(), 2);
+	V_uv.col(0) = V_wall.col(cols_to_use(0));
+	V_uv.col(1) = V_wall.col(cols_to_use(1));
+	V_uv.col(0) = V_uv.col(0).array() - V_uv.col(0).minCoeff();
+	V_uv.col(0) = V_uv.col(0).array() / V_uv.col(0).maxCoeff();
+	V_uv.col(1) = V_uv.col(1).array() - V_uv.col(1).minCoeff();
+	V_uv.col(1) = V_uv.col(1).array() / V_uv.col(1).maxCoeff();
+
+	V_uv = V_uv.array() * 3; //Amount of repetitions of the texture
+
+	Eigen::Matrix<unsigned char, Dynamic, Dynamic> texR, texG, texB;
+	std::string texture_file = cur_dir + "\\..\\data\\free\\wall2square.jpg";
+	int width, height, n;
+	unsigned char *data = stbi_load(texture_file.c_str(), &width, &height, &n, 4);
+
+	if (!data) {
+		std::cerr << "Could not load wall texture." << std::endl;
+	}
+	texR.resize(height, width);
+	texG.resize(height, width);
+	texB.resize(height, width);
+
+	for (unsigned j = 0; j < height; ++j) {
+		for (unsigned i = 0; i < width; ++i) {
+			// used to flip with libPNG, but I'm not sure if
+			// simply j*width + i wouldn't be better
+			// stb_image uses horizontal scanline an starts top-left corner
+			texR(i, j) = data[4 * ((width - 1 - i) + width * (height - 1 - j))];
+			texG(i, j) = data[4 * ((width - 1 - i) + width * (height - 1 - j)) + 1];
+			texB(i, j) = data[4 * ((width - 1 - i) + width * (height - 1 - j)) + 2];
+		}
+	}
+	stbi_image_free(data);
+
+	viewer.data().set_uv(V_uv);
+	viewer.data().show_texture = true;
+	viewer.data().show_lines = false;
 	viewer.data().set_texture(texR, texG, texB);
 }
 
@@ -1073,19 +1119,19 @@ bool callback_save_scene(Viewer& viewer, std::string cur_dir) {
 void menu_opened() {
 	menu.set_active();
 	menu.callback_draw_viewer_window = menu_HUD;
-	viewer.selected_data_index = 2;
+	viewer.selected_data_index = pointer_mesh_index;
 	prev_laser_show = viewer.data().show_laser;
 	viewer.data().show_laser = true;
-	viewer.selected_data_index = 1;
+	viewer.selected_data_index = base_mesh_index;
 	viewer.oculusVR.menu_active = true;
 }
 
 void menu_closed() {
 	menu.set_inactive();
 	menu.callback_draw_viewer_window = current_tool_HUD;
-	viewer.selected_data_index = 2;
+	viewer.selected_data_index = pointer_mesh_index;
 	viewer.data().show_laser = prev_laser_show;
-	viewer.selected_data_index = 1;
+	viewer.selected_data_index = base_mesh_index;
 	viewer.oculusVR.menu_active = false;
 }
 
@@ -1107,14 +1153,65 @@ int main(int argc, char *argv[]) {
 	//Init stroke selector
 	added_stroke = new Stroke(&V, &F, 1);
 	base_mesh = new Mesh(V, F, edge_boundary_markers, vertex_is_fixed, new_mapped_indices, sharp_edge, 0);
+	viewer.core.light_position << 0.0f, 0.95f, 0.0f;
 
-	V_floor.row(0) << -10, 0, -10;
-	V_floor.row(1) << 10, 0, -10;
-	V_floor.row(2) << 10, 0, 10;
-	V_floor.row(3) << -10, 0, 10;
+	Eigen::RowVector3d lfb(-2.5, 0, -2.5); //Left front bottom
+	Eigen::RowVector3d lft(-2.5, 2, -2.5); //Left front top
+	Eigen::RowVector3d rfb(2.5, 0, -2.5); //Right front bottom
+	Eigen::RowVector3d rft(2.5, 2, -2.5); //Right front top
+	Eigen::RowVector3d lbb(-2.5, 0, 2.5); //Left back bottom
+	Eigen::RowVector3d lbt(-2.5, 2, 2.5); //Left back top
+	Eigen::RowVector3d rbb(2.5, 0, 2.5); //Right back bottom
+	Eigen::RowVector3d rbt(2.5, 2, 2.5); //Right back top
 
-	F_floor.row(0) << 0, 3, 1;
-	F_floor.row(1) << 3, 2, 1;
+
+	V_floor.row(0) = lfb;
+	V_floor.row(1) = rfb;
+	V_floor.row(2) = rbb;
+	V_floor.row(3) = lbb;
+
+	F_floor.row(0) << 0, 1, 3;
+	F_floor.row(1) << 3, 1, 2;
+
+	V_roof.row(0) = lft;
+	V_roof.row(1) = rft;
+	V_roof.row(2) = rbt;
+	V_roof.row(3) = lbt;
+
+	F_roof.row(0) << 1, 3, 0;
+	F_roof.row(1) << 1, 2, 3;
+
+	V_left_wall.row(0) = lfb;
+	V_left_wall.row(1) = lbb;
+	V_left_wall.row(2) = lbt;
+	V_left_wall.row(3) = lft;
+
+	F_left_wall.row(0) << 1, 0, 3;
+	F_left_wall.row(1) << 1, 3, 2;
+
+	V_front_wall.row(0) = lfb;
+	V_front_wall.row(1) = rfb;
+	V_front_wall.row(2) = rft;
+	V_front_wall.row(3) = lft;
+	
+	F_front_wall.row(0) << 1, 3, 0;
+	F_front_wall.row(1) << 1, 2, 3;
+
+	V_right_wall.row(0) = rfb;
+	V_right_wall.row(1) = rbb;
+	V_right_wall.row(2) = rbt;
+	V_right_wall.row(3) = rft;
+
+	F_right_wall.row(0) << 1, 3, 0;
+	F_right_wall.row(1) << 1, 2, 3;
+
+	V_back_wall.row(0) = rbb;
+	V_back_wall.row(1) = lbb;
+	V_back_wall.row(2) = lbt;
+	V_back_wall.row(3) = rbt;
+
+	F_back_wall.row(0) << 1, 3, 0;
+	F_back_wall.row(1) << 1, 2, 3;
 
 	char cur_dir[256];
 	GetCurrentDirectoryA(256, cur_dir);
@@ -1126,8 +1223,54 @@ int main(int argc, char *argv[]) {
 	}
 	else {
 		set_floor_mesh(viewer, V_floor, F_floor, std::string(cur_dir));
+		viewer.data().uniform_colors(
+			Eigen::Vector3d(igl::SILVER_AMBIENT[0], igl::SILVER_AMBIENT[1], igl::SILVER_AMBIENT[2]),
+			Eigen::Vector3d(igl::SILVER_DIFFUSE[0], igl::SILVER_DIFFUSE[1], igl::SILVER_DIFFUSE[2]),
+			Eigen::Vector3d(igl::SILVER_SPECULAR[0], igl::SILVER_SPECULAR[1], igl::SILVER_SPECULAR[2]));
 
 		viewer.append_mesh();
+		Eigen::Vector2d cols_to_use(0, 2);
+		set_wall_mesh(viewer, V_roof, F_roof, cols_to_use, std::string(cur_dir)); //Roof
+		viewer.data().uniform_colors(
+			Eigen::Vector3d(igl::SILVER_AMBIENT[0], igl::SILVER_AMBIENT[1], igl::SILVER_AMBIENT[2]),
+			Eigen::Vector3d(igl::SILVER_DIFFUSE[0], igl::SILVER_DIFFUSE[1], igl::SILVER_DIFFUSE[2]),
+			Eigen::Vector3d(igl::SILVER_SPECULAR[0], igl::SILVER_SPECULAR[1], igl::SILVER_SPECULAR[2]));
+
+		viewer.append_mesh();
+		cols_to_use << 2, 1;
+		set_wall_mesh(viewer, V_left_wall, F_left_wall, cols_to_use, std::string(cur_dir));
+		viewer.data().uniform_colors(
+			Eigen::Vector3d(igl::SILVER_AMBIENT[0], igl::SILVER_AMBIENT[1], igl::SILVER_AMBIENT[2]),
+			Eigen::Vector3d(igl::SILVER_DIFFUSE[0], igl::SILVER_DIFFUSE[1], igl::SILVER_DIFFUSE[2]),
+			Eigen::Vector3d(igl::SILVER_SPECULAR[0], igl::SILVER_SPECULAR[1], igl::SILVER_SPECULAR[2]));
+
+		viewer.append_mesh();
+		cols_to_use << 0, 1;
+		set_wall_mesh(viewer, V_front_wall, F_front_wall, cols_to_use, std::string(cur_dir));
+		viewer.data().uniform_colors(
+			Eigen::Vector3d(igl::SILVER_AMBIENT[0], igl::SILVER_AMBIENT[1], igl::SILVER_AMBIENT[2]),
+			Eigen::Vector3d(igl::SILVER_DIFFUSE[0], igl::SILVER_DIFFUSE[1], igl::SILVER_DIFFUSE[2]),
+			Eigen::Vector3d(igl::SILVER_SPECULAR[0], igl::SILVER_SPECULAR[1], igl::SILVER_SPECULAR[2]));
+
+		viewer.append_mesh();
+		cols_to_use << 2, 1;
+		set_wall_mesh(viewer, V_right_wall, F_right_wall, cols_to_use, std::string(cur_dir));
+		viewer.data().uniform_colors(
+			Eigen::Vector3d(igl::SILVER_AMBIENT[0], igl::SILVER_AMBIENT[1], igl::SILVER_AMBIENT[2]),
+			Eigen::Vector3d(igl::SILVER_DIFFUSE[0], igl::SILVER_DIFFUSE[1], igl::SILVER_DIFFUSE[2]),
+			Eigen::Vector3d(igl::SILVER_SPECULAR[0], igl::SILVER_SPECULAR[1], igl::SILVER_SPECULAR[2]));
+
+		viewer.append_mesh();
+		cols_to_use << 0, 1;
+		set_wall_mesh(viewer, V_back_wall, F_back_wall, cols_to_use, std::string(cur_dir));
+		viewer.data().uniform_colors(
+			Eigen::Vector3d(igl::SILVER_AMBIENT[0], igl::SILVER_AMBIENT[1], igl::SILVER_AMBIENT[2]),
+			Eigen::Vector3d(igl::SILVER_DIFFUSE[0], igl::SILVER_DIFFUSE[1], igl::SILVER_DIFFUSE[2]),
+			Eigen::Vector3d(igl::SILVER_SPECULAR[0], igl::SILVER_SPECULAR[1], igl::SILVER_SPECULAR[2]));
+
+
+		viewer.append_mesh();
+		base_mesh_index = viewer.selected_data_index;
 		viewer.data().set_mesh(V, F);
 		Eigen::MatrixXd N_corners;
 		igl::per_corner_normals(V, F, 50, N_corners);
@@ -1136,7 +1279,8 @@ int main(int argc, char *argv[]) {
 
 	viewer.append_mesh(); //For laser ray/point
 	viewer.data().show_laser = false;
-	viewer.selected_data_index = 1;
+	pointer_mesh_index = viewer.selected_data_index;
+	viewer.selected_data_index = base_mesh_index;
 	viewer.plugins.push_back(&menu);
 
 	viewer.init_oculus();
@@ -1304,10 +1448,10 @@ int main(int argc, char *argv[]) {
 			reset_trackers();
 			selected_tool_mode = DRAW;
 			im_texID_cur = im_texID_draw;
-			viewer.selected_data_index = 2;
+			viewer.selected_data_index = pointer_mesh_index;
 			viewer.data().show_laser = false;
 			prev_laser_show = viewer.data().show_laser;
-			viewer.selected_data_index = 1;
+			viewer.selected_data_index = base_mesh_index;
 			menu_closed();
 		}
 		ImGui::PopID();
@@ -1317,10 +1461,10 @@ int main(int argc, char *argv[]) {
 			reset_trackers();
 			selected_tool_mode = PULL;
 			im_texID_cur = im_texID_pull;
-			viewer.selected_data_index = 2;
+			viewer.selected_data_index = pointer_mesh_index;
 			viewer.data().show_laser = false;
 			prev_laser_show = viewer.data().show_laser;
-			viewer.selected_data_index = 1;
+			viewer.selected_data_index = base_mesh_index;
 			menu_closed();
 		}
 		ImGui::PopID();
@@ -1330,10 +1474,10 @@ int main(int argc, char *argv[]) {
 			reset_trackers();
 			selected_tool_mode = ADD;
 			im_texID_cur = im_texID_add;
-			viewer.selected_data_index = 2;
+			viewer.selected_data_index = pointer_mesh_index;
 			viewer.data().show_laser = true;
 			prev_laser_show = viewer.data().show_laser;
-			viewer.selected_data_index = 1;
+			viewer.selected_data_index = base_mesh_index;
 			menu_closed();
 		}
 		ImGui::PopID();
@@ -1343,10 +1487,10 @@ int main(int argc, char *argv[]) {
 			reset_trackers();
 			selected_tool_mode = CUT;
 			im_texID_cur = im_texID_cut;
-			viewer.selected_data_index = 2;
+			viewer.selected_data_index = pointer_mesh_index;
 			viewer.data().show_laser = true;
 			prev_laser_show = viewer.data().show_laser;
-			viewer.selected_data_index = 1;
+			viewer.selected_data_index = base_mesh_index;
 			menu_closed();
 		}
 		ImGui::PopID();
@@ -1356,10 +1500,10 @@ int main(int argc, char *argv[]) {
 			reset_trackers();
 			selected_tool_mode = EXTRUDE;
 			im_texID_cur = im_texID_extrude;
-			viewer.selected_data_index = 2;
+			viewer.selected_data_index = pointer_mesh_index;
 			viewer.data().show_laser = true;
 			prev_laser_show = viewer.data().show_laser;
-			viewer.selected_data_index = 1;
+			viewer.selected_data_index = base_mesh_index;
 			menu_closed();
 		}
 		ImGui::PopID();
@@ -1369,10 +1513,10 @@ int main(int argc, char *argv[]) {
 			reset_trackers();
 			selected_tool_mode = REMOVE;
 			im_texID_cur = im_texID_remove;
-			viewer.selected_data_index = 2;
+			viewer.selected_data_index = pointer_mesh_index;
 			viewer.data().show_laser = true;
 			prev_laser_show = viewer.data().show_laser;
-			viewer.selected_data_index = 1;
+			viewer.selected_data_index = base_mesh_index;
 			menu_closed();
 		}
 		ImGui::PopID();
@@ -1385,10 +1529,10 @@ int main(int argc, char *argv[]) {
 			std::cerr << "Please specify how you want to save the scene. " << std::endl;
 			callback_save_scene(viewer, cur_dir);
 			im_texID_cur = im_texID_save;
-			viewer.selected_data_index = 2;
+			viewer.selected_data_index = pointer_mesh_index;
 			viewer.data().show_laser = true;
 			prev_laser_show = viewer.data().show_laser;
-			viewer.selected_data_index = 1;
+			viewer.selected_data_index = base_mesh_index;
 			menu_closed();
 		}
 		ImGui::PopID();
@@ -1402,10 +1546,10 @@ int main(int argc, char *argv[]) {
 			bool success_load = callback_load_scene(viewer, cur_dir);
 			dirty_boundary = true;
 			im_texID_cur = im_texID_load;
-			viewer.selected_data_index = 2;
+			viewer.selected_data_index = pointer_mesh_index;
 			viewer.data().show_laser = true;
 			prev_laser_show = viewer.data().show_laser;
-			viewer.selected_data_index = 1;
+			viewer.selected_data_index = base_mesh_index;
 			menu_closed();
 		}
 		ImGui::PopID();
@@ -1415,10 +1559,10 @@ int main(int argc, char *argv[]) {
 			reset_trackers();
 			selected_tool_mode = CHANGE;
 			im_texID_cur = im_texID_change;
-			viewer.selected_data_index = 2;
+			viewer.selected_data_index = pointer_mesh_index;
 			viewer.data().show_laser = true;
 			prev_laser_show = viewer.data().show_laser;
-			viewer.selected_data_index = 1;
+			viewer.selected_data_index = base_mesh_index;
 			menu_closed();
 		}
 		ImGui::PopID();
