@@ -583,7 +583,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				dirty_boundary = true;
 				stroke_collection.back().update_Positions(V, true);
 				viewer.data().clear();
-				draw_all_strokes();
 				for (int j = 0; j < 10; j++) {
 					for (int i = 0; i < initial_smooth_iter / 10; i++) {
 						SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
@@ -594,6 +593,8 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 					igl::per_corner_normals(V, F, 50, N_corners);
 					viewer.data().set_normals(N_corners);
 				}
+				draw_all_strokes();
+
 				std::cerr << "Created a mesh with " << V.rows() << " vertices, and " << F.rows() << " faces." << std::endl;
 			}
 		}
@@ -1111,6 +1112,7 @@ int main(int argc, char *argv[]) {
 	//Init stroke selector
 	added_stroke = new Stroke(&V, &F, 1);
 	base_mesh = new Mesh(V, F, edge_boundary_markers, vertex_is_fixed, new_mapped_indices, sharp_edge, 0);
+	viewer.core.light_position << 0.0f, -2.0f, -2.0f;
 
 	V_floor.row(0) << -10, 0, -10;
 	V_floor.row(1) << 10, 0, -10;
