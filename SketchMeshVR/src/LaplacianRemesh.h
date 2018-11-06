@@ -30,6 +30,7 @@ private:
 	static std::vector<int> sort_boundary_vertices(Eigen::Vector3d start_vertex, std::vector<int> boundary_vertices, Mesh & m);
 	static std::vector<int> reorder(std::vector<int> boundary_vertices, Eigen::Vector3d start_v, Mesh & m);
 	static Eigen::RowVector3d compute_mean_viewpoint(Mesh & m, std::vector<int> inner_boundary_vertices);
+	static Eigen::Vector3d get_normal_from_curve(Eigen::MatrixXd curve_points);
 	static void propagate_dirty_faces(int face, std::vector<bool>& dirty_face);
 	static void update_edge_indicators(Mesh & m, Eigen::MatrixXi & all_sharpEV);
 	static void update_face_indices(Mesh & m);
