@@ -407,7 +407,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				prev_tool_mode = FAIL;
 				return;
 			}
-			CurveDeformation::startPullCurve(handleID, (*base_mesh).V, (*base_mesh).F);
+			CurveDeformation::startPullCurve(handleID, (*base_mesh).V, (*base_mesh).F, (*base_mesh).edge_boundary_markers);
 			prev_tool_mode = PULL;
 		}
 		else if (prev_tool_mode == PULL) {
