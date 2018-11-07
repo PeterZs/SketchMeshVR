@@ -410,7 +410,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				prev_tool_mode = FAIL;
 				return;
 			}
-			CurveDeformation::startPullCurve(handleID, (*base_mesh).V, (*base_mesh).F);
+			CurveDeformation::startPullCurve(handleID, (*base_mesh).V, (*base_mesh).F, (*base_mesh).edge_boundary_markers);
 			prev_tool_mode = PULL;
 		}
 		else if (prev_tool_mode == PULL) {
@@ -586,7 +586,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				dirty_boundary = true;
 				stroke_collection.back().update_Positions(V, true);
 				viewer.data().clear();
-				draw_all_strokes();
 				for (int j = 0; j < 10; j++) {
 					for (int i = 0; i < initial_smooth_iter / 10; i++) {
 						SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
@@ -597,6 +596,8 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 					igl::per_corner_normals(V, F, 50, N_corners);
 					viewer.data().set_normals(N_corners);
 				}
+				draw_all_strokes();
+
 				std::cerr << "Created a mesh with " << V.rows() << " vertices, and " << F.rows() << " faces." << std::endl;
 			}
 		}
@@ -1157,7 +1158,8 @@ int main(int argc, char *argv[]) {
 	//Init stroke selector
 	added_stroke = new Stroke(&V, &F, 1);
 	base_mesh = new Mesh(V, F, edge_boundary_markers, vertex_is_fixed, new_mapped_indices, sharp_edge, 0);
-	viewer.core.light_position << 0.0f, 0.95f, 0.0f;
+
+	viewer.core.light_position << 0.0f, -2.0f, -2.0f;
 
 	Eigen::RowVector3d lfb(-2.5, 0, -2.5); //Left front bottom
 	Eigen::RowVector3d lft(-2.5, 2, -2.5); //Left front top
@@ -1216,6 +1218,7 @@ int main(int argc, char *argv[]) {
 
 	F_back_wall.row(0) << 1, 3, 0;
 	F_back_wall.row(1) << 1, 2, 3;
+
 
 	char cur_dir[256];
 	GetCurrentDirectoryA(256, cur_dir);

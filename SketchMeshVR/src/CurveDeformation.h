@@ -5,7 +5,7 @@
 class CurveDeformation {
 
 public:
-	static void startPullCurve(int _handle_ID, Eigen::MatrixXd & V, Eigen::MatrixXi & F);
+	static void startPullCurve(int _handle_ID, Eigen::MatrixXd & V, Eigen::MatrixXi & F, Eigen::VectorXi& edge_boundary_markers);
 	static void pullCurve(const Eigen::RowVector3d & pos, Eigen::MatrixXd & V, Eigen::VectorXi& edge_boundary_markers);
 
 	static Eigen::MatrixXi EF, EV, FE;
@@ -30,6 +30,9 @@ private:
 	static void propagate(int prev_edge, int vert, double remaining_distance, std::vector<int>& vertices_in_range, Eigen::MatrixXd & V, Eigen::VectorXi& edge_boundary_markers);
 	static void propagate(PulledCurve & curve, int prev_edge, int vert, int edge_marker, Eigen::VectorXi & edge_consumed, Eigen::VectorXi & edge_boundary_markers);
 	static int find_next_edge(int vert, int prev_edge, int edge_marker, Eigen::VectorXi & edge_boundary_markers);
+	static double find_furthest_edge_vertex(Eigen::MatrixXd & V, Eigen::VectorXi & edge_boundary_markers);
+	static void collect_vertex_distances(double drag_size, Eigen::MatrixXd & V, Eigen::VectorXi & edge_boundary_markers);
+	static void propagate_distances(int prev_edge, int vert, double remaining_distance, std::vector<int>& vertices_in_range, Eigen::MatrixXd & V, Eigen::VectorXi & edge_boundary_markers);
 	static int find_edge(int start, int end);
 	static void sort_by_distance(std::vector<int>& vertices_in_range);
 	static bool distance_sorter(int a, int b);

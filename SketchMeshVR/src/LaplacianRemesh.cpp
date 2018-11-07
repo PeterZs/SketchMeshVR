@@ -517,7 +517,9 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 
 	Eigen::MatrixXd resampled_path = CleanStroke3D::resample_by_length_with_fixes(path, unit_length);
 	Eigen::Matrix4f modelview = view * model;
-	if (!is_counter_clockwise_boundaries(resampled_path, modelview, proj, viewport, mean_viewpoint_inner, !is_front_loop)) {
+
+	//For non-extrusion base strokes, check if they are counter clockwise (extrusion bases are made CCW when created)
+	if (!is_front_loop && !is_counter_clockwise_boundaries(resampled_path, modelview, proj, viewport, mean_viewpoint_inner, !is_front_loop)) {
 		resampled_path = resampled_path.colwise().reverse().eval();
 	}
 
@@ -559,9 +561,18 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 	col_idx2.col(0) << 0, 1, 2;
 	igl::slice(m.V, row_idx2, col_idx2, tmp_V); //Keep only the clean "boundary" vertices in the mesh
 
-	if (!is_counter_clockwise_boundaries(tmp_V, modelview, proj, viewport, mean_viewpoint_inner, !is_front_loop)) {
+	//Only use the regular check for non-extrusion generated boundaries (check will go wrong if user rotated the mesh between drawing the base and silhouette
+	if (!is_front_loop && !is_counter_clockwise_boundaries(tmp_V, modelview, proj, viewport, mean_viewpoint_inner, !is_front_loop)) {
 		reverse(outer_boundary_vertices.begin(), outer_boundary_vertices.end());
 	}
+	else if (is_front_loop) { //Extrusion
+		Eigen::Vector3d path_normal = get_normal_from_curve(resampled_path);
+		Eigen::Vector3d boundary_normal = get_normal_from_curve(tmp_V);
+		if (path_normal.dot(boundary_normal) < 0) { //Normal based on the surface path and boundary vertices point in different directions so we need to reverse the order of the boundary vertices
+			reverse(outer_boundary_vertices.begin(), outer_boundary_vertices.end());
+		}
+	}
+
 	try {
 		stitch(path_vertices, outer_boundary_vertices, m, false, replacing_edges.leftCols(2));
 	}
@@ -628,6 +639,20 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		}
 	}
 	return Eigen::VectorXi::Map(path_vertices.data(), path_vertices.size());
+}
+
+Eigen::Vector3d LaplacianRemesh::get_normal_from_curve(Eigen::MatrixXd curve_points) {
+	Eigen::RowVector3d center = curve_points.colwise().mean();
+	Eigen::Vector3d normal(0, 0, 0);
+	Eigen::Vector3d vec0, vec1;
+
+	for (int i = 0; i < curve_points.rows(); i++) {
+		vec0 = curve_points.row(i) - center;
+		vec1 = curve_points.row((i + 1) % curve_points.rows()) - center;
+		normal += vec1.cross(vec0);
+	}
+	normal.normalize();
+	return normal;
 }
 
 /** Compute the mean of the boundary vertices on the side of the mesh that is removed.

@@ -6,8 +6,8 @@
 using namespace std;
 using namespace igl;
 
-int moving_vertex_ID, prev_range_size = -1;
-double prev_drag_size, DRAG_SCALE = 2.9;
+int moving_vertex_ID, nr_edge_connected_vertices, prev_range_size = -1;
+double initial_mesh_size, prev_drag_size, DRAG_SCALE = 3.9;// 2.9;
 Eigen::RowVector3d start_pos;
 vector<vector<int>> CurveDeformation::neighbors;
 Eigen::MatrixXi CurveDeformation::EV, CurveDeformation::FE, CurveDeformation::EF;
@@ -18,7 +18,7 @@ Eigen::MatrixXd original_positions, tmp_original_pos;
 vector<CurveDeformation::PulledCurve> curves;
 std::unordered_map<int, int> local_to_global_edge_ID, global_to_local_edge_ID;
 
-void CurveDeformation::startPullCurve(int _moving_vertex_ID, Eigen::MatrixXd& V, Eigen::MatrixXi& F) {
+void CurveDeformation::startPullCurve(int _moving_vertex_ID, Eigen::MatrixXd& V, Eigen::MatrixXi& F, Eigen::VectorXi& edge_boundary_markers) {
 	moving_vertex_ID = _moving_vertex_ID;
 	start_pos = V.row(moving_vertex_ID);
 	prev_range_size = -1;
@@ -31,10 +31,15 @@ void CurveDeformation::startPullCurve(int _moving_vertex_ID, Eigen::MatrixXd& V,
 	distance_to_vert.resize(V.rows());
 	tmp_original_pos.resize(1, 4);
 	tmp_original_pos << moving_vertex_ID, start_pos;
+
+	//initial_mesh_diagonal = (V.colwise().maxCoeff() - V.colwise().minCoeff()).norm();
+	initial_mesh_size = find_furthest_edge_vertex(V, edge_boundary_markers);
 }
 
 void CurveDeformation::pullCurve(const Eigen::RowVector3d& pos, Eigen::MatrixXd& V, Eigen::VectorXi& edge_boundary_markers) {
 	double drag_size = (pos - start_pos).norm() * DRAG_SCALE;
+	drag_size = min(drag_size, initial_mesh_size*0.98);
+	std::cout << "Drag size: " << drag_size << "   mesh size: " << initial_mesh_size << std::endl;
 	bool ROI_is_updated = false;
 	Eigen::MatrixXd prev_V;
 
@@ -78,7 +83,11 @@ bool CurveDeformation::update_ROI_test(double drag_size, Eigen::MatrixXd& V, Eig
 	vector<int> vertices_in_range = collect_vertices_within_drag_length(drag_size, V, edge_boundary_markers);
 	if (vertices_in_range.size() == prev_range_size) {
 		return false;
+	}	
+	if (vertices_in_range.size() >= nr_edge_connected_vertices - 2) {
+		return false;
 	}
+
 	prev_range_size = vertices_in_range.size();
 	sort_by_distance(vertices_in_range);
 
@@ -142,17 +151,20 @@ void CurveDeformation::propagate(int prev_edge, int vert, double remaining_dista
 	int next_vert;
 	double edge_length;
 	for (int i = 0; i < neighbors[vert].size(); i++) {
+		if (visited[neighbors[vert][i]]) {
+			continue;
+		}
 		int edge = find_edge(vert, neighbors[vert][i]);
 		if (edge == prev_edge) {
 			continue;
 		}
-		edge_length = (original_positions.row(vert) - original_positions.row(neighbors[vert][i])).norm();
 		if (edge_boundary_markers[edge]) {
+			edge_length = (original_positions.row(vert) - original_positions.row(neighbors[vert][i])).norm();
 			if (remaining_distance - edge_length > 0) {
 				next_vert = neighbors[vert][i];
-				if (visited[next_vert]) {
+			/*	if (visited[next_vert]) {
 					continue;
-				}
+				}*/
 				visited[next_vert] = 1;
 				distance_to_vert[next_vert] = remaining_distance - edge_length;
 				vertices_in_range.push_back(next_vert);
@@ -314,4 +326,57 @@ int CurveDeformation::find_next_edge(int vert, int prev_edge, int edge_marker, E
 		}
 	}
 	return -1;
+}
+
+double CurveDeformation::find_furthest_edge_vertex(Eigen::MatrixXd& V, Eigen::VectorXi& edge_boundary_markers) {
+	collect_vertex_distances(DBL_MAX, V, edge_boundary_markers);
+	std::sort(distance_to_vert.data(), distance_to_vert.data() + distance_to_vert.size());
+	nr_edge_connected_vertices = (distance_to_vert.array() > 0).count();
+	/*int count = 0;
+	for (int i = 0; i < distance_to_vert.size(); i++) {
+		if (distance_to_vert[i] > 0) {
+			count++;
+			if (count == 3) {
+				return distance_to_vert[i];
+			}
+		}
+	}*/
+	return distance_to_vert[distance_to_vert.size() - 6];
+}
+
+//Special version for the initial determination of the distance to the furthest edge-connected vertex. Avoids setting the pulled index to INF
+void CurveDeformation::collect_vertex_distances(double drag_size, Eigen::MatrixXd& V, Eigen::VectorXi& edge_boundary_markers) {
+	visited.setZero();
+	distance_to_vert.setZero();
+	visited[moving_vertex_ID] = 1;
+	
+
+	vector<int> vertices_in_range;
+	vertices_in_range.push_back(moving_vertex_ID);
+	propagate_distances(-1, moving_vertex_ID, drag_size, vertices_in_range, V, edge_boundary_markers);
+}
+
+//Special version for the initial determination of the distance to the furthest edge-connected vertex. Sets the distances as actual over-edge distance to the pulling vertex
+void CurveDeformation::propagate_distances(int prev_edge, int vert, double remaining_distance, std::vector<int>& vertices_in_range, Eigen::MatrixXd& V, Eigen::VectorXi& edge_boundary_markers) {
+	int next_vert;
+	double edge_length;
+	for (int i = 0; i < neighbors[vert].size(); i++) {
+		if (visited[neighbors[vert][i]]) {
+			continue;
+		}
+		int edge = find_edge(vert, neighbors[vert][i]);
+		if (edge == prev_edge) {
+			continue;
+		}
+		if (edge_boundary_markers[edge]) {
+			edge_length = (original_positions.row(vert) - original_positions.row(neighbors[vert][i])).norm();
+			if (remaining_distance - edge_length > 0) {
+				next_vert = neighbors[vert][i];
+				visited[next_vert] = 1;
+				distance_to_vert[next_vert] = distance_to_vert[vert] + edge_length;
+				vertices_in_range.push_back(next_vert);
+				propagate_distances(edge, next_vert, remaining_distance - edge_length, vertices_in_range, V, edge_boundary_markers);
+			}
+		}
+	}
 }
