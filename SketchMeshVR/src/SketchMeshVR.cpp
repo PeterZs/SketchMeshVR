@@ -1159,7 +1159,7 @@ int main(int argc, char *argv[]) {
 	added_stroke = new Stroke(&V, &F, 1);
 	base_mesh = new Mesh(V, F, edge_boundary_markers, vertex_is_fixed, new_mapped_indices, sharp_edge, 0);
 
-	viewer.core.light_position << 0.0f, -2.0f, -2.0f;
+	viewer.core.light_position << 0.0f, -1.8f, -0.3f;
 
 	Eigen::RowVector3d lfb(-2.5, 0, -2.5); //Left front bottom
 	Eigen::RowVector3d lft(-2.5, 2, -2.5); //Left front top
@@ -1176,8 +1176,8 @@ int main(int argc, char *argv[]) {
 	V_floor.row(2) = rbb;
 	V_floor.row(3) = lbb;
 
-	F_floor.row(0) << 0, 1, 3;
-	F_floor.row(1) << 3, 1, 2;
+	F_floor.row(0) << 0, 3, 1;
+	F_floor.row(1) << 3, 2, 1;
 
 	V_roof.row(0) = lft;
 	V_roof.row(1) = rft;
