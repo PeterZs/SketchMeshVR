@@ -13,6 +13,7 @@ public:
     static double edge_weight;
 	static double curvature_vertex_weight;
 	static double factor;
+	static double existing_curvature_weight;
 	static std::unordered_map<int, Eigen::SparseMatrix<double>> precompute_matrix_for_LM_and_edges;
     static std::unordered_map<int, Eigen::SparseMatrix<double>> AT_for_LM_and_edges;
 	static std::unordered_map<int, Eigen::SparseMatrix<double>> precompute_matrix_for_positions;

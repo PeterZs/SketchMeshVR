@@ -78,7 +78,7 @@ Stroke* extrusion_base;
 vector<Stroke> stroke_collection;
 
 //For smoothing
-int initial_smooth_iter = 120;
+int initial_smooth_iter = 10;// 120;
 
 //For selecting vertices
 int handleID = -1;
@@ -586,16 +586,27 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				dirty_boundary = true;
 				stroke_collection.back().update_Positions(V, true);
 				viewer.data().clear();
+
 				for (int j = 0; j < 10; j++) {
-					for (int i = 0; i < initial_smooth_iter / 10; i++) {
+					//for (int i = 0; i < initial_smooth_iter / 10; i++) {
 						SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
-					}
+				//}
 
 					viewer.data().set_mesh(V, F);
 					Eigen::MatrixXd N_corners;
 					igl::per_corner_normals(V, F, 50, N_corners);
 					viewer.data().set_normals(N_corners);
 				}
+			/*	for (int i = 0; i < 10; i++) {
+					SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
+				}
+				viewer.data().clear();
+
+				viewer.data().set_mesh(V, F);
+				Eigen::MatrixXd N_corners;
+				igl::per_corner_normals(V, F, 50, N_corners);
+				viewer.data().set_normals(N_corners);*/
+				
 				draw_all_strokes();
 
 				std::cerr << "Created a mesh with " << V.rows() << " vertices, and " << F.rows() << " faces." << std::endl;
@@ -922,7 +933,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 					(*base_mesh).patches[i]->update_patch_vertex_positions((*base_mesh).V);
 				}
 
-				for (int i = 0; i < 5; i++) {
+				for (int i = 0; i < 1; i++) {
 					SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
 				}
 				for (int i = 0; i < stroke_collection.size(); i++) {
@@ -935,9 +946,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				viewer.data().set_normals(N_corners);
 
 				draw_all_strokes();
-			
-				
-			
+
 		}
 		else if (prev_tool_mode == CHANGE) {
 			//We might have changed the patch structure (e.g. when removing a sharp boundary stroke), so request new patches
@@ -1159,16 +1168,16 @@ int main(int argc, char *argv[]) {
 	added_stroke = new Stroke(&V, &F, 1);
 	base_mesh = new Mesh(V, F, edge_boundary_markers, vertex_is_fixed, new_mapped_indices, sharp_edge, 0);
 
-	viewer.core.light_position << 0.0f, -1.8f, -0.3f;
+	viewer.core.light_position << 0.0f, -2.8f, -0.3f;
 
 	Eigen::RowVector3d lfb(-2.5, 0, -2.5); //Left front bottom
-	Eigen::RowVector3d lft(-2.5, 2, -2.5); //Left front top
+	Eigen::RowVector3d lft(-2.5, 3, -2.5); //Left front top
 	Eigen::RowVector3d rfb(2.5, 0, -2.5); //Right front bottom
-	Eigen::RowVector3d rft(2.5, 2, -2.5); //Right front top
+	Eigen::RowVector3d rft(2.5, 3, -2.5); //Right front top
 	Eigen::RowVector3d lbb(-2.5, 0, 2.5); //Left back bottom
-	Eigen::RowVector3d lbt(-2.5, 2, 2.5); //Left back top
+	Eigen::RowVector3d lbt(-2.5, 3, 2.5); //Left back top
 	Eigen::RowVector3d rbb(2.5, 0, 2.5); //Right back bottom
-	Eigen::RowVector3d rbt(2.5, 2, 2.5); //Right back top
+	Eigen::RowVector3d rbt(2.5, 3, 2.5); //Right back top
 
 
 	V_floor.row(0) = lfb;

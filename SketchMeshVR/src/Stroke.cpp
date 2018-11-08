@@ -94,6 +94,7 @@ bool Stroke::addSegment(Eigen::Vector3f& pos, igl::opengl::glfw::Viewer &viewer)
 		if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < min_inter_point_distance) {
 			return false;
 		}
+
 		if (stroke3DPoints.rows() > 10) {
 			if ((stroke3DPoints.row(0) - pos.transpose().cast<double>()).squaredNorm() < (stroke3DPoints.row(0) - stroke3DPoints.row(1)).squaredNorm()*4.0) { //User is too close to beginning point. Don't sample, and block DRAW mode
 				return true; //Block DRAW mode till the buttons are released again
@@ -538,7 +539,7 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 	vertex_is_fixed.resize(V2.rows());
 	for (int i = 0; i < V2.rows(); i++) {
 		if (i >= vertex_markers.rows()) { //vertex can't be boundary (it's on backside)
-			V2.row(i) = V2.row(i) + 0.1*N_Vertices.row(i);
+			V2.row(i) = V2.row(i) + 0.05*N_Vertices.row(i);
 			vertex_is_fixed[i] = 0;
 		}
 		else {
@@ -547,7 +548,7 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 				//Don't need to change stroke3DPoints here because they're the same as V2's points.
 				continue;
 			}
-			V2.row(i) = V2.row(i) + 0.1*N_Vertices.row(i);
+			V2.row(i) = V2.row(i) + 0.05*N_Vertices.row(i);
 			vertex_is_fixed[i] = 0;
 		}
 	}
