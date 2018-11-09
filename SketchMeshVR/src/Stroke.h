@@ -84,6 +84,9 @@ private:
 
 	static Eigen::MatrixXd resample_stroke2D(Eigen::MatrixXd & original_stroke2DPoints);
 	static void move_to_middle(Eigen::MatrixXd &positions, Eigen::MatrixXd &new_positions);
+	static void TaubinFairing2D(Eigen::MatrixXd & original_stroke2DPoints, int n);
+	static void smooth_sub(Eigen::MatrixXd & points, double direction);
+	static Eigen::RowVector2d to_sum_of_vectors(Eigen::RowVector2d vert, Eigen::RowVector2d prev, Eigen::RowVector2d next, double direction);
 	static void generate_backfaces(Eigen::MatrixXi &faces, Eigen::MatrixXi &back_faces);
 	bool line_segments_intersect(Eigen::RowVector2d& p1, Eigen::RowVector2d& p2, Eigen::RowVector2d& p3, Eigen::RowVector2d& p4);
 	double compute_stroke_diag();

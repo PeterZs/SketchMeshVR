@@ -32,14 +32,13 @@ void CurveDeformation::startPullCurve(int _moving_vertex_ID, Eigen::MatrixXd& V,
 	tmp_original_pos.resize(1, 4);
 	tmp_original_pos << moving_vertex_ID, start_pos;
 
-	//initial_mesh_diagonal = (V.colwise().maxCoeff() - V.colwise().minCoeff()).norm();
 	initial_mesh_size = find_furthest_edge_vertex(V, edge_boundary_markers);
 }
 
 void CurveDeformation::pullCurve(const Eigen::RowVector3d& pos, Eigen::MatrixXd& V, Eigen::VectorXi& edge_boundary_markers) {
 	double drag_size = (pos - start_pos).norm() * DRAG_SCALE;
 	drag_size = min(drag_size, initial_mesh_size*0.98);
-	std::cout << "Drag size: " << drag_size << "   mesh size: " << initial_mesh_size << std::endl;
+
 	bool ROI_is_updated = false;
 	Eigen::MatrixXd prev_V;
 

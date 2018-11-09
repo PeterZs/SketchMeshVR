@@ -558,6 +558,8 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			draw_should_block = false;
 
 			if (added_stroke->toLoop()) { //Returns false if the stroke only consists of 1 point (user just clicked)
+				viewer.data().add_edges(added_stroke->stroke3DPoints.bottomRows(1), added_stroke->stroke3DPoints.row(added_stroke->stroke3DPoints.rows()-2), Eigen::RowVector3d(0, 0, 1)); //Shows closing stroke
+
 				added_stroke->generate3DMeshFromStroke(edge_boundary_markers, vertex_is_fixed, V, F, viewer);
 
 				if (!igl::is_edge_manifold(F)) { //Check if the drawn stroke results in an edge-manifold mesh, otherwise sound a beep and revert
@@ -585,27 +587,17 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 				dirty_boundary = true;
 				stroke_collection.back().update_Positions(V, true);
-				viewer.data().clear();
 
 				for (int j = 0; j < 10; j++) {
-					//for (int i = 0; i < initial_smooth_iter / 10; i++) {
-						SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
-				//}
-
-					viewer.data().set_mesh(V, F);
-					Eigen::MatrixXd N_corners;
-					igl::per_corner_normals(V, F, 50, N_corners);
-					viewer.data().set_normals(N_corners);
-				}
-			/*	for (int i = 0; i < 10; i++) {
 					SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
+
 				}
-				viewer.data().clear();
+				viewer.data().clear(); //Don't clear before smoothing, otherwise the user won't see the drawn stroke will the shape is inflating
 
 				viewer.data().set_mesh(V, F);
 				Eigen::MatrixXd N_corners;
 				igl::per_corner_normals(V, F, 50, N_corners);
-				viewer.data().set_normals(N_corners);*/
+				viewer.data().set_normals(N_corners);
 				
 				draw_all_strokes();
 

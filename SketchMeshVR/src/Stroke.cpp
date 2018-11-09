@@ -444,11 +444,6 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 	}
 	set3DPoints(resampled_new_3DPoints);
 
-	Eigen::MatrixX3d projected_points;
-	/*Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
-	igl::project(stroke3DPoints, modelview, viewer.core.get_proj(), viewer.core.viewport, projected_points);
-	dep = projected_points.col(2);*/
-
 	Eigen::RowVector3d center = stroke3DPoints.colwise().mean();
 	stroke3DPoints = stroke3DPoints.rowwise() - center; //Zero mean
 	Eigen::MatrixXd cov = (1.0/(stroke3DPoints.rows()-1)) * (stroke3DPoints.transpose()*stroke3DPoints);
@@ -467,12 +462,13 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 	Eigen::MatrixXd new_axes(3, 3);
 	new_axes << xvec, yvec, zvec;
 
-	projected_points = stroke3DPoints * new_axes;
+	Eigen::MatrixX3d projected_points = stroke3DPoints * new_axes;
 	dep = projected_points.col(2);
 
 	stroke2DPoints = projected_points;
 	Eigen::MatrixXd original_stroke2DPoints = stroke2DPoints.leftCols(2);
-	stroke2DPoints = resample_stroke2D(original_stroke2DPoints); //Enabling this might give a discrepancy between what is drawn and the result you get but does give smoother meshes
+	TaubinFairing2D(original_stroke2DPoints, 5);
+	stroke2DPoints = original_stroke2DPoints;
 
 	counter_clockwise();  //Ensure the stroke is counter-clockwise, handy later
 
@@ -490,9 +486,6 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 
 	//Set a inter-sample distance dependent maximum triangle area. Setting this too small will result in inflation in the wrong direction.
 	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq25a" + to_string(0.5*(mean_squared_sample_dist)), V2_tmp, F2, vertex_markers, edge_markers);
-//	double mean_Z = stroke3DPoints.col(2).mean();
-//	V2 = Eigen::MatrixXd::Constant(V2_tmp.rows(), V2_tmp.cols() + 1, mean_Z);
-//	V2.leftCols(2) = V2_tmp;
 
 
 	V2 = center.replicate(V2_tmp.rows(), 1);
@@ -500,7 +493,6 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 	for (int i = 0; i < V2_tmp.rows(); i++) {
 		V2.row(i) += xvec.transpose()*V2_tmp(i, 0);
 		V2.row(i) += yvec.transpose()*V2_tmp(i, 1);
-	//	V2.row(i) += zvec.transpose();
 	}
 
 	generate_backfaces(F2, F2_back);
@@ -553,26 +545,8 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 		}
 	}
 
-/** Old code that projects to the XY-plane
-
-	Eigen::VectorXd dep_tmp = Eigen::VectorXd::Constant(V2.rows(), dep.mean());
-	dep_tmp.topRows(stroke2DPoints.rows()) = dep;
-
-	Eigen::MatrixXd V2_unproj, V2_with_dep(V2.rows(), 3);
-	V2_with_dep.leftCols(2) = V2.leftCols(2);
-	V2_with_dep.col(2) = dep_tmp;
-
-	igl::unproject(V2_with_dep, modelview, viewer.core.get_proj(), viewer.core.viewport, V2_unproj);
-	V2.leftCols(2) = V2_unproj.leftCols(2);
-	//Below is old code that unprojects to the actual original z-values of the drawn stroke
-	//V2.block(0, 2, stroke2DPoints.rows(), 1) = V2_unproj.block(0, 2, stroke2DPoints.rows(), 1); //Use actual z-value of drawn stroke 
-
-	**/
-
-
 	mesh_V = V2;
 	mesh_F = F2;
-
 
 	if (!is_edge_manifold(*F)) {
 		stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
@@ -631,9 +605,6 @@ void Stroke::project_with_PCA_given_target(Eigen::Vector3d target_vec) {
 	Eigen::Vector3d yvec = (max_idx == 0) ? es.eigenvectors().real().col(idx[1]) : es.eigenvectors().real().col(idx[0]);
 	Eigen::Vector3d zvec = (max_idx == 0) ? es.eigenvectors().real().col(idx[2]) : es.eigenvectors().real().col(!(max_idx - 1) + 1);
 
-//	Eigen::Vector3d xvec = es.eigenvectors().real().col(idx[0]);
-//	Eigen::Vector3d yvec = es.eigenvectors().real().col(idx[1]);
-//	Eigen::Vector3d zvec = es.eigenvectors().real().col(idx[2]);
 	Eigen::MatrixXd new_axes(3, 3);
 	new_axes << xvec, yvec, zvec;
 
@@ -670,29 +641,48 @@ void Stroke::counter_clockwise() {
 	}
 }
 
-/** Resamples the stroke by moving all vertices to the middle of their neighbors. Essentially has a smoothing effect. **/
-Eigen::MatrixXd Stroke::resample_stroke2D(Eigen::MatrixXd & original_stroke2DPoints) {
-	Eigen::MatrixXd new_stroke2DPoints = Eigen::MatrixXd::Zero(original_stroke2DPoints.rows(), 2);
-	int nr_iterations = max(5.0, original_stroke2DPoints.rows() / 4.0);
-	for (int i = 0; i < nr_iterations; i++) {
-		move_to_middle(original_stroke2DPoints, new_stroke2DPoints);
-		move_to_middle(new_stroke2DPoints, original_stroke2DPoints);
+/** Taubin fairing will make sure that the shape doesn't shrink when smoothing the curve **/
+void Stroke::TaubinFairing2D(Eigen::MatrixXd& original_stroke2DPoints, int n) {
+	for (int i = 0; i < n; i++) {
+		smooth_sub(original_stroke2DPoints, 0.63139836);
+		smooth_sub(original_stroke2DPoints, -0.6739516);
 	}
-	return new_stroke2DPoints;
 }
 
-void Stroke::move_to_middle(Eigen::MatrixXd &positions, Eigen::MatrixXd &new_positions) {
-	int n = positions.rows();
-	Eigen::Vector2d prev, cur, next;
+void Stroke::smooth_sub(Eigen::MatrixXd& points, double direction) {
+	int n = points.rows();
+	Eigen::MatrixXd new_positions(n, 2);
+	Eigen::RowVector2d prev, cur, next;
+	for (int i = 0; i < n; i++) {
+		prev = points.row(((i - 1) + n) % n);
+		cur = points.row(i);
+		next = points.row(((i + 1) + n) % n);
+		new_positions.row(i) = to_sum_of_vectors(cur, prev, next, direction);
+	}
 
 	for (int i = 0; i < n; i++) {
-		prev = positions.row(((i - 1) + n) % n);
-		cur = positions.row(i % n);
-		next = positions.row(((i + 1) + n) % n);
-
-		new_positions(i, 0) = (cur[0] * 2 + prev[0] + next[0]) / 4;
-		new_positions(i, 1) = (cur[1] * 2 + prev[1] + next[1]) / 4;
+		points.row(i) = new_positions.row(i);
 	}
+}
+
+Eigen::RowVector2d Stroke::to_sum_of_vectors(Eigen::RowVector2d vert, Eigen::RowVector2d prev, Eigen::RowVector2d next, double direction) {
+	Eigen::RowVector2d total_vec(0, 0);
+	double total_w = 0.0;
+	double w = 0.0;
+	Eigen::RowVector2d vec;
+
+	vec = prev - vert;
+	w = 1.0 / vec.norm();
+	total_vec += vec*w;
+	total_w += w;
+
+	vec = next - vert;
+	w = 1.0 / vec.norm();
+	total_vec += vec*w;
+	total_w += w;
+
+	total_vec *= (1.0 / total_w);
+	return (vert + total_vec*direction);
 }
 
 void Stroke::generate_backfaces(Eigen::MatrixXi &faces, Eigen::MatrixXi &back_faces) {

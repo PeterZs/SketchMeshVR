@@ -28,9 +28,9 @@ Eigen::VectorXd SurfaceSmoothing::curvatures(ptrdiff_t(0));
 int ID = 0, iteration = 0;
 int no_boundary_vertices, no_boundary_adjacent_vertices;
 double SurfaceSmoothing::vertex_weight = 1000.0;
-double SurfaceSmoothing::edge_weight = 0.001;// 0.00001;
-double SurfaceSmoothing::factor = 0.1;// 0.1;
-double SurfaceSmoothing::existing_curvature_weight = 0.001; //Controls how fast the surface inflates. A lower value will lead to quicker inflation
+double SurfaceSmoothing::edge_weight = 0.001;
+double SurfaceSmoothing::factor = 0.1;
+double SurfaceSmoothing::existing_curvature_weight = 0.01; //Controls how fast the surface inflates. A lower value will lead to quicker inflation, but thin regions will stay flatter
 vector<vector<int>> neighbors;
 
 
@@ -235,12 +235,7 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 					tripletList.push_back(T(i, j, L(i, j)));
 				}
 			}
-			if (m.vertex_is_fixed[i] > 0) {
-				tripletList.push_back(T(m.V.rows() + i, i, existing_curvature_weight));
-			}
-			else {
-				tripletList.push_back(T(m.V.rows() + i, i, existing_curvature_weight));
-			}
+			tripletList.push_back(T(m.V.rows() + i, i, existing_curvature_weight));
 		}
 
 		A.setFromTriplets(tripletList.begin(), tripletList.end());
@@ -254,7 +249,6 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
     Eigen::VectorXd current_curvatures;
 	if(iteration == 0) {
 		initial_curvature = compute_initial_curvature(m);
-		std::cout << initial_curvature.mean() << std::endl;
     }else{
         current_curvatures = get_curvatures(m);
 		for (int i = 0; i < current_curvatures.rows(); i++) {
@@ -270,9 +264,6 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_LMs(Mesh &m, Eigen::MatrixXd &L
 			}
 		} else {
 			b[m.V.rows() + i] = existing_curvature_weight*current_curvatures[i];
-			/*if (m.vertex_is_fixed[i]<= 0) {
-				b[m.V.rows() + i] *= 0.1;
-			}*/
 		}
 	}
 
@@ -293,29 +284,15 @@ Eigen::VectorXd SurfaceSmoothing::compute_target_edge_lengths(Mesh &m, Eigen::Ma
 
 	Eigen::VectorXd b = Eigen::VectorXd::Zero(m.V.rows() * 2);
 
-	double cum_edge_length;
 	if(iteration == 0){
 		for(int i = 0; i < m.V.rows(); i++) {
 			if (m.vertex_is_fixed[i] > 0) {
-				cum_edge_length = 0.0;
-				for(int j = 0; j < neighbors[i].size(); j++) {
-					if (m.vertex_is_fixed[neighbors[i][j]] > 0) {
-                        cum_edge_length += (m.V.row(neighbors[i][j]) - m.V.row(i)).norm();
-                    }
-				}
-				//b[m.V.rows() + i] = (double)(cum_edge_length / neighbors[i].size());
 				b[m.V.rows() + i] = average_edge_lengths[i]*0.1;
 			}
 		}
 	} else {
 		for(int i = 0; i < m.V.rows(); i++) {
-			cum_edge_length = 0.0;
-			for(int j = 0; j < neighbors[i].size(); j++) {
-				cum_edge_length += (m.V.row(neighbors[i][j]) - m.V.row(i)).norm();
-			}
-			//b[m.V.rows() + i] = (double)(cum_edge_length / neighbors[i].size());
 			b[m.V.rows() + i] = average_edge_lengths[i] * 0.1;
-
 		}
 	}
 	
@@ -436,7 +413,6 @@ Eigen::MatrixX3d SurfaceSmoothing::compute_vertex_laplacians(Mesh &m) {
 			vec += m.V.row(neighbors[i][j]);
 		}
 		laplacians.row(i) = m.V.row(i) - (vec.transpose()/nr_neighbors);
-		//laplacians.row(i) = nr_neighbors * m.V.row(i) - vec.transpose();
 	}
 	return laplacians;
 }
