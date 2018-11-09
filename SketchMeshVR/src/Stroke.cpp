@@ -17,6 +17,7 @@ using namespace igl;
 using namespace std;
 
 double min_inter_point_distance = 0.0001125;
+int MAX_NR_TRIANGLES = 1000; //For the entire mesh (front + backside)
 Eigen::RowVector3d red_color(1, 0, 0);
 Eigen::RowVector3d blue_color(0, 0, 1);
 
@@ -436,57 +437,73 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 	new_3DPoints.conservativeResize(new_3DPoints.rows() + resampled_3DPoints.rows(), Eigen::NoChange);
 	new_3DPoints.bottomRows(resampled_3DPoints.rows()) = resampled_3DPoints;
 
-	Eigen::MatrixXd resampled_new_3DPoints = CleanStroke3D::resample_by_length_sub(new_3DPoints, 0, new_3DPoints.rows() - 1, sqrt(min_inter_point_distance));
-	closest_vert_bindings.clear();
-
-	for (int i = 0; i < resampled_new_3DPoints.rows(); i++) {
-		closest_vert_bindings.push_back(i);
-	}
-	set3DPoints(resampled_new_3DPoints);
-
-	Eigen::RowVector3d center = stroke3DPoints.colwise().mean();
-	stroke3DPoints = stroke3DPoints.rowwise() - center; //Zero mean
-	Eigen::MatrixXd cov = (1.0/(stroke3DPoints.rows()-1)) * (stroke3DPoints.transpose()*stroke3DPoints);
-	EigenSolver<MatrixXd> es;
-	es.compute(cov);
-	Eigen::VectorXd eigenvals = es.eigenvalues().real();
-
-	std::vector<int> idx(eigenvals.rows());
-	size_t n(0);
-	std::generate(std::begin(idx), std::end(idx), [&] {return n++; }); //Fill the vector idx with increasing integers starting from 0
-	std::sort(std::begin(idx), std::end(idx), [&](int i1, int i2) {return eigenvals[i1] > eigenvals[i2]; }); //Sort the vector of indices based on the descending values of eigenvalues
-
-	Eigen::Vector3d xvec = es.eigenvectors().real().col(idx[0]);
-	Eigen::Vector3d yvec = es.eigenvectors().real().col(idx[1]);
-	Eigen::Vector3d zvec = es.eigenvectors().real().col(idx[2]);
-	Eigen::MatrixXd new_axes(3, 3);
-	new_axes << xvec, yvec, zvec;
-
-	Eigen::MatrixX3d projected_points = stroke3DPoints * new_axes;
-	dep = projected_points.col(2);
-
-	stroke2DPoints = projected_points;
-	Eigen::MatrixXd original_stroke2DPoints = stroke2DPoints.leftCols(2);
-	TaubinFairing2D(original_stroke2DPoints, 5);
-	stroke2DPoints = original_stroke2DPoints;
-
-	counter_clockwise();  //Ensure the stroke is counter-clockwise, handy later
-
 	Eigen::MatrixXd V2_tmp, V2;
-	Eigen::MatrixXi F2, F2_back, vertex_markers, edge_markers;
-	Eigen::MatrixXi stroke_edges(stroke2DPoints.rows(), 2);
-	double mean_squared_sample_dist = 0.0;
+	Eigen::MatrixXi F2, F2_back, vertex_markers;
+	Eigen::RowVector3d center;
+	Eigen::Vector3d xvec, yvec;
+	int count = 0;
+	double resampling_distance = sqrt(min_inter_point_distance);
+	do{
+		count++;
+		if (count > 1) { //Previous triangulation was too finegrained, have to increase resampling distance
+			resampling_distance *= pow(1.15, double(abs((MAX_NR_TRIANGLES/2.0)-F2.rows()) / (MAX_NR_TRIANGLES / 2.0)));
+			std::cout << pow(1.15, double(abs((MAX_NR_TRIANGLES / 2.0) - F2.rows()) / (MAX_NR_TRIANGLES / 2.0))) << std::endl;
+		}
+		std::cout << "Step0 " << resampling_distance << std::endl;
+		Eigen::MatrixXd resampled_new_3DPoints = CleanStroke3D::resample_by_length_sub(new_3DPoints, 0, new_3DPoints.rows() - 1, resampling_distance);
+		closest_vert_bindings.clear();
+		std::cout << "Step1" << std::endl;
+		for (int i = 0; i < resampled_new_3DPoints.rows(); i++) {
+			closest_vert_bindings.push_back(i);
+		}
+		set3DPoints(resampled_new_3DPoints);
 
-	for (int i = 0; i < stroke2DPoints.rows(); i++) {
-		stroke_edges.row(i) << i, ((i + 1) % stroke2DPoints.rows());
-		mean_squared_sample_dist += (stroke2DPoints.row(i) - stroke2DPoints.row((i + 1) % stroke2DPoints.rows())).squaredNorm();
-	}
-	mean_squared_sample_dist /= stroke2DPoints.rows();
+		center = stroke3DPoints.colwise().mean();
+		stroke3DPoints = stroke3DPoints.rowwise() - center; //Zero mean
+		Eigen::MatrixXd cov = (1.0 / (stroke3DPoints.rows() - 1)) * (stroke3DPoints.transpose()*stroke3DPoints);
+		EigenSolver<MatrixXd> es;
+		es.compute(cov);
+		Eigen::VectorXd eigenvals = es.eigenvalues().real();
+		std::cout << "Step2" << std::endl;
 
+		std::vector<int> idx(eigenvals.rows());
+		size_t n(0);
+		std::generate(std::begin(idx), std::end(idx), [&] {return n++; }); //Fill the vector idx with increasing integers starting from 0
+		std::sort(std::begin(idx), std::end(idx), [&](int i1, int i2) {return eigenvals[i1] > eigenvals[i2]; }); //Sort the vector of indices based on the descending values of eigenvalues
+		std::cout << "Step3" << std::endl;
 
-	//Set a inter-sample distance dependent maximum triangle area. Setting this too small will result in inflation in the wrong direction.
-	igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq25a" + to_string(0.5*(mean_squared_sample_dist)), V2_tmp, F2, vertex_markers, edge_markers);
+		xvec = es.eigenvectors().real().col(idx[0]);
+		yvec = es.eigenvectors().real().col(idx[1]);
+		Eigen::Vector3d zvec = es.eigenvectors().real().col(idx[2]);
+		Eigen::MatrixXd new_axes(3, 3);
+		new_axes << xvec, yvec, zvec;
+		std::cout << "Step4" << std::endl;
 
+		Eigen::MatrixX3d projected_points = stroke3DPoints * new_axes;
+		dep = projected_points.col(2);
+
+		stroke2DPoints = projected_points.leftCols(2);
+		TaubinFairing2D(stroke2DPoints, 5);
+
+		std::cout << "Step5" << std::endl;
+
+		counter_clockwise();  //Ensure the stroke is counter-clockwise, handy later
+
+		Eigen::MatrixXi edge_markers, stroke_edges(stroke2DPoints.rows(), 2);
+		double mean_squared_sample_dist = 0.0;
+
+		for (int i = 0; i < stroke2DPoints.rows(); i++) {
+			stroke_edges.row(i) << i, ((i + 1) % stroke2DPoints.rows());
+			mean_squared_sample_dist += (stroke2DPoints.row(i) - stroke2DPoints.row((i + 1) % stroke2DPoints.rows())).squaredNorm();
+		}
+		mean_squared_sample_dist /= stroke2DPoints.rows();
+
+		std::cout << "Before triangulate" << std::endl;
+		//Set a inter-sample distance dependent maximum triangle area. Setting this too small will result in inflation in the wrong direction.
+		igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq25a" + to_string(0.5*(mean_squared_sample_dist)), V2_tmp, F2, vertex_markers, edge_markers);
+		std::cout << " Done triangulating " << F2.rows() << " triangles." << std::endl;
+
+	} while (F2.rows() > (MAX_NR_TRIANGLES/2));
 
 	V2 = center.replicate(V2_tmp.rows(), 1);
 
@@ -500,13 +517,13 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 	int original_size = V2.rows();
 	V2.conservativeResize(2 * original_size - nr_boundary_vertices, Eigen::NoChange); //Increase size, such that boundary vertices only get included one
 	unordered_map<int, int> backside_vertex_map;
-	int count = 0;
+	int count2 = 0;
 	for (int i = 0; i < original_size; i++) {
 		if (vertex_markers(i) != 1) { //If the vertex is NOT on the boundary, duplicate it
-			V2.row(original_size + count) << V2.row(i);
-			backside_vertex_map.insert({ i, original_size + count });
-			backside_vertex_map.insert({ original_size + count, i });
-			count++;
+			V2.row(original_size + count2) << V2.row(i);
+			backside_vertex_map.insert({ i, original_size + count2 });
+			backside_vertex_map.insert({ original_size + count2, i });
+			count2++;
 		}
 		else {
 			backside_vertex_map.insert({ i, i });
@@ -522,9 +539,6 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 			F2(original_size + i, j) = got->second;
 		}
 	}
-
-
-
 
 	Eigen::MatrixXd N_Faces, N_Vertices;
 	igl::per_vertex_normals(V2, F2, PER_VERTEX_NORMALS_WEIGHTING_TYPE_UNIFORM, N_Vertices);
