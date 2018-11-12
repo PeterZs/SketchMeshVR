@@ -264,7 +264,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			return;
 		}
 	}
-	else if (pressed == OculusVR::ButtonCombo::TRIG && (selected_tool_mode == REMOVE || selected_tool_mode == CHANGE)) {
+	else if (pressed == OculusVR::ButtonCombo::A && (selected_tool_mode == REMOVE || selected_tool_mode == CHANGE)) {
 		if (stroke_collection.size() <= 1) {
 			prev_tool_mode = FAIL;
 			return;
@@ -300,7 +300,13 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 	else if (pressed == OculusVR::ButtonCombo::NONE) {
 		tool_mode = NONE;
 	}
-	else if (pressed == OculusVR::ButtonCombo::B) {
+	else if (pressed == OculusVR::ButtonCombo::A) {
+		std::cout << "Registereds" << std::endl;
+		if (selected_tool_mode == CHANGE || selected_tool_mode == REMOVE) {
+			tool_mode = selected_tool_mode;
+		}
+	}
+	else if (pressed == OculusVR::ButtonCombo::X) {
 		tool_mode = SMOOTH;
 	}
 
@@ -515,23 +521,13 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 	}
 	else if (tool_mode == CHANGE) {
 		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) {
-			Eigen::Vector3f hit_pos;
-			vector<igl::Hit> hits;
-
-			if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
-				hit_pos = (V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v).cast<float>();
-			}
-			else { //Hand ray did not intersect mesh
-				prev_tool_mode = FAIL;
-				return;
-			}
-
 			double closest_dist = INFINITY;
 			double current_closest = closest_dist;
 			int tmp_handleID, closest_stroke_idx;
 			handleID = -1;
 			for (int i = 0; i < stroke_collection.size(); i++) {
-				tmp_handleID = stroke_collection[i].selectClosestVertex(hit_pos, closest_dist);
+				tmp_handleID = stroke_collection[i].selectClosestVertex(pos, closest_dist);
+
 				if ((closest_dist < current_closest) && (tmp_handleID != -1)) {
 					current_closest = closest_dist;
 					handleID = tmp_handleID;
@@ -1575,7 +1571,7 @@ int main(int argc, char *argv[]) {
 			selected_tool_mode = CHANGE;
 			im_texID_cur = im_texID_change;
 			viewer.selected_data_index = pointer_mesh_index;
-			viewer.data().show_laser = true;
+			viewer.data().show_laser = false;
 			prev_laser_show = viewer.data().show_laser;
 			viewer.selected_data_index = base_mesh_index;
 			menu_closed();
@@ -1588,7 +1584,6 @@ int main(int argc, char *argv[]) {
 	viewer.oculusVR.callback_button_down = button_down;
 	viewer.oculusVR.callback_menu_opened = menu_opened;
 	viewer.oculusVR.callback_menu_closed = menu_closed;
-//	viewer.data().point_size = 5;
 	viewer.data().show_lines = false;
 	viewer.launch_oculus();
 }
