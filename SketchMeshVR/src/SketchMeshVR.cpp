@@ -258,7 +258,7 @@ void reset_before_draw() {
 
 void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 	set_laser_points(pos);
-	if (pressed == OculusVR::ButtonCombo::TRIG && (selected_tool_mode == ADD || selected_tool_mode == REMOVE || selected_tool_mode == CUT || selected_tool_mode == EXTRUDE)) {
+	if (pressed == OculusVR::ButtonCombo::TRIG && (selected_tool_mode == ADD || selected_tool_mode == CUT || selected_tool_mode == EXTRUDE)) {
 		if (stroke_collection.size() == 0) { //Don't go into these modes when there is no mesh yet
 			prev_tool_mode = FAIL;
 			return;
@@ -305,6 +305,9 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		if (selected_tool_mode == CHANGE || selected_tool_mode == REMOVE) {
 			tool_mode = selected_tool_mode;
 		}
+		else {
+			tool_mode = FAIL; //Pressing A is only allowed in CHANGE and REMOVE modes
+		}
 	}
 	else if (pressed == OculusVR::ButtonCombo::X) {
 		tool_mode = SMOOTH;
@@ -347,7 +350,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 	}
 	else if (tool_mode == REMOVE) {
 		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) {
-			Eigen::Vector3f hit_pos;
+			/*Eigen::Vector3f hit_pos;
 			vector<igl::Hit> hits;
 
 			if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
@@ -356,14 +359,16 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			else { //Hand ray did not intersect mesh
 				prev_tool_mode = FAIL;
 				return;
-			}
+			}*/
 
 			double closest_dist = INFINITY;
 			double current_closest = closest_dist;
 			int tmp_handleID, closest_stroke_idx;
 			handleID = -1;
 			for (int i = 1; i < stroke_collection.size(); i++) { //Skip stroke 0
-				tmp_handleID = stroke_collection[i].selectClosestVertex(hit_pos, closest_dist);
+				tmp_handleID = stroke_collection[i].selectClosestVertex(pos, closest_dist);
+
+				//tmp_handleID = stroke_collection[i].selectClosestVertex(hit_pos, closest_dist);
 				if ((closest_dist < current_closest) && (tmp_handleID != -1)) {
 					current_closest = closest_dist;
 					handleID = tmp_handleID;
@@ -1525,7 +1530,7 @@ int main(int argc, char *argv[]) {
 			selected_tool_mode = REMOVE;
 			im_texID_cur = im_texID_remove;
 			viewer.selected_data_index = pointer_mesh_index;
-			viewer.data().show_laser = true;
+			viewer.data().show_laser = false;
 			prev_laser_show = viewer.data().show_laser;
 			viewer.selected_data_index = base_mesh_index;
 			menu_closed();

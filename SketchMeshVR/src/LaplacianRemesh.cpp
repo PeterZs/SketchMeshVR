@@ -152,7 +152,7 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke, Eigen:
 	Eigen::RowVector3d mean_viewpoint = compute_mean_viewpoint(m, outer_boundary_vertices);
 	Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
 
-	double unit_length = compute_average_distance_between_onPolygon_vertices(path);
+	double unit_length = compute_average_distance_between_onPolygon_vertices(path, false);
 	Eigen::MatrixXd resampled_path = CleanStroke3D::resample_by_length_with_fixes(path, unit_length);
 	if (!is_counter_clockwise_boundaries(resampled_path, modelview, viewer.core.get_proj(), viewer.core.viewport, mean_viewpoint, true)) {
 		resampled_path = resampled_path.colwise().reverse().eval();
@@ -509,7 +509,8 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		}
 	}
 
-	double unit_length = (is_front_loop) ? compute_average_distance_between_onPolygon_vertices(path) : compute_average_length_of_crossing_edges(path, startV, startEV);
+	double unit_length = (is_front_loop) ? compute_average_distance_between_onPolygon_vertices(path, true) : compute_average_length_of_crossing_edges(path, startV, startEV);
+	std::cout << "Unit length "<<unit_length << std::endl;
 	if (CleanStroke3D::get_stroke_length(path, 0, path.size() - 1) / unit_length < 12) {
 		unit_length = CleanStroke3D::get_stroke_length(path, 0, path.size() - 1) / 12; //Adapt length such that we get 12 samples
 	}
@@ -975,12 +976,13 @@ bool LaplacianRemesh::is_counter_clockwise_boundaries(Eigen::MatrixXd boundary_p
 }
 
 /** Computes the average distance between PathElements that are on faces (and not on edges). **/
-double LaplacianRemesh::compute_average_distance_between_onPolygon_vertices(std::vector<PathElement> path) {
+double LaplacianRemesh::compute_average_distance_between_onPolygon_vertices(std::vector<PathElement> path, bool ignore_first) {
 	Eigen::MatrixX3d onPoly_vertices = Eigen::MatrixX3d::Zero(0, 3);
-	for (int i = 0; i < path.size(); i++) {
-		if (path[i].get_type() == PathElement::ElementType::FACE) {
+	int start = ignore_first; //For extrusion bases we want to rotate the vector so that we start at the first point that was drawn (because path actually starts with the last one for extrusion bases). For open paths we don't want to do this
+	for (int i = start; i < path.size(); i++) {
+		if (path[(i + path.size()) % path.size()].get_type() == PathElement::ElementType::FACE) {
 			onPoly_vertices.conservativeResize(onPoly_vertices.rows() + 1, Eigen::NoChange);
-			onPoly_vertices.row(onPoly_vertices.rows() - 1) = path[i].get_vertex().transpose();
+			onPoly_vertices.row(onPoly_vertices.rows() - 1) = path[(i + path.size()) % path.size()].get_vertex().transpose();
 		}
 	}
 
@@ -988,7 +990,8 @@ double LaplacianRemesh::compute_average_distance_between_onPolygon_vertices(std:
 	for (int i = 0; i < onPoly_vertices.rows() - 1; i++) {
 		total += (onPoly_vertices.row(i) - onPoly_vertices.row(i + 1)).norm();
 	}
-	return total / (onPoly_vertices.rows() - 1);
+
+	return total / (onPoly_vertices.rows() - 1 - start);
 }
 
 /** Computes the average length of the edges that are crossed by the SurfacePath**/

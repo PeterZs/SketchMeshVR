@@ -22,7 +22,7 @@ private:
 	static int find_closest(std::vector<int> vertices, Eigen::Vector3d base, Mesh & m);
 	static void stitch(std::vector<int> path_vertices, std::vector<int> boundary_vertices, Mesh & m, bool reverse, Eigen::MatrixXi replacing_edges);
 	static bool is_counter_clockwise_boundaries(Eigen::MatrixXd boundary_points, Eigen::Matrix4f modelview, Eigen::Matrix4f proj, Eigen::Vector4f viewport, Eigen::RowVector3d mean_viewpoint, bool cut);
-	static double compute_average_distance_between_onPolygon_vertices(std::vector<PathElement> path);
+	static double compute_average_distance_between_onPolygon_vertices(std::vector<PathElement> path, bool ignore_first);
 	static double compute_average_length_of_crossing_edges(std::vector<PathElement> path, Eigen::MatrixXd startV, Eigen::MatrixXi startEV);
 	static void update_add_path_points_and_bindings(Stroke & stroke, SurfacePath & surface_path);
 	static bool is_replacing_endpoint(int v_idx, Eigen::MatrixXi & replacing_edges);

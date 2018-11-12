@@ -98,7 +98,6 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 
 	silhouette_vertices = CleanStroke3D::resample(silhouette_vertices); //Resample, including the space between the outer silhouette vertices and the left- and right-most base vertices
 	Eigen::MatrixXd silhouette_vertices_smoothed = smooth_stroke(silhouette_vertices);
-//	Eigen::MatrixXd silhouette_vertices_smoothed = silhouette_vertices;
 
 	tmp_sil = silhouette_vertices_smoothed.middleRows(1, silhouette_vertices_smoothed.rows() - 2); //Remove the left- and right-most vertices again
 	silhouette_vertices = tmp_sil;
