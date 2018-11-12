@@ -216,10 +216,17 @@ void set_laser_points(Eigen::Vector3f& pos) {
 	}
 	else { //First check for intersections with the mesh, then with the floor and finally just set the end point at a far distance_to_vert
 		viewer.selected_data_index = 0;
-		if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), viewer.data().V, viewer.data().F, hits)) {
-			laser_end_point = (viewer.data().V.row(viewer.data().F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + viewer.data().V.row(viewer.data().F(hits[0].id, 1))*hits[0].u + viewer.data().V.row(viewer.data().F(hits[0].id, 2))*hits[0].v);
+		bool hit_found = false;
+		for (int i = 0; i < 6; i++) {
+			if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), viewer.data().V, viewer.data().F, hits)) {
+				laser_end_point = (viewer.data().V.row(viewer.data().F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + viewer.data().V.row(viewer.data().F(hits[0].id, 1))*hits[0].u + viewer.data().V.row(viewer.data().F(hits[0].id, 2))*hits[0].v);
+				hit_found = true;
+				break;
+			}
+			viewer.selected_data_index++;
 		}
-		else {
+
+		if(!hit_found){
 			laser_end_point = (pos + 10 * viewer.oculusVR.get_right_touch_direction()).cast<double>();
 		}
 		viewer.selected_data_index = base_mesh_index;
@@ -1581,7 +1588,7 @@ int main(int argc, char *argv[]) {
 	viewer.oculusVR.callback_button_down = button_down;
 	viewer.oculusVR.callback_menu_opened = menu_opened;
 	viewer.oculusVR.callback_menu_closed = menu_closed;
-	viewer.data().point_size = 15;
+//	viewer.data().point_size = 5;
 	viewer.data().show_lines = false;
 	viewer.launch_oculus();
 }

@@ -17,7 +17,7 @@ using namespace igl;
 using namespace std;
 
 double min_inter_point_distance = 0.0001125;
-int MAX_NR_TRIANGLES = 1000; //For the entire mesh (front + backside)
+int MAX_NR_TRIANGLES = 10000; //For the entire mesh (front + backside)
 Eigen::RowVector3d red_color(1, 0, 0);
 Eigen::RowVector3d blue_color(0, 0, 1);
 
@@ -446,13 +446,12 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 	do{
 		count++;
 		if (count > 1) { //Previous triangulation was too finegrained, have to increase resampling distance
-			resampling_distance *= pow(1.15, double(abs((MAX_NR_TRIANGLES/2.0)-F2.rows()) / (MAX_NR_TRIANGLES / 2.0)));
-			std::cout << pow(1.15, double(abs((MAX_NR_TRIANGLES / 2.0) - F2.rows()) / (MAX_NR_TRIANGLES / 2.0))) << std::endl;
+			resampling_distance *= pow(1.15, 2*double(abs((MAX_NR_TRIANGLES/2.0)-F2.rows()) / (MAX_NR_TRIANGLES / 2.0))); //Multiply the exponent by a factor 2 to ensure faster convergence
 		}
 		std::cout << "Step0 " << resampling_distance << std::endl;
 		Eigen::MatrixXd resampled_new_3DPoints = CleanStroke3D::resample_by_length_sub(new_3DPoints, 0, new_3DPoints.rows() - 1, resampling_distance);
 		closest_vert_bindings.clear();
-		std::cout << "Step1" << std::endl;
+
 		for (int i = 0; i < resampled_new_3DPoints.rows(); i++) {
 			closest_vert_bindings.push_back(i);
 		}
@@ -464,28 +463,23 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 		EigenSolver<MatrixXd> es;
 		es.compute(cov);
 		Eigen::VectorXd eigenvals = es.eigenvalues().real();
-		std::cout << "Step2" << std::endl;
 
 		std::vector<int> idx(eigenvals.rows());
 		size_t n(0);
 		std::generate(std::begin(idx), std::end(idx), [&] {return n++; }); //Fill the vector idx with increasing integers starting from 0
 		std::sort(std::begin(idx), std::end(idx), [&](int i1, int i2) {return eigenvals[i1] > eigenvals[i2]; }); //Sort the vector of indices based on the descending values of eigenvalues
-		std::cout << "Step3" << std::endl;
 
 		xvec = es.eigenvectors().real().col(idx[0]);
 		yvec = es.eigenvectors().real().col(idx[1]);
 		Eigen::Vector3d zvec = es.eigenvectors().real().col(idx[2]);
 		Eigen::MatrixXd new_axes(3, 3);
 		new_axes << xvec, yvec, zvec;
-		std::cout << "Step4" << std::endl;
 
 		Eigen::MatrixX3d projected_points = stroke3DPoints * new_axes;
 		dep = projected_points.col(2);
 
 		stroke2DPoints = projected_points.leftCols(2);
 		TaubinFairing2D(stroke2DPoints, 5);
-
-		std::cout << "Step5" << std::endl;
 
 		counter_clockwise();  //Ensure the stroke is counter-clockwise, handy later
 
