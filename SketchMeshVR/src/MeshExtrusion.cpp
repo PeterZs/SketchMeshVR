@@ -89,6 +89,8 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 		silhouette_vertices = tmp_sil_vert;
 	}
 
+	//double sil_unit_length = get_stroke_unit_length(silhouette_vertices); //Distance used for resampling later. Calculate this before adding the left- and right-most vertices (because they might be far away from the silhouette endpoints)
+
 	silhouette_vertices.conservativeResize(silhouette_vertices.rows() + 1, Eigen::NoChange);
 	Eigen::MatrixXd tmp_sil = silhouette_vertices.topRows(silhouette_vertices.rows() - 1);
 	silhouette_vertices.block(1, 0, silhouette_vertices.rows() - 1, 3) = tmp_sil; 
@@ -96,9 +98,9 @@ bool MeshExtrusion::extrude_main(Mesh& m, SurfacePath& surface_path, Stroke& str
 	silhouette_vertices.conservativeResize(silhouette_vertices.rows() + 1, Eigen::NoChange);
 	silhouette_vertices.row(silhouette_vertices.rows() - 1) = m.V.row(boundary_vertices[most_left_vertex_idx]); //Add the left-most vertex
 
-	silhouette_vertices = CleanStroke3D::resample(silhouette_vertices); //Resample, including the space between the outer silhouette vertices and the left- and right-most base vertices
+	double sil_unit_length = get_base_unit_length(m.V, boundary_vertices); //Use the intersample distance for the extrusion's base stroke, since this gives a more uniform sampling when we make the loops
 	Eigen::MatrixXd silhouette_vertices_smoothed = smooth_stroke(silhouette_vertices);
-
+	silhouette_vertices_smoothed = CleanStroke3D::resample_by_length_sub(silhouette_vertices_smoothed, 0, silhouette_vertices_smoothed.rows()-1, sil_unit_length); //Resample, including the space between the outer silhouette vertices and the left- and right-most base vertices
 	tmp_sil = silhouette_vertices_smoothed.middleRows(1, silhouette_vertices_smoothed.rows() - 2); //Remove the left- and right-most vertices again
 	silhouette_vertices = tmp_sil;
 
@@ -227,6 +229,24 @@ void MeshExtrusion::move_to_middle(Eigen::MatrixXd &positions, Eigen::MatrixXd &
 		new_positions(i, 1) = (cur[1] * 2 + prev[1] + next[1]) / 4;
 		new_positions(i, 2) = (cur[2] * 2 + prev[2] + next[2]) / 4;
 	}
+}
+
+double MeshExtrusion::get_stroke_unit_length(Eigen::MatrixXd& vertices) {
+	//Assumes that the matrix of vertices can be used as is (i.e. if we need the unit length of a closed curve, vertices needs to be looped already)
+	double total = 0.0;
+	for (int i = 0; i < vertices.rows() - 1; i++) {
+		total += (vertices.row(i) - vertices.row(i + 1)).norm();
+	}
+	return total / (vertices.rows() - 1);
+}
+
+//Boundary_vertices here won't be looped, but we also don't necessarily need a loop to determine the average sampling distance
+double MeshExtrusion::get_base_unit_length(Eigen::MatrixXd& V, Eigen::VectorXi& boundary_vertices) {
+	double total = 0.0;
+	for (int i = 0; i < boundary_vertices.rows() - 1; i++) {
+		total += (V.row(boundary_vertices[i]) - V.row(boundary_vertices[i + 1])).norm();
+	}
+	return total / (boundary_vertices.rows() - 1);
 }
 
 void MeshExtrusion::remove_out_of_bounds_silhouette(Eigen::MatrixXd& silhouette_vertices, Eigen::RowVector3d& center, const Eigen::RowVector3d& left_most, const Eigen::RowVector3d& right_most, Eigen::RowVector3d& dir) {

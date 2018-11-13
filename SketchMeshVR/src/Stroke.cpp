@@ -450,7 +450,6 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 		if (count > 1) { //Previous triangulation was too finegrained, have to increase resampling distance
 			resampling_distance *= pow(1.15, 2*double(abs((MAX_NR_TRIANGLES/2.0)-F2.rows()) / (MAX_NR_TRIANGLES / 2.0))); //Multiply the exponent by a factor 2 to ensure faster convergence
 		}
-		std::cout << "Step0 " << resampling_distance << std::endl;
 		Eigen::MatrixXd resampled_new_3DPoints = CleanStroke3D::resample_by_length_sub(new_3DPoints, 0, new_3DPoints.rows() - 1, resampling_distance);
 		closest_vert_bindings.clear();
 
@@ -494,10 +493,8 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 		}
 		mean_squared_sample_dist /= stroke2DPoints.rows();
 
-		std::cout << "Before triangulate" << std::endl;
 		//Set a inter-sample distance dependent maximum triangle area. Setting this too small will result in inflation in the wrong direction.
 		igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq25a" + to_string(0.5*(mean_squared_sample_dist)), V2_tmp, F2, vertex_markers, edge_markers);
-		std::cout << " Done triangulating " << F2.rows() << " triangles." << std::endl;
 
 	} while (F2.rows() > (MAX_NR_TRIANGLES/2));
 
@@ -654,12 +651,12 @@ void Stroke::counter_clockwise() {
 /** Taubin fairing will make sure that the shape doesn't shrink when smoothing the curve **/
 void Stroke::TaubinFairing2D(Eigen::MatrixXd& original_stroke2DPoints, int n) {
 	for (int i = 0; i < n; i++) {
-		smooth_sub(original_stroke2DPoints, 0.63139836);
-		smooth_sub(original_stroke2DPoints, -0.6739516);
+		smooth_sub2D(original_stroke2DPoints, 0.63139836);
+		smooth_sub2D(original_stroke2DPoints, -0.6739516);
 	}
 }
 
-void Stroke::smooth_sub(Eigen::MatrixXd& points, double direction) {
+void Stroke::smooth_sub2D(Eigen::MatrixXd& points, double direction) {
 	int n = points.rows();
 	Eigen::MatrixXd new_positions(n, 2);
 	Eigen::RowVector2d prev, cur, next;
@@ -667,7 +664,7 @@ void Stroke::smooth_sub(Eigen::MatrixXd& points, double direction) {
 		prev = points.row(((i - 1) + n) % n);
 		cur = points.row(i);
 		next = points.row(((i + 1) + n) % n);
-		new_positions.row(i) = to_sum_of_vectors(cur, prev, next, direction);
+		new_positions.row(i) = to_sum_of_vectors2D(cur, prev, next, direction);
 	}
 
 	for (int i = 0; i < n; i++) {
@@ -675,7 +672,7 @@ void Stroke::smooth_sub(Eigen::MatrixXd& points, double direction) {
 	}
 }
 
-Eigen::RowVector2d Stroke::to_sum_of_vectors(Eigen::RowVector2d vert, Eigen::RowVector2d prev, Eigen::RowVector2d next, double direction) {
+Eigen::RowVector2d Stroke::to_sum_of_vectors2D(Eigen::RowVector2d vert, Eigen::RowVector2d prev, Eigen::RowVector2d next, double direction) {
 	Eigen::RowVector2d total_vec(0, 0);
 	double total_w = 0.0;
 	double w = 0.0;
@@ -693,6 +690,14 @@ Eigen::RowVector2d Stroke::to_sum_of_vectors(Eigen::RowVector2d vert, Eigen::Row
 
 	total_vec *= (1.0 / total_w);
 	return (vert + total_vec*direction);
+}
+
+void Stroke::resample_and_smooth_3DPoints() {
+	double avg_sample_dist = CleanStroke3D::get_stroke_length(stroke3DPoints) / (stroke3DPoints.rows() - 1);
+
+	CleanStroke3D::resample_by_length_sub(stroke3DPoints, stroke3DPoints.rows() - 2, stroke3DPoints.rows() - 1, avg_sample_dist);
+	Eigen::MatrixXd tmp = stroke3DPoints;
+	stroke3DPoints = (Eigen::MatrixX3d) CleanStroke3D::TaubinFairing3D(tmp, 5);
 }
 
 void Stroke::generate_backfaces(Eigen::MatrixXi &faces, Eigen::MatrixXi &back_faces) {

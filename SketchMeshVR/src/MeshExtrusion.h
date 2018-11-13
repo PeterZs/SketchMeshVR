@@ -25,6 +25,11 @@ private:
 	static void post_extrude_main_update_bindings(Stroke & base, SurfacePath & surface_path);
 	static Eigen::MatrixXd smooth_stroke(Eigen::MatrixXd & input_points);
 	static void move_to_middle(Eigen::MatrixXd & positions, Eigen::MatrixXd & new_positions);
+	static Eigen::MatrixXd TaubinFairing3D(Eigen::MatrixXd & original_3DPoints, int n);
+	static void smooth_sub3D(Eigen::MatrixXd & points, double direction);
+	static Eigen::RowVector3d to_sum_of_vectors3D(Eigen::RowVector3d vert, Eigen::RowVector3d prev, Eigen::RowVector3d next, double direction);
+	static double get_stroke_unit_length(Eigen::MatrixXd & vertices);
+	static double get_base_unit_length(Eigen::MatrixXd & V, Eigen::VectorXi & boundary_vertices);
 	static void remove_out_of_bounds_silhouette(Eigen::MatrixXd & silhouette_vertices, Eigen::RowVector3d & center, const Eigen::RowVector3d & left_most, const Eigen::RowVector3d & right_most, Eigen::RowVector3d & dir);
 
 };

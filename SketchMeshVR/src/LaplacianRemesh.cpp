@@ -507,6 +507,8 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 		else {
 			path[i].fixed = false;
 		}
+
+		std::cout << path[i].get_vertex().transpose() << std::endl;
 	}
 
 	double unit_length = (is_front_loop) ? compute_average_distance_between_onPolygon_vertices(path, true) : compute_average_length_of_crossing_edges(path, startV, startEV);
@@ -517,6 +519,8 @@ Eigen::VectorXi LaplacianRemesh::remesh(Mesh& m, SurfacePath& surface_path, Eige
 
 
 	Eigen::MatrixXd resampled_path = CleanStroke3D::resample_by_length_with_fixes(path, unit_length);
+	std::cout << std::endl << " resampleL: " << resampled_path << std::endl;
+
 	Eigen::Matrix4f modelview = view * model;
 
 	//For non-extrusion base strokes, check if they are counter clockwise (extrusion bases are made CCW when created)

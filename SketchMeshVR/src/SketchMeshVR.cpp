@@ -838,6 +838,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 					return;
 				}
 
+
 				(*base_mesh).patches.clear();
 				(*base_mesh).face_patch_map.clear();
 				(*base_mesh).patches = Patch::init_patches(*base_mesh);
@@ -897,6 +898,8 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				}
 
 				dirty_boundary = true;
+
+				extrusion_base->resample_and_smooth_3DPoints();
 
 				bool succes_extrude_prepare = MeshExtrusion::extrude_prepare(*extrusion_base, base_surface_path); //Don't need to update all strokes here, since it didn't remove any vertices
 				if (!succes_extrude_prepare) { //Catches the case that face == -1 in SurfacePath
