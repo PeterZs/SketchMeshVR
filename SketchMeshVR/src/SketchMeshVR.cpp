@@ -899,7 +899,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				dirty_boundary = true;
 
 				base_model = viewer.core.get_model();
-				base_view = viewer.oculusVR.get_start_action_view();// viewer.core.get_view();
+				base_view = viewer.oculusVR.get_start_action_view(); //Use the same view as has been used for the initial drawing of the base on the mesh, otherwise it is guaranteed to shift
 				base_proj = viewer.core.get_proj();
 				base_viewport = viewer.core.viewport;
 

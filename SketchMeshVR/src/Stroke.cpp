@@ -291,11 +291,12 @@ void Stroke::addSegmentExtrusionBase(Eigen::Vector3f& pos, igl::opengl::glfw::Vi
 		Eigen::Vector3f hit_pos_tmp = hit_pos.cast<float>();
 		Eigen::Vector3d hit_pos2D = igl::project(hit_pos_tmp, modelview, viewer.core.get_proj(), viewer.core.viewport).cast<double>();
 
+		//Extrusion base does not need hand_pos_at_draw inside of here anymore, since it will be set when the base is resampled and smoothed (which is right after the user releases the button, so before the generation of the SurfacePath -where the hand positions are needed-)
 		if (stroke2DPoints.rows() == 1 && stroke2DPoints.isZero()) {
 			stroke2DPoints.row(0) << hit_pos2D[0], hit_pos2D[1];
 			stroke3DPoints.row(0) << hit_pos[0], hit_pos[1], hit_pos[2];
 			faces_hit.row(0) << hits[0].id, hits[1].id;
-			hand_pos_at_draw.row(0) << pos.transpose().cast<double>();
+			//hand_pos_at_draw.row(0) << pos.transpose().cast<double>();
 			stroke_color = Eigen::RowVector3d(1, 0, 0);
 		}
 		else {
@@ -308,8 +309,8 @@ void Stroke::addSegmentExtrusionBase(Eigen::Vector3f& pos, igl::opengl::glfw::Vi
 			faces_hit.conservativeResize(faces_hit.rows() + 1, Eigen::NoChange);
 			faces_hit.row(faces_hit.rows() - 1) << hits[0].id, hits[1].id;
 
-			hand_pos_at_draw.conservativeResize(hand_pos_at_draw.rows() + 1, Eigen::NoChange);
-			hand_pos_at_draw.row(hand_pos_at_draw.rows() - 1) << pos.transpose().cast<double>();
+			//hand_pos_at_draw.conservativeResize(hand_pos_at_draw.rows() + 1, Eigen::NoChange);
+			//hand_pos_at_draw.row(hand_pos_at_draw.rows() - 1) << pos.transpose().cast<double>();
 
 		}
 	}
@@ -700,14 +701,11 @@ void Stroke::resample_and_smooth_3DPoints(Eigen::Matrix4f& model, Eigen::Matrix4
 	stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
 	stroke2DPoints.bottomRows(1) = stroke2DPoints.row(0); //Temporarily append first point so we can resample the whole loop
 
-
-
 	//Resample the entire 2D stroke
 	Eigen::MatrixXd resampled_2D = resample_stroke2D(stroke2DPoints, avg_sample_dist, length);
 	stroke2DPoints = resampled_2D.topRows(resampled_2D.rows() - 1); //Remove looped point again
 
-	//Smooth 2D stroke
-	//TaubinFairing2D(stroke2DPoints, 50);
+	//Smooth 2D stroke. Use move_to_middle instead of Taubin Fairing to ensure that the straight piece (due to the user not closing the gap) is smoothed out
 	stroke2DPoints = move_to_middle_smoothing(stroke2DPoints);
 
 	//Project onto mesh to get 3DPoints and hit faces. Use mid hit point (average of front and back hitpoint) as the alternative for "hand_point" (should form the same plane)
@@ -732,13 +730,14 @@ void Stroke::resample_and_smooth_3DPoints(Eigen::Matrix4f& model, Eigen::Matrix4
 		}
 
 		hit_front = (*V).row((*F)(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + (*V).row((*F)(hits[0].id, 1))*hits[0].u + (*V).row((*F)(hits[0].id, 2))*hits[0].v;
-		//hit_back = (*V).row((*F)(hits[1].id, 0))*(1.0 - hits[1].u - hits[1].v) + (*V).row((*F)(hits[1].id, 1))*hits[1].u + (*V).row((*F)(hits[1].id, 2))*hits[1].v;
 
 		new_3DPoints.row(i) = hit_front.transpose();
 		faces_hit.row(i) << hits[0].id, hits[1].id;
 		hand_pos_at_draw.row(i) = inside_point.transpose().cast<double>();
 
 	}
+
+	//Make all these variables looped again
 	new_3DPoints.bottomRows(1) = new_3DPoints.row(0);
 	faces_hit.bottomRows(1) = faces_hit.row(0);
 	hand_pos_at_draw.bottomRows(1) = hand_pos_at_draw.row(0);
