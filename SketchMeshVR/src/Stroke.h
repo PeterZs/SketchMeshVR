@@ -32,6 +32,7 @@ public:
 	void update_Positions(Eigen::MatrixXd V, bool structure_changed);
 	void generate3DMeshFromStroke(Eigen::VectorXi & edge_boundary_markers, Eigen::VectorXi & vertex_is_fixed, Eigen::MatrixXd & mesh_V, Eigen::MatrixXi & mesh_F, igl::opengl::glfw::Viewer & viewer);
 	void project_with_PCA_given_target(Eigen::Vector3d target_vec);
+	void resample_and_smooth_3DPoints(Eigen::Matrix4f& model, Eigen::Matrix4f& view, Eigen::Matrix4f& proj, Eigen::Vector4f& viewport);
 	bool has_self_intersection(bool make_looped);
 	int selectClosestVertex(Eigen::Vector3f pos, double & closest_distance);
     
@@ -87,9 +88,11 @@ private:
 	static void TaubinFairing2D(Eigen::MatrixXd & original_stroke2DPoints, int n);
 	static void smooth_sub2D(Eigen::MatrixXd & points, double direction);
 	static Eigen::RowVector2d to_sum_of_vectors2D(Eigen::RowVector2d vert, Eigen::RowVector2d prev, Eigen::RowVector2d next, double direction);
-	void resample_and_smooth_3DPoints();
 	static void generate_backfaces(Eigen::MatrixXi &faces, Eigen::MatrixXi &back_faces);
 	bool line_segments_intersect(Eigen::RowVector2d& p1, Eigen::RowVector2d& p2, Eigen::RowVector2d& p3, Eigen::RowVector2d& p4);
+	double get_2D_length();
+	Eigen::MatrixXd resample_stroke2D(Eigen::MatrixXd & original_2D, double unit_length, double length);
+	Eigen::MatrixXd move_to_middle_smoothing(Eigen::MatrixXd & stroke2DPoints);
 	double compute_stroke_diag();
 	bool empty2D() const { return stroke2DPoints.isZero(); }
 

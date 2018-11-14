@@ -301,7 +301,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		tool_mode = NONE;
 	}
 	else if (pressed == OculusVR::ButtonCombo::A) {
-		std::cout << "Registereds" << std::endl;
 		if (selected_tool_mode == CHANGE || selected_tool_mode == REMOVE) {
 			tool_mode = selected_tool_mode;
 		}
@@ -899,7 +898,12 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 				dirty_boundary = true;
 
-				extrusion_base->resample_and_smooth_3DPoints();
+				base_model = viewer.core.get_model();
+				base_view = viewer.oculusVR.get_start_action_view();// viewer.core.get_view();
+				base_proj = viewer.core.get_proj();
+				base_viewport = viewer.core.viewport;
+
+				extrusion_base->resample_and_smooth_3DPoints(base_model, base_view, base_proj, base_viewport);
 
 				bool succes_extrude_prepare = MeshExtrusion::extrude_prepare(*extrusion_base, base_surface_path); //Don't need to update all strokes here, since it didn't remove any vertices
 				if (!succes_extrude_prepare) { //Catches the case that face == -1 in SurfacePath
@@ -910,10 +914,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 				extrusion_base_already_drawn = true;
 
-				base_model = viewer.core.get_model();
-				base_view = viewer.core.get_view();
-				base_proj = viewer.core.get_proj();
-				base_viewport = viewer.core.viewport;
+				
 
 				draw_all_strokes();
 				draw_extrusion_base(); //Need to draw the extrusion base separately, since it isn't added to the stroke_collection yet.

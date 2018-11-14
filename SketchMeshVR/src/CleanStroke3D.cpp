@@ -116,10 +116,9 @@ Eigen::MatrixXd CleanStroke3D::resample_by_length_sub(Eigen::MatrixXd path_verti
 	if (length < unit_length) { //Actual stroke is shorter than requested inter-sample length
 		resampled_points.conservativeResize(resampled_points.rows() + 1, Eigen::NoChange);
 		resampled_points.row(resampled_points.rows() - 1) = v1;
-		std::cout << "yes: " << std::endl;
 		return resampled_points;
 	}
-	std::cout << "no: " << std::endl;
+
 	double total = 0.0, prev_total = 0.0, next_spot = unit_length;
 	Eigen::RowVector3d prev = v0, next = path_vertices.row(start_index + 1);
 	int index = start_index + 1, count = 0;

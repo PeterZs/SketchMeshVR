@@ -1,6 +1,7 @@
 #include "Stroke.h"
 #include "CleanStroke3D.h"
-#include <igl/unproject_onto_mesh.h>
+#include <igl/unproject_in_mesh.h>
+
 #include <igl/unproject.h>
 #include <igl/project.h>
 #include <igl/triangle/triangulate.h>
@@ -286,6 +287,7 @@ void Stroke::addSegmentExtrusionBase(Eigen::Vector3f& pos, igl::opengl::glfw::Vi
 
 		has_points_on_mesh = true;
 		Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
+
 		Eigen::Vector3f hit_pos_tmp = hit_pos.cast<float>();
 		Eigen::Vector3d hit_pos2D = igl::project(hit_pos_tmp, modelview, viewer.core.get_proj(), viewer.core.viewport).cast<double>();
 
@@ -299,7 +301,6 @@ void Stroke::addSegmentExtrusionBase(Eigen::Vector3f& pos, igl::opengl::glfw::Vi
 		else {
 			stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
 			stroke2DPoints.row(stroke2DPoints.rows() - 1) << hit_pos2D[0], hit_pos2D[1];
-			std::cout << "dist " << (stroke3DPoints.bottomRows(1) - hit_pos.transpose()).norm() << std::endl;
 
 			stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
 			stroke3DPoints.row(stroke3DPoints.rows() - 1) << hit_pos[0], hit_pos[1], hit_pos[2];
@@ -648,7 +649,7 @@ void Stroke::counter_clockwise() {
 	}
 }
 
-/** Taubin fairing will make sure that the shape doesn't shrink when smoothing the curve **/
+/** Taubin fairing will make sure that the shape doesn't shrink when smoothing the curve. Assumes a non-looped input **/
 void Stroke::TaubinFairing2D(Eigen::MatrixXd& original_stroke2DPoints, int n) {
 	for (int i = 0; i < n; i++) {
 		smooth_sub2D(original_stroke2DPoints, 0.63139836);
@@ -692,12 +693,57 @@ Eigen::RowVector2d Stroke::to_sum_of_vectors2D(Eigen::RowVector2d vert, Eigen::R
 	return (vert + total_vec*direction);
 }
 
-void Stroke::resample_and_smooth_3DPoints() {
-	double avg_sample_dist = CleanStroke3D::get_stroke_length(stroke3DPoints) / (stroke3DPoints.rows() - 1);
+void Stroke::resample_and_smooth_3DPoints(Eigen::Matrix4f& model, Eigen::Matrix4f& view, Eigen::Matrix4f& proj, Eigen::Vector4f& viewport) {
+	//Stroke2DPoints are not looped
+	double length = get_2D_length();
+	double avg_sample_dist = length / (stroke2DPoints.rows() - 1);
+	stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
+	stroke2DPoints.bottomRows(1) = stroke2DPoints.row(0); //Temporarily append first point so we can resample the whole loop
 
-	CleanStroke3D::resample_by_length_sub(stroke3DPoints, stroke3DPoints.rows() - 2, stroke3DPoints.rows() - 1, avg_sample_dist);
-	Eigen::MatrixXd tmp = stroke3DPoints;
-	stroke3DPoints = (Eigen::MatrixX3d) CleanStroke3D::TaubinFairing3D(tmp, 5);
+
+
+	//Resample the entire 2D stroke
+	Eigen::MatrixXd resampled_2D = resample_stroke2D(stroke2DPoints, avg_sample_dist, length);
+	stroke2DPoints = resampled_2D.topRows(resampled_2D.rows() - 1); //Remove looped point again
+
+	//Smooth 2D stroke
+	//TaubinFairing2D(stroke2DPoints, 50);
+	stroke2DPoints = move_to_middle_smoothing(stroke2DPoints);
+
+	//Project onto mesh to get 3DPoints and hit faces. Use mid hit point (average of front and back hitpoint) as the alternative for "hand_point" (should form the same plane)
+	Eigen::Vector3d bc, hit_front, hit_back;
+	Eigen::Vector3f inside_point;
+	Eigen::MatrixXd new_3DPoints(stroke2DPoints.rows() + 1, 3);
+	std::vector<igl::Hit> hits;
+	faces_hit.resize(stroke2DPoints.rows() + 1, 2);
+	faces_hit.setZero();
+
+	hand_pos_at_draw.resize(stroke2DPoints.rows() + 1, Eigen::NoChange);
+	hand_pos_at_draw.setZero();
+
+	Eigen::Matrix4f modelview = view*model;
+
+	for (int i = 0; i < stroke2DPoints.rows(); i++) {
+		Eigen::Vector2f tmp = (stroke2DPoints.row(i)).cast<float>().transpose();
+		igl::unproject_in_mesh(tmp, modelview, proj, viewport, *V, *F, inside_point, hits);
+		if (hits.size() < 2) {
+			std::cerr << "Error: resampled/smoothed 2D point did not project onto mesh. Implement skipping of these points. " << std::endl;
+			std::cout << hits[1].id << std::endl;
+		}
+
+		hit_front = (*V).row((*F)(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + (*V).row((*F)(hits[0].id, 1))*hits[0].u + (*V).row((*F)(hits[0].id, 2))*hits[0].v;
+		//hit_back = (*V).row((*F)(hits[1].id, 0))*(1.0 - hits[1].u - hits[1].v) + (*V).row((*F)(hits[1].id, 1))*hits[1].u + (*V).row((*F)(hits[1].id, 2))*hits[1].v;
+
+		new_3DPoints.row(i) = hit_front.transpose();
+		faces_hit.row(i) << hits[0].id, hits[1].id;
+		hand_pos_at_draw.row(i) = inside_point.transpose().cast<double>();
+
+	}
+	new_3DPoints.bottomRows(1) = new_3DPoints.row(0);
+	faces_hit.bottomRows(1) = faces_hit.row(0);
+	hand_pos_at_draw.bottomRows(1) = hand_pos_at_draw.row(0);
+
+	set3DPoints(new_3DPoints);
 }
 
 void Stroke::generate_backfaces(Eigen::MatrixXi &faces, Eigen::MatrixXi &back_faces) {
@@ -920,6 +966,90 @@ bool Stroke::line_segments_intersect(Eigen::RowVector2d& p1, Eigen::RowVector2d&
 		return false;
 	}
 }
+
+double Stroke::get_2D_length() {
+	double length = 0.0;
+	for (int i = 0; i < stroke2DPoints.rows() - 1; i++) {
+		length += (stroke2DPoints.row(i) - stroke2DPoints.row(i + 1)).norm();
+	}
+	return length;
+}
+
+Eigen::MatrixXd Stroke::resample_stroke2D(Eigen::MatrixXd& original_2D, double unit_length, double length) {
+	int n = 1 + (int)(length / unit_length);
+
+	int start_index = 0, end_index = original_2D.rows() - 1;
+	Eigen::RowVector2d v0 = original_2D.row(start_index);
+	Eigen::RowVector2d v1 = original_2D.row(end_index);
+
+	Eigen::MatrixXd resampled_points(0, 2);
+
+	if (length < unit_length) { //Actual stroke is shorter than requested inter-sample length
+		resampled_points.conservativeResize(resampled_points.rows() + 1, Eigen::NoChange);
+		resampled_points.row(resampled_points.rows() - 1) = v1;
+		return resampled_points;
+	}
+
+	double total = 0.0, prev_total = 0.0, next_spot = unit_length;
+	Eigen::RowVector2d prev = v0, next = original_2D.row(start_index + 1);
+	int index = start_index + 1, count = 0;
+
+	while (true) {
+		next = original_2D.row(index);
+		total += (prev - next).norm();
+		while (total >= next_spot) { //The along-path distance_to_vert to the next path_vertex is bigger than where we would want the next sample, so we create an interpolated sample
+			double t = (next_spot - prev_total) / (total - prev_total);
+			resampled_points.conservativeResize(resampled_points.rows() + 1, Eigen::NoChange);
+			resampled_points.row(resampled_points.rows() - 1) = prev*(1 - t) + next*t;
+			next_spot += unit_length;
+			count++;
+			if (count == n - 1) {
+				break;
+			}
+
+		}
+		if (count == n - 1) {
+			break;
+		}
+		prev = next;
+		prev_total = total;
+		index++;
+
+		if (index == end_index) {
+			break;
+		}
+	}
+
+	resampled_points.conservativeResize(resampled_points.rows() + 1, Eigen::NoChange);
+	resampled_points.row(resampled_points.rows() - 1) = v1;
+	return resampled_points;
+}
+
+Eigen::MatrixXd Stroke::move_to_middle_smoothing(Eigen::MatrixXd& stroke2DPoints) {
+	Eigen::MatrixXd new_stroke2DPoints = Eigen::MatrixXd::Zero(stroke2DPoints.rows(), 2);
+	int nr_iterations = max(2.0, stroke2DPoints.rows() / 8.0);
+
+	for (int i = 0; i < nr_iterations; i++) {
+		move_to_middle(stroke2DPoints, new_stroke2DPoints);
+		move_to_middle(new_stroke2DPoints, stroke2DPoints);
+	}
+	return new_stroke2DPoints;
+}
+
+void Stroke::move_to_middle(Eigen::MatrixXd &positions, Eigen::MatrixXd &new_positions) {
+	int n = positions.rows();
+	Eigen::Vector2d prev, cur, next;
+
+	for (int i = 0; i < n; i++) {
+		prev = positions.row(((i - 1) + n) % n);
+		cur = positions.row(i % n);
+		next = positions.row(((i + 1) + n) % n);
+
+		new_positions(i, 0) = (cur[0] * 2 + prev[0] + next[0]) / 4;
+		new_positions(i, 1) = (cur[1] * 2 + prev[1] + next[1]) / 4;
+	}
+}
+
 
 int Stroke::get_ID() {
 	return stroke_ID;
