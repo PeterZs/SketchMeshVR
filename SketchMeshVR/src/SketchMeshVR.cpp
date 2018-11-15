@@ -117,6 +117,7 @@ Eigen::RowVector3d laser_end_point;
 bool prev_laser_show;
 
 Eigen::Vector3d prev_translation_point;
+double prev_scale_size;
 
 
 void sound_error_beep() {
@@ -576,15 +577,33 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		}
 		if (prev_tool_mode == NONE) {
 			prev_translation_point = ((pos + viewer.oculusVR.get_left_hand_pos()) / 2.0).cast<double>();
+			prev_scale_size = (pos - viewer.oculusVR.get_left_hand_pos()).norm();
 			prev_tool_mode = TRANSLATE;
 		}
 		else if(prev_tool_mode == TRANSLATE) {
 			Eigen::Vector3d cur_translation_point = ((pos + viewer.oculusVR.get_left_hand_pos()) / 2.0).cast<double>();
 			Eigen::RowVector3d translation_vec = (cur_translation_point - prev_translation_point).transpose();
 			Eigen::MatrixXd tmp = translation_vec.replicate(V.rows(), 1);
-			V = V + tmp;
+			//V = V + tmp;
+
+			double cur_scale_size = (pos - viewer.oculusVR.get_left_hand_pos()).norm();
+			double scale_factor = cur_scale_size / prev_scale_size;
+
+			Eigen::Vector3f mesh_translation = -V.colwise().mean().eval().cast<float>();
+			Eigen::MatrixXd V_tmp(4, V.rows());
+			V_tmp.block(0, 0, 3, V.rows()) = V.transpose();
+			V_tmp.row(3) = Eigen::RowVectorXd::Constant(V.rows(), 1);
+
+			Eigen::Matrix4f scaling = Eigen::Matrix4f::Identity()*scale_factor;
+			scaling.col(3).head(3) += scaling.topLeftCorner(3, 3)*mesh_translation;
+
+			Eigen::Matrix4f place_back = Eigen::Matrix4f::Identity();
+			place_back.col(3).head(3) = -mesh_translation;
+
+			V = ((place_back.cast<double>()*scaling.cast<double>()*V_tmp).topRows(3)).transpose();
 
 			prev_translation_point = cur_translation_point;
+			prev_scale_size = cur_scale_size;
 
 			viewer.data().set_mesh(V, F);
 			Eigen::MatrixXd N_corners;
