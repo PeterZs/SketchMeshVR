@@ -152,7 +152,7 @@ bool LaplacianRemesh::remesh_open_path(Mesh& m, Stroke& open_path_stroke, Eigen:
 	Eigen::RowVector3d mean_viewpoint = compute_mean_viewpoint(m, outer_boundary_vertices);
 	Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
 
-	double unit_length = compute_average_distance_between_onPolygon_vertices(path, false);
+	double unit_length = compute_average_length_of_crossing_edges(path, start_V, startEV);
 	Eigen::MatrixXd resampled_path = CleanStroke3D::resample_by_length_with_fixes(path, unit_length);
 	if (!is_counter_clockwise_boundaries(resampled_path, modelview, viewer.core.get_proj(), viewer.core.viewport, mean_viewpoint, true)) {
 		resampled_path = resampled_path.colwise().reverse().eval();

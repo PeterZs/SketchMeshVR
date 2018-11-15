@@ -18,7 +18,7 @@ public:
 	bool addSegment(Eigen::Vector3f & pos, igl::opengl::glfw::Viewer & viewer);
 	void addSegmentAdd(Eigen::Vector3f & pos, igl::opengl::glfw::Viewer & viewer);
 	void addSegmentCut(Eigen::Vector3f & pos, igl::opengl::glfw::Viewer & viewer);
-	void addSegmentExtrusionBase(Eigen::Vector3f & pos, igl::opengl::glfw::Viewer & viewer);
+	bool addSegmentExtrusionBase(Eigen::Vector3f & pos, igl::opengl::glfw::Viewer & viewer);
 	void addSegmentExtrusionSilhouette(Eigen::Vector3f & pos, igl::opengl::glfw::Viewer & viewer);
 
 	void prepend_first_point(igl::opengl::glfw::Viewer & viewer);

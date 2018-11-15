@@ -93,12 +93,13 @@ Stroke::~Stroke() {}
 /** Used for DRAW. Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon). **/
 bool Stroke::addSegment(Eigen::Vector3f& pos, igl::opengl::glfw::Viewer &viewer) {
 	if (!stroke3DPoints.isZero()) {
-		if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < min_inter_point_distance) {
+		if ((stroke3DPoints.bottomRows(1) - pos.transpose().cast<double>()).squaredNorm() < min_inter_point_distance) {
 			return false;
 		}
 
 		if (stroke3DPoints.rows() > 10) {
 			if ((stroke3DPoints.row(0) - pos.transpose().cast<double>()).squaredNorm() < (stroke3DPoints.row(0) - stroke3DPoints.row(1)).squaredNorm()*4.0) { //User is too close to beginning point. Don't sample, and block DRAW mode
+				viewer.data().add_edges(stroke3DPoints.bottomRows(1), stroke3DPoints.row(0), blue_color);
 				return true; //Block DRAW mode till the buttons are released again
 			}
 		}
@@ -109,16 +110,14 @@ bool Stroke::addSegment(Eigen::Vector3f& pos, igl::opengl::glfw::Viewer &viewer)
 	}
 	else {
 		stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
-		stroke3DPoints.row(stroke3DPoints.rows() - 1) << pos[0], pos[1], pos[2];
+		stroke3DPoints.bottomRows(1) << pos[0], pos[1], pos[2];
 
 		stroke_edges.conservativeResize(stroke_edges.rows() + 1, Eigen::NoChange);
 		stroke_edges.bottomRows(1) << stroke3DPoints.rows() - 2, stroke3DPoints.rows() - 1;
 	}
 	closest_vert_bindings.push_back(stroke3DPoints.rows() - 1); //In the case of DRAW this will match the vertex indices, since we start from 0
 	viewer.data().add_edges(stroke3DPoints.topRows(stroke3DPoints.rows() - 1), stroke3DPoints.middleRows(1, stroke3DPoints.rows() - 1), blue_color);
-	if (stroke3DPoints.rows() > 10 && (stroke3DPoints.bottomRows(1) - stroke3DPoints.row(0)).squaredNorm() < (stroke3DPoints.row(1) - stroke3DPoints.row(0)).squaredNorm()*8.0) { //Show the closing line if the current point is close enough the first point (and we have already at least 10 samples)
-		viewer.data().add_edges(stroke3DPoints.bottomRows(1), stroke3DPoints.row(0), blue_color);
-	}
+	
 	return false;
 }
 
@@ -136,7 +135,7 @@ void Stroke::addSegmentAdd(Eigen::Vector3f& pos, igl::opengl::glfw::Viewer &view
 		if (!stroke3DPoints.isZero() && hit_pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && hit_pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && hit_pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
 			return;
 		}
-		if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - hit_pos.transpose()).squaredNorm() < min_inter_point_distance) {
+		if ((stroke3DPoints.bottomRows(1) - hit_pos.transpose()).squaredNorm() < min_inter_point_distance) {
 			return;
 		}
 
@@ -154,23 +153,23 @@ void Stroke::addSegmentAdd(Eigen::Vector3f& pos, igl::opengl::glfw::Viewer &view
 		}
 		else {
 			stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
-			stroke2DPoints.row(stroke2DPoints.rows() - 1) << hit_pos2D[0], hit_pos2D[1];
+			stroke2DPoints.bottomRows(1) << hit_pos2D[0], hit_pos2D[1];
 
 			stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
-			stroke3DPoints.row(stroke3DPoints.rows() - 1) << hit_pos[0], hit_pos[1], hit_pos[2];
+			stroke3DPoints.bottomRows(1) << hit_pos[0], hit_pos[1], hit_pos[2];
 
 			stroke3DPointsBack.conservativeResize(stroke3DPointsBack.rows() + 1, Eigen::NoChange);
-			stroke3DPointsBack.row(stroke3DPointsBack.rows() - 1) << hit_pos_back[0], hit_pos_back[1], hit_pos_back[2];
+			stroke3DPointsBack.bottomRows(1) << hit_pos_back[0], hit_pos_back[1], hit_pos_back[2];
 
 			faces_hit.conservativeResize(faces_hit.rows() + 1, Eigen::NoChange);
-			faces_hit.row(faces_hit.rows() - 1) << hits[0].id, hits[1].id;
+			faces_hit.bottomRows(1) << hits[0].id, hits[1].id;
 
 			hand_pos_at_draw.conservativeResize(hand_pos_at_draw.rows() + 1, Eigen::NoChange);
-			hand_pos_at_draw.row(hand_pos_at_draw.rows() - 1) << pos.transpose().cast<double>();
+			hand_pos_at_draw.bottomRows(1) << pos.transpose().cast<double>();
 		}
 
 		if (stroke3DPoints.rows() > 1) {
-			viewer.data().add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0, 1, 0));
+			viewer.data().add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.bottomRows(1), Eigen::RowVector3d(0, 1, 0));
 		}
 		ends_on_mesh = true;
 		prev_point_was_on_mesh = true;
@@ -217,7 +216,7 @@ void Stroke::addSegmentCut(Eigen::Vector3f& pos, igl::opengl::glfw::Viewer &view
 			std::cerr << "Please draw the first point outside of the mesh" << endl;
 			return;
 		}
-		if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - hit_pos.transpose()).squaredNorm() < min_inter_point_distance) {
+		if ((stroke3DPoints.bottomRows(1) - hit_pos.transpose()).squaredNorm() < min_inter_point_distance) {
 			return;
 		}
 
@@ -235,20 +234,20 @@ void Stroke::addSegmentCut(Eigen::Vector3f& pos, igl::opengl::glfw::Viewer &view
 		}
 		else {
 			stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
-			stroke2DPoints.row(stroke2DPoints.rows() - 1) << hit_pos2D[0], hit_pos2D[1];
+			stroke2DPoints.bottomRows(1) << hit_pos2D[0], hit_pos2D[1];
 
 			stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
-			stroke3DPoints.row(stroke3DPoints.rows() - 1) << hit_pos[0], hit_pos[1], hit_pos[2];
+			stroke3DPoints.bottomRows(1) << hit_pos[0], hit_pos[1], hit_pos[2];
 
 			stroke3DPointsBack.conservativeResize(stroke3DPointsBack.rows() + 1, Eigen::NoChange);
-			stroke3DPointsBack.row(stroke3DPointsBack.rows() - 1) << hit_pos_back[0], hit_pos_back[1], hit_pos_back[2];
+			stroke3DPointsBack.bottomRows(1) << hit_pos_back[0], hit_pos_back[1], hit_pos_back[2];
 
 			faces_hit.conservativeResize(faces_hit.rows() + 1, Eigen::NoChange);
-			faces_hit.row(faces_hit.rows() - 1) << hits[0].id, hits[1].id;
+			faces_hit.bottomRows(1) << hits[0].id, hits[1].id;
 		}
 
 		if (stroke3DPoints.rows() > 2) {
-			viewer.data().add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(1, 0, 1));
+			viewer.data().add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.bottomRows(1), Eigen::RowVector3d(1, 0, 1));
 		}
 
 		prev_point_was_on_mesh = true;
@@ -268,21 +267,27 @@ void Stroke::addSegmentCut(Eigen::Vector3f& pos, igl::opengl::glfw::Viewer &view
 
 /** Used for EXTRUDE. Extrusion base strokes need to be drawn entirely on the mesh (points outside of it will be ignored) and needs to surround at least one vertex.
 Will add a new 3D point to the stroke (if it is new compared to the last point, and didn't follow up too soon) and will also add its projection on the mesh as a 2D point. Will also store the indices of the faces that are hit. The closest vertex bindings are handled in SurfacePath. **/
-void Stroke::addSegmentExtrusionBase(Eigen::Vector3f& pos, igl::opengl::glfw::Viewer &viewer) {
+bool Stroke::addSegmentExtrusionBase(Eigen::Vector3f& pos, igl::opengl::glfw::Viewer &viewer) {
 	vector<igl::Hit> hits;
 
 	if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), (*V), (*F), hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 		if (hits.size() < 2) { //User had hand inside or behind mesh while drawing extrusion base stroke
-			return;
+			return false;
 		}
 		Eigen::Vector3d hit_pos = (*V).row((*F)(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + (*V).row((*F)(hits[0].id, 1))*hits[0].u + (*V).row((*F)(hits[0].id, 2))*hits[0].v;
 
 
-		if (!stroke3DPoints.isZero() && hit_pos[0] == stroke3DPoints(stroke3DPoints.rows() - 1, 0) && hit_pos[1] == stroke3DPoints(stroke3DPoints.rows() - 1, 1) && hit_pos[2] == stroke3DPoints(stroke3DPoints.rows() - 1, 2)) {//Check that the point is new compared to last time
-			return;
-		}
-		else if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - hit_pos.transpose()).squaredNorm() < 0.25*min_inter_point_distance) {
-			return;
+		if (!stroke3DPoints.isZero()){
+			if ((stroke3DPoints.bottomRows(1) - hit_pos.transpose()).squaredNorm() < 0.25*min_inter_point_distance) {
+				return false;
+			}
+
+			if(stroke3DPoints.rows() > 10) {
+				if ((stroke3DPoints.row(0) - hit_pos.transpose().cast<double>()).squaredNorm() < (stroke3DPoints.row(0) - stroke3DPoints.row(1)).squaredNorm()*4.0) { //User is too close to beginning point. Don't sample, and block ADD mode
+					viewer.data().add_edges(stroke3DPoints.bottomRows(1), stroke3DPoints.row(0), blue_color);
+					return true; //Block ADD mode till the buttons are released again
+				}
+			}
 		}
 
 		has_points_on_mesh = true;
@@ -296,33 +301,28 @@ void Stroke::addSegmentExtrusionBase(Eigen::Vector3f& pos, igl::opengl::glfw::Vi
 			stroke2DPoints.row(0) << hit_pos2D[0], hit_pos2D[1];
 			stroke3DPoints.row(0) << hit_pos[0], hit_pos[1], hit_pos[2];
 			faces_hit.row(0) << hits[0].id, hits[1].id;
-			//hand_pos_at_draw.row(0) << pos.transpose().cast<double>();
 			stroke_color = Eigen::RowVector3d(1, 0, 0);
 		}
 		else {
 			stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
-			stroke2DPoints.row(stroke2DPoints.rows() - 1) << hit_pos2D[0], hit_pos2D[1];
+			stroke2DPoints.bottomRows(1) << hit_pos2D[0], hit_pos2D[1];
 
 			stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
-			stroke3DPoints.row(stroke3DPoints.rows() - 1) << hit_pos[0], hit_pos[1], hit_pos[2];
+			stroke3DPoints.bottomRows(1) << hit_pos[0], hit_pos[1], hit_pos[2];
 
 			faces_hit.conservativeResize(faces_hit.rows() + 1, Eigen::NoChange);
-			faces_hit.row(faces_hit.rows() - 1) << hits[0].id, hits[1].id;
-
-			//hand_pos_at_draw.conservativeResize(hand_pos_at_draw.rows() + 1, Eigen::NoChange);
-			//hand_pos_at_draw.row(hand_pos_at_draw.rows() - 1) << pos.transpose().cast<double>();
-
+			faces_hit.bottomRows(1) << hits[0].id, hits[1].id;
 		}
 	}
 	else {
 		if (has_points_on_mesh) {
 			has_been_outside_mesh = true;
 		}
-		return;
+		return false;
 	}
 
 	if (stroke3DPoints.rows() > 1) {
-		viewer.data().add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0, 0, 1));
+		viewer.data().add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.bottomRows(1), blue_color);
 	}
 }
 
@@ -338,7 +338,7 @@ void Stroke::addSegmentExtrusionSilhouette(Eigen::Vector3f& pos, igl::opengl::gl
 	if (!stroke2DPoints.isZero() && pt2D[0] == stroke2DPoints(stroke2DPoints.rows() - 1, 0) && pt2D[1] == stroke2DPoints(stroke2DPoints.rows() - 1, 1)) {//Check that the point is new compared to last time
 		return;
 	}
-	else if ((stroke3DPoints.row(stroke3DPoints.rows() - 1) - pos.transpose().cast<double>()).squaredNorm() < 0.25*min_inter_point_distance) {
+	else if ((stroke3DPoints.bottomRows(1) - pos.transpose().cast<double>()).squaredNorm() < 0.25*min_inter_point_distance) {
 		return;
 	}
 
@@ -348,16 +348,15 @@ void Stroke::addSegmentExtrusionSilhouette(Eigen::Vector3f& pos, igl::opengl::gl
 	}
 	else {
 		stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
-		stroke2DPoints.row(stroke2DPoints.rows() - 1) << pt2D[0], pt2D[1];
+		stroke2DPoints.bottomRows(1) << pt2D[0], pt2D[1];
 
 		stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
-		stroke3DPoints.row(stroke3DPoints.rows() - 1) << pos[0], pos[1], pos[2];
+		stroke3DPoints.bottomRows(1) << pos[0], pos[1], pos[2];
 	}
 
 	if (stroke3DPoints.rows() > 1) {
-		viewer.data().add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.block(stroke3DPoints.rows() - 1, 0, 1, 3), Eigen::RowVector3d(0.2, 0.6, 1));
+		viewer.data().add_edges(stroke3DPoints.block(stroke3DPoints.rows() - 2, 0, 1, 3), stroke3DPoints.bottomRows(1), Eigen::RowVector3d(0.2, 0.6, 1));
 	}
-
 }
 
 /** Used for CUT. Adds the first point, which is the last point outside of the mesh before cut start. Doesn't get drawn. **/
@@ -385,19 +384,19 @@ void Stroke::prepend_first_point(igl::opengl::glfw::Viewer &viewer) {
 
 /** Used for CUT. Adds the final point, which is the first point outside of the mesh. Doesn't get drawn. **/
 void Stroke::append_final_point(igl::opengl::glfw::Viewer &viewer) {
-	Eigen::Vector3d last_point = pos_after_cut + (stroke3DPoints.row(stroke3DPoints.rows() - 1).transpose() - pos_after_cut).dot(dir_after_cut.normalized()) * dir_after_cut.normalized(); //The closest point Pr along a line that starts from P1 and goes in direction dir to point P2 is as follows: Pr = P1 + (P2 - P1).dot(dir) * dir with dir normalized
+	Eigen::Vector3d last_point = pos_after_cut + (stroke3DPoints.bottomRows(1).transpose() - pos_after_cut).dot(dir_after_cut.normalized()) * dir_after_cut.normalized(); //The closest point Pr along a line that starts from P1 and goes in direction dir to point P2 is as follows: Pr = P1 + (P2 - P1).dot(dir) * dir with dir normalized
 	Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
 	Eigen::Vector3f last_point_tmp = last_point.cast<float>();
 	Eigen::Vector3d hit_pos2D = igl::project(last_point_tmp, modelview, viewer.core.get_proj(), viewer.core.viewport).cast<double>();
 
 	stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
-	stroke2DPoints.row(stroke2DPoints.rows() - 1) << hit_pos2D[0], hit_pos2D[1];
+	stroke2DPoints.bottomRows(1) << hit_pos2D[0], hit_pos2D[1];
 
 	stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
-	stroke3DPoints.row(stroke3DPoints.rows() - 1) = last_point;
+	stroke3DPoints.bottomRows(1) = last_point;
 
 	faces_hit.conservativeResize(faces_hit.rows() + 1, Eigen::NoChange);
-	faces_hit.row(faces_hit.rows() - 1) << -1, -1;
+	faces_hit.bottomRows(1) << -1, -1;
 }
 
 bool Stroke::toLoop() {
@@ -1048,7 +1047,6 @@ void Stroke::move_to_middle(Eigen::MatrixXd &positions, Eigen::MatrixXd &new_pos
 		new_positions(i, 1) = (cur[1] * 2 + prev[1] + next[1]) / 4;
 	}
 }
-
 
 int Stroke::get_ID() {
 	return stroke_ID;

@@ -107,6 +107,7 @@ Eigen::Vector4f base_viewport;
 
 bool has_recentered = false;
 bool draw_should_block = false;
+bool extrude_base_should_block = false;
 
 Eigen::RowVector3d red(1, 0, 0);
 Eigen::RowVector3d black(0, 0, 0);
@@ -471,6 +472,9 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		}
 	}
 	else if (tool_mode == EXTRUDE) {
+		if (extrude_base_should_block) {
+			return;
+		}
 		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) {
 			prev_tool_mode = EXTRUDE;
 			if (extrusion_base_already_drawn) {
@@ -483,7 +487,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				extrusion_base = new Stroke(&V, &F, next_added_stroke_ID);
 				extrusion_base->stroke_color = red;
 				next_added_stroke_ID++;
-				extrusion_base->addSegmentExtrusionBase(pos, viewer);
+				extrude_base_should_block = extrusion_base->addSegmentExtrusionBase(pos, viewer);
 			}
 		}
 		else if (prev_tool_mode == EXTRUDE) {
@@ -491,7 +495,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				added_stroke->addSegmentExtrusionSilhouette(pos, viewer);
 			}
 			else {
-				extrusion_base->addSegmentExtrusionBase(pos, viewer);
+				extrude_base_should_block = extrusion_base->addSegmentExtrusionBase(pos, viewer);
 			}
 		}
 	}
@@ -877,6 +881,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				extrusion_base_already_drawn = false;
 			}
 			else { //mouse released after extrusion base drawn
+				extrude_base_should_block = false;
 				extrusion_base->toLoop();
 				if (!extrusion_base->has_points_on_mesh) {
 					next_added_stroke_ID--;
