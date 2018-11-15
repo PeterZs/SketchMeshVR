@@ -70,7 +70,7 @@ int base_mesh_index, pointer_mesh_index;
 std::function<void()> current_tool_HUD;
 std::function<void(void)> menu_HUD;
 //General
-enum ToolMode { DRAW, ADD, CUT, EXTRUDE, PULL, REMOVE, CHANGE, SMOOTH, NAVIGATE, NONE, DEFAULT, FAIL }; //NONE is used to indicate that a button was released, whereas DEFAULT indicates that one of the toggle buttons was pressed within its cooldown period, FAIL is used to indicate that something went wrong (e.g. user clicked too far away for PULL)
+enum ToolMode { DRAW, ADD, CUT, EXTRUDE, PULL, REMOVE, CHANGE, SMOOTH, NAVIGATE, TRANSLATE, NONE, DEFAULT, FAIL }; //NONE is used to indicate that a button was released, whereas DEFAULT indicates that one of the toggle buttons was pressed within its cooldown period, FAIL is used to indicate that something went wrong (e.g. user clicked too far away for PULL)
 
 ToolMode tool_mode = DRAW, selected_tool_mode = DRAW, prev_tool_mode = NONE;
 Stroke* added_stroke;
@@ -115,6 +115,8 @@ Eigen::RowVector3d blue(0, 0, 1);
 
 Eigen::RowVector3d laser_end_point;
 bool prev_laser_show;
+
+Eigen::Vector3d prev_translation_point;
 
 
 void sound_error_beep() {
@@ -311,6 +313,15 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 	}
 	else if (pressed == OculusVR::ButtonCombo::X) {
 		tool_mode = SMOOTH;
+	}
+	else if (pressed == OculusVR::ButtonCombo::GRIPTRIGBOTH) {
+		tool_mode = TRANSLATE;
+		viewer.selected_data_index = pointer_mesh_index;
+		if (prev_tool_mode != TRANSLATE) {
+			prev_laser_show = viewer.data().show_laser;
+		}
+		viewer.data().show_laser = false;
+		viewer.selected_data_index = base_mesh_index;
 	}
 
 	if (tool_mode == DRAW) {
@@ -557,6 +568,31 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		}
 		else if (prev_tool_mode == CHANGE) {
 			return; //Only take action upon button press and release
+		}
+	}
+	else if (tool_mode == TRANSLATE) {
+		if (V.rows() == 0) {
+			return;
+		}
+		if (prev_tool_mode == NONE) {
+			prev_translation_point = ((pos + viewer.oculusVR.get_left_hand_pos()) / 2.0).cast<double>();
+			prev_tool_mode = TRANSLATE;
+		}
+		else if(prev_tool_mode == TRANSLATE) {
+			Eigen::Vector3d cur_translation_point = ((pos + viewer.oculusVR.get_left_hand_pos()) / 2.0).cast<double>();
+			Eigen::RowVector3d translation_vec = (cur_translation_point - prev_translation_point).transpose();
+			Eigen::MatrixXd tmp = translation_vec.replicate(V.rows(), 1);
+			V = V + tmp;
+
+			prev_translation_point = cur_translation_point;
+
+			viewer.data().set_mesh(V, F);
+			Eigen::MatrixXd N_corners;
+			igl::per_corner_normals(V, F, 50, N_corners);
+			viewer.data().set_normals(N_corners);
+
+			draw_all_strokes();
+
 		}
 	}
 	else if (tool_mode == NONE) { //Have to finish up as if we're calling mouse_up()
@@ -975,6 +1011,11 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			viewer.data().set_normals(N_corners);
 
 			draw_all_strokes();
+		}
+		else if (prev_tool_mode == TRANSLATE) {
+			viewer.selected_data_index = pointer_mesh_index;
+			viewer.data().show_laser = prev_laser_show;
+			viewer.selected_data_index = base_mesh_index;
 		}
 		else if (prev_tool_mode == NAVIGATE) {
 			viewer.selected_data_index = pointer_mesh_index;

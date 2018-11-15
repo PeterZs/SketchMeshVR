@@ -384,7 +384,7 @@ void Stroke::prepend_first_point(igl::opengl::glfw::Viewer &viewer) {
 
 /** Used for CUT. Adds the final point, which is the first point outside of the mesh. Doesn't get drawn. **/
 void Stroke::append_final_point(igl::opengl::glfw::Viewer &viewer) {
-	Eigen::Vector3d last_point = pos_after_cut + (stroke3DPoints.bottomRows(1).transpose() - pos_after_cut).dot(dir_after_cut.normalized()) * dir_after_cut.normalized(); //The closest point Pr along a line that starts from P1 and goes in direction dir to point P2 is as follows: Pr = P1 + (P2 - P1).dot(dir) * dir with dir normalized
+	Eigen::Vector3d last_point = pos_after_cut + (stroke3DPoints.row(stroke3DPoints.rows() - 1).transpose() - pos_after_cut).dot(dir_after_cut.normalized()) * dir_after_cut.normalized(); //The closest point Pr along a line that starts from P1 and goes in direction dir to point P2 is as follows: Pr = P1 + (P2 - P1).dot(dir) * dir with dir normalized
 	Eigen::Matrix4f modelview = viewer.oculusVR.get_start_action_view() * viewer.core.get_model();
 	Eigen::Vector3f last_point_tmp = last_point.cast<float>();
 	Eigen::Vector3d hit_pos2D = igl::project(last_point_tmp, modelview, viewer.core.get_proj(), viewer.core.viewport).cast<double>();
@@ -393,7 +393,7 @@ void Stroke::append_final_point(igl::opengl::glfw::Viewer &viewer) {
 	stroke2DPoints.bottomRows(1) << hit_pos2D[0], hit_pos2D[1];
 
 	stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
-	stroke3DPoints.bottomRows(1) = last_point;
+	stroke3DPoints.row(stroke3DPoints.rows() - 1) = last_point;
 
 	faces_hit.conservativeResize(faces_hit.rows() + 1, Eigen::NoChange);
 	faces_hit.bottomRows(1) << -1, -1;
