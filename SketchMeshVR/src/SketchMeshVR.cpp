@@ -583,24 +583,28 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		else if(prev_tool_mode == TRANSLATE) {
 			Eigen::Vector3d cur_translation_point = ((pos + viewer.oculusVR.get_left_hand_pos()) / 2.0).cast<double>();
 			Eigen::RowVector3d translation_vec = (cur_translation_point - prev_translation_point).transpose();
-			Eigen::MatrixXd tmp = translation_vec.replicate(V.rows(), 1);
-			//V = V + tmp;
-
+			
 			double cur_scale_size = (pos - viewer.oculusVR.get_left_hand_pos()).norm();
 			double scale_factor = cur_scale_size / prev_scale_size;
 
 			Eigen::Vector3f mesh_translation = -V.colwise().mean().eval().cast<float>();
-			Eigen::MatrixXd V_tmp(4, V.rows());
-			V_tmp.block(0, 0, 3, V.rows()) = V.transpose();
-			V_tmp.row(3) = Eigen::RowVectorXd::Constant(V.rows(), 1);
+			Eigen::MatrixXf V_tmp(4, V.rows());
+			V_tmp.block(0, 0, 3, V.rows()) = V.transpose().cast<float>();
+			V_tmp.row(3) = Eigen::RowVectorXf::Constant(V.rows(), 1);
 
-			Eigen::Matrix4f scaling = Eigen::Matrix4f::Identity()*scale_factor;
-			scaling.col(3).head(3) += scaling.topLeftCorner(3, 3)*mesh_translation;
+			Eigen::Matrix4f scaling = Eigen::Matrix4f::Identity();
+			scaling.block(0, 0, 3, 3) *= scale_factor;
 
-			Eigen::Matrix4f place_back = Eigen::Matrix4f::Identity();
-			place_back.col(3).head(3) = -mesh_translation;
+			Eigen::Matrix4f mesh_to_origin_translation = Eigen::Matrix4f::Identity();
+			mesh_to_origin_translation.col(3).head(3) = mesh_translation;
 
-			V = ((place_back.cast<double>()*scaling.cast<double>()*V_tmp).topRows(3)).transpose();
+			Eigen::Matrix4f move_translation = Eigen::Matrix4f::Identity();
+			move_translation.col(3).head(3) = translation_vec.transpose().cast<float>();
+
+			Eigen::Matrix4f place_back_translation = Eigen::Matrix4f::Identity();
+			place_back_translation.col(3).head(3) = -mesh_translation;
+
+			V = (place_back_translation*move_translation*scaling*mesh_to_origin_translation*V_tmp).topRows(3).transpose().cast<double>();
 
 			prev_translation_point = cur_translation_point;
 			prev_scale_size = cur_scale_size;
@@ -611,7 +615,6 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			viewer.data().set_normals(N_corners);
 
 			draw_all_strokes();
-
 		}
 	}
 	else if (tool_mode == NONE) { //Have to finish up as if we're calling mouse_up()
