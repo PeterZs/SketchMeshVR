@@ -313,16 +313,11 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		}
 	}
 	else if (pressed == OculusVR::ButtonCombo::X) {
+		set_laser_points(viewer.oculusVR.get_left_hand_pos());
 		tool_mode = SMOOTH;
 	}
 	else if (pressed == OculusVR::ButtonCombo::GRIPTRIGBOTH) {
 		tool_mode = TRANSLATE;
-		viewer.selected_data_index = pointer_mesh_index;
-		if (prev_tool_mode != TRANSLATE) {
-			prev_laser_show = viewer.data().show_laser;
-		}
-		viewer.data().show_laser = false;
-		viewer.selected_data_index = base_mesh_index;
 	}
 
 	if (tool_mode == DRAW) {
@@ -514,7 +509,15 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 	else if (tool_mode == SMOOTH) {
 		if (prev_tool_mode == NONE) {		
 			prev_tool_mode = SMOOTH;
-			select_dragging_handle(pos);
+
+			//Turn lasers off
+			viewer.selected_data_index = pointer_mesh_index;
+			prev_laser_show = viewer.data().show_laser;
+			viewer.data().show_laser = false;
+			viewer.oculusVR.right_hand_visible = false;
+			viewer.selected_data_index = base_mesh_index;
+
+			select_dragging_handle(viewer.oculusVR.get_left_hand_pos());
 			if (handleID == -1) { //Perform general mesh smooth
 				return;
 			}
@@ -525,18 +528,13 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			if (handleID == -1) {
 				return;
 			}
-			Eigen::Vector3d double_pos = pos.cast<double>();
+			Eigen::Vector3d double_pos = viewer.oculusVR.get_left_hand_pos().cast<double>();
 			Eigen::MatrixXd prevV = V;
 			CurveRub::rubbing(double_pos, rub_seamID, V);
 			for (int i = 0; i < stroke_collection.size(); i++) {
 				stroke_collection[i].update_Positions(V, false);
 			}
-		/*	viewer.data().set_mesh(V, F);
-			Eigen::MatrixXd N_corners;
-			igl::per_corner_normals(V, F, 50, N_corners);
-			viewer.data().set_normals(N_corners);*/
 			draw_all_strokes();
-
 		}
 	}
 	else if (tool_mode == CHANGE) {
@@ -576,6 +574,11 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			return;
 		}
 		if (prev_tool_mode == NONE) {
+			viewer.selected_data_index = pointer_mesh_index;
+			prev_laser_show = viewer.data().show_laser;
+			viewer.data().show_laser = false;
+			viewer.selected_data_index = base_mesh_index;
+
 			prev_translation_point = ((pos + viewer.oculusVR.get_left_hand_pos()) / 2.0).cast<double>();
 			prev_scale_size = (pos - viewer.oculusVR.get_left_hand_pos()).norm();
 			prev_tool_mode = TRANSLATE;
@@ -1000,7 +1003,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 					(*base_mesh).patches[i]->update_patch_vertex_positions((*base_mesh).V);
 				}
 
-				for (int i = 0; i < 1; i++) {
+				for (int i = 0; i < 8; i++) {
 					SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
 				}
 				for (int i = 0; i < stroke_collection.size(); i++) {
@@ -1013,7 +1016,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				viewer.data().set_normals(N_corners);
 
 				draw_all_strokes();
-
+				viewer.oculusVR.right_hand_visible = true;
 		}
 		else if (prev_tool_mode == CHANGE) {
 			//We might have changed the patch structure (e.g. when removing a sharp boundary stroke), so request new patches

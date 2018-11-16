@@ -26,6 +26,9 @@ public:
 	static void propagate_patch(Patch* patch, int face, Eigen::VectorXi& faces, std::vector<Patch*> &face_patch_map, Eigen::VectorXi& sharp_edge);
 	void update_parent_vertex_positions(Eigen::MatrixXd& base_V);
 	void update_patch_vertex_positions(Eigen::MatrixXd& base_V);
+	double compute_mean_minimum_triangle_angle();
+	int find_edge(int start, int end, Eigen::MatrixXi & EV);
+	void upsample_patch();
 	Mesh get_mesh() { return mesh; };
 	Mesh mesh;
 
