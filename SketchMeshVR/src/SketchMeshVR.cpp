@@ -16,7 +16,6 @@
 #include <iostream>
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/per_corner_normals.h>
-#include <igl/upsample.h>
 
 #include <igl/opengl/glfw/imgui/ImGuiMenu.h>
 #include <igl/opengl/glfw/imgui/ImGuiHelpers.h>
@@ -70,7 +69,7 @@ int base_mesh_index, pointer_mesh_index;
 std::function<void()> current_tool_HUD;
 std::function<void(void)> menu_HUD;
 //General
-enum ToolMode { DRAW, ADD, CUT, EXTRUDE, PULL, REMOVE, CHANGE, SMOOTH, NAVIGATE, TRANSLATE, NONE, DEFAULT, FAIL }; //NONE is used to indicate that a button was released, whereas DEFAULT indicates that one of the toggle buttons was pressed within its cooldown period, FAIL is used to indicate that something went wrong (e.g. user clicked too far away for PULL)
+enum ToolMode { DRAW, ADD, CUT, EXTRUDE, PULL, REMOVE, CHANGE, SMOOTH, UPSAMPLE, NAVIGATE, TRANSLATE, NONE, DEFAULT, FAIL }; //NONE is used to indicate that a button was released, whereas DEFAULT indicates that one of the toggle buttons was pressed within its cooldown period, FAIL is used to indicate that something went wrong (e.g. user clicked too far away for PULL)
 
 ToolMode tool_mode = DRAW, selected_tool_mode = DRAW, prev_tool_mode = NONE;
 Stroke* added_stroke;
@@ -108,6 +107,7 @@ Eigen::Vector4f base_viewport;
 bool has_recentered = false;
 bool draw_should_block = false;
 bool extrude_base_should_block = false;
+bool upsample_activated = false;
 
 Eigen::RowVector3d red(1, 0, 0);
 Eigen::RowVector3d black(0, 0, 0);
@@ -315,6 +315,19 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 	else if (pressed == OculusVR::ButtonCombo::X) {
 		set_laser_points(viewer.oculusVR.get_left_hand_pos());
 		tool_mode = SMOOTH;
+	}
+	else if (pressed == OculusVR::ButtonCombo::Y) {
+		pos = viewer.oculusVR.get_left_hand_pos();
+		set_laser_points(pos);
+		if (!upsample_activated) {
+			viewer.selected_data_index = pointer_mesh_index;
+			prev_laser_show = viewer.data().show_laser;
+			viewer.data().show_laser = true;
+			viewer.selected_data_index = base_mesh_index;
+		}
+		if (tool_mode != UPSAMPLE) {
+			tool_mode = UPSAMPLE;
+		}
 	}
 	else if (pressed == OculusVR::ButtonCombo::GRIPTRIGBOTH) {
 		tool_mode = TRANSLATE;
@@ -535,6 +548,50 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				stroke_collection[i].update_Positions(V, false);
 			}
 			draw_all_strokes();
+		}
+	}
+	else if (tool_mode == UPSAMPLE) {
+		if (prev_tool_mode == NONE) {
+			if (upsample_activated) {
+				vector<igl::Hit> hits;
+				if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_left_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
+					Patch* hit_patch = ((*base_mesh).face_patch_map[hits[0].id]);
+					std::cout << "Before" << (*base_mesh).F.rows() << std::endl;
+					(*hit_patch).upsample_patch((*base_mesh).V, (*base_mesh).F, (*base_mesh).face_patch_map, (*base_mesh).edge_boundary_markers, (*base_mesh).sharp_edge, (*base_mesh).vertex_is_fixed, replacing_vertex_bindings);
+					std::cout << "End" << (*base_mesh).F.rows() << std::endl;
+
+					(*base_mesh).patches.clear();
+					(*base_mesh).face_patch_map.clear();
+					//std::cout << "Test etst: " << std::endl << (*base_mesh).sharp_edge << std::endl;
+					(*base_mesh).patches = Patch::init_patches(*base_mesh);
+
+					new_mapped_indices.setLinSpaced((*base_mesh).V.rows(), 0, (*base_mesh).V.rows()-1);
+					for (int i = 0; i < stroke_collection.size() ; i++) {
+						stroke_collection[i].update_vert_bindings(new_mapped_indices, replacing_vertex_bindings);
+					}
+					dirty_boundary = true;
+					std::cout << "Get here" << std::endl;
+					for (int i = 0; i < initial_smooth_iter; i++) {
+						SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
+					}
+					std::cout << "even here" << std::endl;
+					for (int i = 0; i < stroke_collection.size(); i++) {
+						stroke_collection[i].update_Positions(V, true);
+					}
+					std::cout << "and here" << std::endl;
+					viewer.data().clear();
+					viewer.data().set_mesh(V, F);
+					Eigen::MatrixXd N_corners;
+					igl::per_corner_normals(V, F, 50, N_corners);
+					viewer.data().set_normals(N_corners);
+
+					draw_all_strokes();
+				}
+			}
+			prev_tool_mode = UPSAMPLE;
+		}
+		else if (prev_tool_mode == UPSAMPLE) {
+			return; //Only take action on button press and release (not continuosly)
 		}
 	}
 	else if (tool_mode == CHANGE) {
@@ -1017,6 +1074,17 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 				draw_all_strokes();
 				viewer.oculusVR.right_hand_visible = true;
+		}
+		else if (prev_tool_mode == UPSAMPLE) {
+			if (!upsample_activated) {
+				upsample_activated = true;
+			}
+			else { //Done, button release after 2nd click
+				upsample_activated = false; 
+				viewer.selected_data_index = pointer_mesh_index;
+				viewer.data().show_laser = prev_laser_show;
+				viewer.selected_data_index = base_mesh_index;
+			}
 		}
 		else if (prev_tool_mode == CHANGE) {
 			//We might have changed the patch structure (e.g. when removing a sharp boundary stroke), so request new patches

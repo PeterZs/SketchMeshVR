@@ -818,7 +818,8 @@ void Stroke::update_Positions(Eigen::MatrixXd V, bool structure_changed) {
 }
 
 /** Remaps the stroke's vertex bindings after the mesh topology has changed.
-	Note that this method does not update the stroke3DPoints, use update_Positions() for that. **/
+	Note that this method does not update the stroke3DPoints, use update_Positions() for that. 
+	Assumes that replacing_vertex_bindings contains entries that are in the right order, e.g. the new vertex is inserted before the second mentioned vertex. **/
 bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::MatrixXi& replacing_vertex_bindings) {
 	vector<int> new_bindings;
 	int first_included_after_remove = -1;
@@ -838,6 +839,7 @@ bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::M
 			}
 		}
 	}
+	
 
 	for (int i = 0; i < closest_vert_bindings.size() - 1; i++) {	//Closest_vert_bindings is always a loop
 		if (new_mapped_indices[closest_vert_bindings[i]] == -1) { //Removed vertex

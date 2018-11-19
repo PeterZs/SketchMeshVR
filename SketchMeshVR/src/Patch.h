@@ -27,8 +27,8 @@ public:
 	void update_parent_vertex_positions(Eigen::MatrixXd& base_V);
 	void update_patch_vertex_positions(Eigen::MatrixXd& base_V);
 	double compute_mean_minimum_triangle_angle();
+	void upsample_patch(Eigen::MatrixXd & base_V, Eigen::MatrixXi & base_F, std::vector<Patch*> base_face_patch_map, Eigen::VectorXi & base_edge_boundary_markers, Eigen::VectorXi & base_sharp_edge, Eigen::VectorXi & base_vertex_is_fixed, Eigen::MatrixXi& replacing_vertex_bindings);
 	int find_edge(int start, int end, Eigen::MatrixXi & EV);
-	void upsample_patch();
 	Mesh get_mesh() { return mesh; };
 	Mesh mesh;
 

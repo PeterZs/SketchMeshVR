@@ -10,10 +10,13 @@ static int next_mesh_ID;
 std::vector<Patch*> Patch::init_patches(Mesh& h) {
 	next_mesh_ID = h.ID + 1;
 	igl::edge_topology(h.V, h.F, EV, FE, EF);
+	std::cout << "EV ROWS " << EV.rows() << std::endl;
 
 	std::vector<Patch*> patches;
 	h.face_patch_map.clear();
 	h.face_patch_map.resize(h.F.rows(), nullptr);
+
+	std::cout << h.sharp_edge << std::endl << "Rows:" << h.sharp_edge.rows() << std::endl;;
 
 	for (int i = 0; i < h.F.rows(); i++) {
 		Patch* face_patch = h.face_patch_map[i];
@@ -21,6 +24,7 @@ std::vector<Patch*> Patch::init_patches(Mesh& h) {
 			Patch* new_patch = new Patch();
 			Eigen::VectorXi faces;
 			propagate_patch(new_patch, i, faces, h.face_patch_map, h.sharp_edge);
+			std::cout << "HMMMKAY" << std::endl;
 			(*new_patch).create_mesh_structure(h, faces);
 			patches.push_back(new_patch);
 		}
@@ -35,8 +39,11 @@ void Patch::propagate_patch(Patch* patch, int face, Eigen::VectorXi& faces, std:
 	for (int i = 0; i < 3; i++) {
 		int edge = FE(face, i);
 		int face2 = (EF(edge, 0) == face) ? EF(edge, 1) : EF(edge, 0); //get the adjacent polygon
-		if (face_patch_map[face2] == nullptr && !sharp_edge[edge]) {
+		if ((face_patch_map[face2] == nullptr) && (!sharp_edge[edge])) {
 			propagate_patch(patch, face2, faces, face_patch_map, sharp_edge);
+		}
+		else {
+			std::cout << "face2: " << face2 << " face-patch-map[face2]: " << face_patch_map[face2] << " edge: " << edge << " sharp_edge[edge] " << sharp_edge[edge] << std::endl;
 		}
 	}
 }
@@ -160,7 +167,8 @@ double Patch::compute_mean_minimum_triangle_angle() {
 	return min_angles_per_triangle.mean();
 }
 
-void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std::vector<Patch*> base_face_patch_map, Eigen::VectorXi& base_edge_boundary_markers, Eigen::VectorXi& base_sharp_edge) {
+void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std::vector<Patch*> base_face_patch_map, Eigen::VectorXi& base_edge_boundary_markers, Eigen::VectorXi& base_sharp_edge, Eigen::VectorXi& base_vertex_is_fixed, Eigen::MatrixXi& replacing_vertex_bindings) {
+	replacing_vertex_bindings.resize(0, 4);
 	Eigen::MatrixXi old_meshF = mesh.F;
 	int start_size_baseV = base_V.rows();
 	//Store EV of base_mesh before upsampling
@@ -173,8 +181,8 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 	//Assuming that each face is only part of 1 Patch, we can take the base_mesh's face_patch_map, and remove slice (keeping only the faces that do not map to the current patch)
 	std::vector<int> clean_faces;
 	for (int i = 0; i < base_face_patch_map.size(); i++) {
-		if(base_face_patch_map[i] == this){
-			//Face should be removed from base_F
+		if (base_face_patch_map[i] == this) {
+			//Face should be removed from base_F		
 		}
 		else {
 			clean_faces.push_back(i);
@@ -186,7 +194,7 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 	Eigen::VectorXi row_idx = Eigen::VectorXi::Map(clean_faces.data(), clean_faces.size());
 	Eigen::VectorXi col_idx(3);
 	col_idx.col(0) << 0, 1, 2;
-	igl::slice(base_F, row_idx, col_idx, tmp_F); 
+	igl::slice(base_F, row_idx, col_idx, tmp_F);
 
 	//Append newly created vertices to the vertex list of the base (don't care about the patch, because this will be reinitialized afterwards anyway)
 	int nr_added_points = new_patchV.rows() - mesh.V.rows();
@@ -194,11 +202,25 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 	base_V.conservativeResize(base_V.rows() + nr_added_points, Eigen::NoChange);
 	base_V.bottomRows(nr_added_points) = newly_addedV;
 
+	int start_size = mesh.V.rows();
+	parent_vertices.conservativeResize(parent_vertices.rows() + nr_added_points);
+	for (int i = 0; i < nr_added_points; i++) {
+		parent_vertices[start_size + i] = start_size_baseV + i;
+	}
+
+	//TODO: update tmp_F with indices into base_F?  Or already the case
+	Eigen::MatrixXi new_patchF_reindexed(new_patchF.rows(), 3);
+	for (int i = 0; i < new_patchF.rows(); i++) {
+		new_patchF_reindexed.row(i) << parent_vertices[new_patchF(i, 0)], parent_vertices[new_patchF(i, 1)], parent_vertices[new_patchF(i, 2)];
+	}
 
 	//Append newly created faces to the cleaned-up face list of the base
-	base_F.resize(tmp_F.rows() + new_patchF.rows(), 3);
+	base_F.resize(tmp_F.rows() + new_patchF_reindexed.rows(), 3);
 	base_F.topRows(tmp_F.rows()) = tmp_F;
-	base_F.bottomRows(new_patchF.rows()) = new_patchF;
+	base_F.bottomRows(new_patchF_reindexed.rows()) = new_patchF_reindexed;
+
+	base_vertex_is_fixed.conservativeResize(base_vertex_is_fixed.rows() + nr_added_points);
+
 
 
 
@@ -212,7 +234,14 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 
 	Eigen::VectorXi new_base_edge_boundary_markers(newEV.rows());
 	Eigen::VectorXi new_base_sharp_edge(newEV.rows());
+	new_base_edge_boundary_markers.setConstant(-1);
+	new_base_sharp_edge.setConstant(-1);
+
 	for (int i = 0; i < newEV.rows(); i++) {
+		if (new_base_sharp_edge[i] != -1) { //Edge has already been covered
+			continue;
+		}
+
 		int start = newEV(i, 0);
 		int end = newEV(i, 1);
 		if (start >= start_size_baseV && end >= start_size_baseV) { //Both vertices are newly added, so they form an interior edge.
@@ -220,36 +249,56 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 			new_base_sharp_edge[i] = 0;
 		}
 		else if(start < start_size_baseV && end < start_size_baseV){ //Both vertices were existing already
+			std::cout << "This shouldn't happen (yet) " << start << "  " << end << std::endl;
 			int old_edge = find_edge(start, end, startEV);
 			new_base_edge_boundary_markers[i] = base_edge_boundary_markers[old_edge];
 			new_base_sharp_edge[i] = base_sharp_edge[old_edge];
 		}
 		else { //One vertex is old (smallest index), one is new (larger index)
 			//Could be the case that this is an edge that belongs to a stroke inside of the Patch (but that is not the boundary stroke), so we have to check the original edge_boundary_markers and sharp_edge indicators
+			//TODO: Check if this is a boundary edge (i.e. that is part of another patch as well)
+
 
 			int equal_pos;
 			//Find all edges in newEV that connect to the vertex with the larger index (new vertex). Only one of these (except for the current edge i) will be with a vertex that has an index < start_size_baseV
-			Eigen::VectorXi right_end_point = newEV.col(1).cwiseEqual(std::max(start, end)).cast<int>();
-			Eigen::VectorXi connects_old_point = newEV.col(0).array() < start_size_baseV;
+			Eigen::VectorXi right_end_point = (newEV.col(1).cwiseEqual(std::max(start, end))).cast<int>();
+			Eigen::VectorXi connects_old_point = (newEV.col(0).array() < start_size_baseV).cast<int>();
 			Eigen::VectorXi not_current_edge = (newEV.col(0).array() != std::min(start, end)).cast<int>();
 			int maxval = (right_end_point + connects_old_point + not_current_edge).maxCoeff(&equal_pos); //Find the row that contains both vertices of this edge
 			if (maxval == 3) {
-				//TODO: CHECK THIS (it was late)
+				//std::cout << "looking at edge going from to " <<  newEV.row(equal_pos) << std::endl;
 				int old_edge_start = std::min(start, end);
 				int old_edge_end = std::min(newEV(equal_pos, 0), newEV(equal_pos, 1));
-				new_base_edge_boundary_markers[i] = base_edge_boundary_markers[find_edge(old_edge_start, old_edge_end, startEV)];
-				new_base_sharp_edge[i] = base_sharp_edge[find_edge(old_edge_start, old_edge_end, startEV)];
+				int original_edge = find_edge(old_edge_start, old_edge_end, startEV);			
+				int other_edge = find_edge(old_edge_end, std::max(start, end), newEV);
+				int marker_val = base_edge_boundary_markers[original_edge];
+				int sharp_val = base_sharp_edge[original_edge];
+				new_base_edge_boundary_markers[i] = marker_val;
+				new_base_sharp_edge[i] = sharp_val;
+				new_base_edge_boundary_markers[other_edge] = marker_val;
+				new_base_sharp_edge[other_edge] = sharp_val;
+
+
+				int tmp1 = std::min(old_edge_start, old_edge_end);
+				int tmp2 = std::max(old_edge_start, old_edge_end);
+
+				replacing_vertex_bindings.conservativeResize(replacing_vertex_bindings.rows() + 1, Eigen::NoChange);
+				replacing_vertex_bindings.bottomRows(1) << marker_val, tmp1, tmp2, std::max(start, end);
+
+				//Only set the newly added midpoint vertices to fixed if both endpoints of the original edge are fixed and the edge has a boundary marker (to prevent fixed edges from forming when 2 endpoints from the original edge each are fixed but are not connected by a boundary marked edge)
+				if (base_vertex_is_fixed[old_edge_start] && base_vertex_is_fixed[old_edge_end] && base_edge_boundary_markers[original_edge]) {
+					base_vertex_is_fixed[std::max(start, end)] = 1;
+				}
+				else {
+					base_vertex_is_fixed[std::max(start, end)] = 0;
+				}
+			}
+			else {
+				std::cout << "What's up: " << start << "  " << end << std::endl;
 			}
 		}
 	}
-
-
-
-	//For vertex_is_fixed: When looping over the originally existing edges, set the new mid-point vertex to fixed if both endpoints of the edge have an edge_boundary_marker>0 and both edge_boundary_markers are the same
-
-
 }
-
 
 int Patch::find_edge(int start, int end, Eigen::MatrixXi& EV) {
 	Eigen::VectorXi col1Equals, col2Equals;
