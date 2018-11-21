@@ -556,25 +556,42 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				vector<igl::Hit> hits;
 				if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_left_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 					Patch* hit_patch = ((*base_mesh).face_patch_map[hits[0].id]);
+
+					for (int i = 0; i < (*base_mesh).patches.size(); i++) {
+						(*base_mesh).patches[i]->update_patch_vertex_positions((*base_mesh).V);
+					}
+
 					(*hit_patch).upsample_patch((*base_mesh).V, (*base_mesh).F, (*base_mesh).face_patch_map, (*base_mesh).edge_boundary_markers, (*base_mesh).sharp_edge, (*base_mesh).vertex_is_fixed, replacing_vertex_bindings);
+					
+					if (igl::is_edge_manifold((*base_mesh).F)) {
+						(*base_mesh).patches.clear();
+						(*base_mesh).face_patch_map.clear();
+						(*base_mesh).patches = Patch::init_patches(*base_mesh);
 
-					(*base_mesh).patches.clear();
-					(*base_mesh).face_patch_map.clear();
-					(*base_mesh).patches = Patch::init_patches(*base_mesh);
+						new_mapped_indices.setLinSpaced((*base_mesh).V.rows(), 0, (*base_mesh).V.rows() - 1);
+						for (int i = 0; i < stroke_collection.size(); i++) {
+							stroke_collection[i].update_vert_bindings(new_mapped_indices, replacing_vertex_bindings);
+						}
+						dirty_boundary = true;
+						std::cout << "Before smoooth" << std::endl;
+						for (int i = 0; i < 8; i++) {
+							SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
+						}
+						std::cout << "after smoooth" << std::endl;
 
-					new_mapped_indices.setLinSpaced((*base_mesh).V.rows(), 0, (*base_mesh).V.rows()-1);
-					for (int i = 0; i < stroke_collection.size() ; i++) {
-						stroke_collection[i].update_vert_bindings(new_mapped_indices, replacing_vertex_bindings);
+						for (int i = 0; i < stroke_collection.size(); i++) {
+							stroke_collection[i].update_Positions(V, true);
+						}
 					}
-					dirty_boundary = true;
+					else {						
+						std::cout << "NOT EDGE MANIFOLD" << std::endl;
 
-					for (int i = 0; i < 8; i++) {
-						SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
+						Eigen::MatrixXi EVtmp, FEtmp, EFtmp;
+						igl::edge_topology((*base_mesh).V, (*base_mesh).F, EVtmp, FEtmp, EFtmp);
+						std::cout << EVtmp.topRows(200) << std::endl;
 					}
-
-					for (int i = 0; i < stroke_collection.size(); i++) {
-						stroke_collection[i].update_Positions(V, true);
-					}
+					
+					
 					viewer.data().clear();
 					viewer.data().set_mesh(V, F);
 					Eigen::MatrixXd N_corners;

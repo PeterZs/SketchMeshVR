@@ -48,7 +48,6 @@ void SurfaceSmoothing::smooth(Mesh& base_mesh, bool& BOUNDARY_IS_DIRTY, bool for
 	}
 
 	if(force_update || (prev_vertex_count != base_mesh.V.rows()) || (prev_patch_count != base_mesh.patches.size())) { //The mesh topology has changed, so we need to reset the precomputed matrices. If only boundary constraints got added, we can reuse part of the matrices so don't clear it all out but instead overwrite certain parts
-		std::cout << "inside here" << std::endl;
 		clear_precomputed_matrices(base_mesh.patches.size());
 		prev_vertex_count = base_mesh.V.rows();
 		prev_patch_count = base_mesh.patches.size();
@@ -64,8 +63,6 @@ void SurfaceSmoothing::smooth(Mesh& base_mesh, bool& BOUNDARY_IS_DIRTY, bool for
 
 	for (int i = 0; i < base_mesh.patches.size(); i++) {
 		Patch* patch = (base_mesh.patches[i]);
-		std::cout << " patch: " << i << "  " << (*patch).mesh.V.rows() << " " << (*patch).mesh.F.rows() << std::endl;
-
 		smooth_main((*patch).mesh, BOUNDARY_IS_DIRTY);
 		(*patch).update_parent_vertex_positions(base_mesh.V);
 		prev_mesh_ID = (*patch).mesh.ID;

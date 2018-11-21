@@ -206,7 +206,6 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 		parent_vertices[start_size + i] = start_size_baseV + i;
 	}
 
-	//TODO: update tmp_F with indices into base_F?  Or already the case
 	Eigen::MatrixXi new_patchF_reindexed(new_patchF.rows(), 3);
 	for (int i = 0; i < new_patchF.rows(); i++) {
 		new_patchF_reindexed.row(i) << parent_vertices[new_patchF(i, 0)], parent_vertices[new_patchF(i, 1)], parent_vertices[new_patchF(i, 2)];
@@ -227,11 +226,10 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 	igl::edge_topology(base_V, base_F, newEV, newFE, newEF);
 
 	//Remove faces that are on adjacent patches, and are attached to edges that will be split in the current patch
-	Eigen::MatrixXi has_missing_face = newEF.cwiseEqual(-1).cast<int>();
-	Eigen::VectorXi has_missing = (has_missing_face.rowwise().sum().array() > 0).cast<int>();
+	//Eigen::MatrixXi has_missing_face = newEF.cwiseEqual(-1).cast<int>();
+	//Eigen::VectorXi has_missing = (has_missing_face.rowwise().sum().array() > 0).cast<int>();
 
-	Eigen::VectorXi dirty_faces(base_F.rows());
-	int present_face;
+	/*int present_face;
 	for (int i = 0; i < newEF.rows(); i++) {
 		if (has_missing[i]) {
 			present_face = (newEF(i, 0) == -1 ? newEF(i, 1) : newEF(i, 0));
@@ -239,19 +237,11 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 				dirty_faces[present_face] = 1;
 			}
 		}
-	}
-	for (int i = 0; i < base_F.rows(); i++) {
-		if (!dirty_faces[i]) {
-			clean_faces.push_back(i);
-		}
-	}
-
-	row_idx = Eigen::VectorXi::Map(clean_faces.data(), clean_faces.size());
-	igl::slice(base_F, row_idx, col_idx, tmp_F);
+	}*/
 
 
 	//Update topology again with the previous patch-adjacent faces (with split edges) removed
-	igl::edge_topology(base_V, base_F, newEV, newFE, newEF);
+	//igl::edge_topology(base_V, base_F, newEV, newFE, newEF);
 
 
 
@@ -261,10 +251,12 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 	Eigen::VectorXi new_base_vertex_is_fixed(base_vertex_is_fixed.rows() + nr_added_points);
 	new_base_vertex_is_fixed.topRows(base_vertex_is_fixed.rows()) = base_vertex_is_fixed;
 
-	std::vector<bool> dirty_face(base_F.rows()); //bools are defaulted to false
+	//std::vector<bool> dirty_face(base_F.rows()); //bools are defaulted to false
 
 	Eigen::MatrixXi faces_to_add(0, 3);
-
+	Eigen::VectorXi dirty_faces(base_F.rows());
+	dirty_faces.setZero();
+	int dirty_count = 0;
 	for (int i = 0; i < newEV.rows(); i++) {
 		if (new_base_sharp_edge[i] != -1) { //Edge has already been covered
 			continue;
@@ -320,6 +312,7 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 				//Find face that is adjacent to the patch boundary edge that we just split, remove that face and replace it with 2 half faces (outside the patch's domain)
 				if (sharp_val) {
 					int edge = find_edge(old_edge_start, old_edge_end, startEV);
+					int cur_edge = find_edge(old_edge_start, old_edge_end, newEV); //Find the edge between the original triangle "base" in the current EV
 					int face1 = startEF(edge, 0);
 					int face2 = startEF(edge, 1);
 
@@ -330,9 +323,13 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 							if ((old_baseF(face2, j) != old_edge_start) && (old_baseF(face2, j) != old_edge_end)) {
 								vert_to_connect = old_baseF(face2, j);
 								faces_to_add.conservativeResize(faces_to_add.rows() + 1, Eigen::NoChange);
-								faces_to_add.bottomRows(1) << old_edge_start, mid_vertex, vert_to_connect;
+								faces_to_add.bottomRows(1) << old_edge_start, vert_to_connect, mid_vertex;
 								faces_to_add.conservativeResize(faces_to_add.rows() + 1, Eigen::NoChange);
-								faces_to_add.bottomRows(1) << mid_vertex, old_edge_end, vert_to_connect;
+								faces_to_add.bottomRows(1) << mid_vertex, vert_to_connect, old_edge_end;
+								int face2_cur = (newEF(cur_edge, 0) == -1) ? newEF(cur_edge, 1) : newEF(cur_edge, 0);
+								std::cout << newEF.row(cur_edge) << "   " << base_F.row(face2_cur) << std::endl;
+								dirty_faces[face2_cur] = 1;
+							//	dirty_count++;
 							}
 						}
 					}
@@ -344,12 +341,16 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 								faces_to_add.bottomRows(1) << old_edge_start, mid_vertex, vert_to_connect;
 								faces_to_add.conservativeResize(faces_to_add.rows() + 1, Eigen::NoChange);
 								faces_to_add.bottomRows(1) << mid_vertex, old_edge_end, vert_to_connect;
+								int face1_cur = (newEF(cur_edge, 0) == -1) ? newEF(cur_edge, 1) : newEF(cur_edge, 0);
+								dirty_faces[face1_cur] = 1;
+								//dirty_count++;
 							}
 						}
 					}
 					else {
 						std::cerr << "Something went wrong? " << std::endl;
 					}
+					std::cout << "Test: " << old_edge_start << "  " << mid_vertex << "   " << vert_to_connect << "   " << old_edge_end << std::endl;
 				}
 				
 			}else {
@@ -357,6 +358,19 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 			}
 		}
 	}
+
+	//std::cout << "Dirty count: " << dirty_count << std::endl;
+
+	clean_faces.clear();
+	for (int i = 0; i < base_F.rows(); i++) {
+		if (!dirty_faces[i]) {
+			clean_faces.push_back(i);
+		}
+	}
+
+	row_idx = Eigen::VectorXi::Map(clean_faces.data(), clean_faces.size());
+	igl::slice(base_F, row_idx, col_idx, tmp_F);
+	base_F = tmp_F;
 
 	base_F = igl::cat(1, base_F, faces_to_add);
 
