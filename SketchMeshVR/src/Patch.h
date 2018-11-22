@@ -29,6 +29,7 @@ public:
 	double compute_mean_minimum_triangle_angle();
 	void upsample_patch(Eigen::MatrixXd & base_V, Eigen::MatrixXi & base_F, std::vector<Patch*> base_face_patch_map, Eigen::VectorXi & base_edge_boundary_markers, Eigen::VectorXi & base_sharp_edge, Eigen::VectorXi & base_vertex_is_fixed, Eigen::MatrixXi& replacing_vertex_bindings);
 	int find_edge(int start, int end, Eigen::MatrixXi & EV);
+	void update_edge_indicators(Eigen::MatrixXd & meshV, Eigen::MatrixXi & meshF, Eigen::VectorXi & sharp_edge, Eigen::VectorXi & edge_boundary_markers, Eigen::MatrixXi & oldEV);
 	Mesh get_mesh() { return mesh; };
 	Mesh mesh;
 

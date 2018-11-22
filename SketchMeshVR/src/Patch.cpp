@@ -240,9 +240,6 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 	}*/
 
 
-	//Update topology again with the previous patch-adjacent faces (with split edges) removed
-	//igl::edge_topology(base_V, base_F, newEV, newFE, newEF);
-
 
 
 	Eigen::VectorXi new_base_edge_boundary_markers(newEV.rows()), new_base_sharp_edge(newEV.rows());
@@ -250,8 +247,6 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 	new_base_sharp_edge.setConstant(-1);
 	Eigen::VectorXi new_base_vertex_is_fixed(base_vertex_is_fixed.rows() + nr_added_points);
 	new_base_vertex_is_fixed.topRows(base_vertex_is_fixed.rows()) = base_vertex_is_fixed;
-
-	//std::vector<bool> dirty_face(base_F.rows()); //bools are defaulted to false
 
 	Eigen::MatrixXi faces_to_add(0, 3);
 	Eigen::VectorXi dirty_faces(base_F.rows());
@@ -269,7 +264,7 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 			new_base_sharp_edge[i] = 0;
 		}
 		else if (start < start_size_baseV && end < start_size_baseV) { //Both vertices were existing already
-			std::cout << "This shouldn't happen (yet) " << start << "  " << end << std::endl;
+			std::cout << "Both existing already " << start << "  " << end << std::endl;
 			int old_edge = find_edge(start, end, startEV);
 			new_base_edge_boundary_markers[i] = base_edge_boundary_markers[old_edge];
 			new_base_sharp_edge[i] = base_sharp_edge[old_edge];
@@ -318,7 +313,7 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 
 					int mid_vertex = std::max(start, end);
 					int vert_to_connect;
-					if (base_face_patch_map[face1] == this) { //Patch face that is removed, take the other one
+					if (base_face_patch_map[face2] != this) { //Only add 2 new faces if the face is not on the same patch (we don't want to add split faces across sharp edges that are within 1 patch)
 						for (int j = 0; j < 3; j++) {
 							if ((old_baseF(face2, j) != old_edge_start) && (old_baseF(face2, j) != old_edge_end)) {
 								vert_to_connect = old_baseF(face2, j);
@@ -329,11 +324,10 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 								int face2_cur = (newEF(cur_edge, 0) == -1) ? newEF(cur_edge, 1) : newEF(cur_edge, 0);
 								std::cout << newEF.row(cur_edge) << "   " << base_F.row(face2_cur) << std::endl;
 								dirty_faces[face2_cur] = 1;
-							//	dirty_count++;
 							}
 						}
 					}
-					else if (base_face_patch_map[face2] == this) {
+					else if (base_face_patch_map[face1] != this) {
 						for (int j = 0; j < 3; j++) {
 							if ((old_baseF(face1, j) != old_edge_start) && (old_baseF(face1, j) != old_edge_end)) {
 								vert_to_connect = old_baseF(face1, j);
@@ -343,7 +337,6 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 								faces_to_add.bottomRows(1) << mid_vertex, old_edge_end, vert_to_connect;
 								int face1_cur = (newEF(cur_edge, 0) == -1) ? newEF(cur_edge, 1) : newEF(cur_edge, 0);
 								dirty_faces[face1_cur] = 1;
-								//dirty_count++;
 							}
 						}
 					}
@@ -359,8 +352,6 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 		}
 	}
 
-	//std::cout << "Dirty count: " << dirty_count << std::endl;
-
 	clean_faces.clear();
 	for (int i = 0; i < base_F.rows(); i++) {
 		if (!dirty_faces[i]) {
@@ -373,6 +364,8 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 	base_F = tmp_F;
 
 	base_F = igl::cat(1, base_F, faces_to_add);
+
+	update_edge_indicators(base_V, base_F, new_base_sharp_edge, new_base_edge_boundary_markers, newEV);
 
 	base_sharp_edge = new_base_sharp_edge;
 	base_edge_boundary_markers = new_base_edge_boundary_markers;
@@ -390,4 +383,25 @@ int Patch::find_edge(int start, int end, Eigen::MatrixXi& EV) {
 		return -1; //Edge between start and end doesn't exist in EV
 	}
 	return equal_pos;
+}
+
+//Used to update the sharp_edge and edge_boundary_marker indicators when we go from a mesh that generated oldEV to one with newly added edge in EV (but those newly added edges have edge_boundary_markers 0 and aren't sharp)
+void Patch::update_edge_indicators(Eigen::MatrixXd& meshV, Eigen::MatrixXi& meshF, Eigen::VectorXi& sharp_edge, Eigen::VectorXi& edge_boundary_markers, Eigen::MatrixXi& oldEV) {
+	Eigen::MatrixXi EV, FE, EF;
+	igl::edge_topology(meshV, meshF, EV, FE, EF);
+	Eigen::VectorXi new_sharp_edge(EV.rows());
+	Eigen::VectorXi new_edge_boundary_markers(EV.rows());
+	new_sharp_edge.setZero();
+	new_edge_boundary_markers.setZero();
+
+	int new_edge;
+	for (int i = 0; i < oldEV.rows(); i++) {
+		new_edge = find_edge(oldEV(i, 0), oldEV(i, 1), EV);
+		new_sharp_edge[new_edge] = sharp_edge[i];
+		new_edge_boundary_markers[new_edge] = edge_boundary_markers[i];
+	}
+
+	sharp_edge = new_sharp_edge;
+	edge_boundary_markers = new_edge_boundary_markers;
+
 }
