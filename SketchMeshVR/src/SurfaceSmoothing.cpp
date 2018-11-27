@@ -63,6 +63,7 @@ void SurfaceSmoothing::smooth(Mesh& base_mesh, bool& BOUNDARY_IS_DIRTY, bool for
 
 	for (int i = 0; i < base_mesh.patches.size(); i++) {
 		Patch* patch = (base_mesh.patches[i]);
+		std::cout << "Patch " << i << " has " << (*patch).mesh.F.rows() << " faces" << std::endl;
 		smooth_main((*patch).mesh, BOUNDARY_IS_DIRTY);
 		(*patch).update_parent_vertex_positions(base_mesh.V);
 		prev_mesh_ID = (*patch).mesh.ID;
@@ -101,7 +102,7 @@ void SurfaceSmoothing::get_average_edge_lengths(Eigen::MatrixXd& V) {
 	}
 }
 
-void SurfaceSmoothing::performance_test(Mesh& m) {
+/*void SurfaceSmoothing::performance_test(Mesh& m) {
 	no_boundary_vertices = (m.vertex_is_fixed.array() > 0).count();
 	no_boundary_adjacent_vertices = 0;
 	for (int i = 0; i < m.V.rows(); i++) {
@@ -113,7 +114,7 @@ void SurfaceSmoothing::performance_test(Mesh& m) {
 			}
 		}
 	}
-}
+}*/
 
 void SurfaceSmoothing::smooth_main(Mesh &m, bool BOUNDARY_IS_DIRTY) {
 	Eigen::MatrixXd& L = precomputed_L[m.ID - 1]; //Patch mesh IDs start at 1 (0 is reserved for the base mesh). So take -1 to index into the vector

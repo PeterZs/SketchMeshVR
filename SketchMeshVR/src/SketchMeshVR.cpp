@@ -33,6 +33,7 @@
 #include "LaplacianRemesh.h"
 #include "AppState.h"
 #include "CurveRub.h"
+#include <chrono>
 
 using namespace std;
 using Viewer = igl::opengl::glfw::Viewer;
@@ -561,29 +562,57 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 						(*base_mesh).patches[i]->update_patch_vertex_positions((*base_mesh).V);
 					}
 
-					(*hit_patch).upsample_patch((*base_mesh).V, (*base_mesh).F, (*base_mesh).face_patch_map, (*base_mesh).edge_boundary_markers, (*base_mesh).sharp_edge, (*base_mesh).vertex_is_fixed, replacing_vertex_bindings);
+					auto start = std::chrono::steady_clock::now();
+					auto end = std::chrono::steady_clock::now();
+					if ((*hit_patch).mesh.F.rows()*4 < Stroke::MAX_NR_TRIANGLES) { //Make sure that upsampling doesn't result in too many faces
+						(*hit_patch).upsample_patch((*base_mesh).V, (*base_mesh).F, (*base_mesh).face_patch_map, (*base_mesh).edge_boundary_markers, (*base_mesh).sharp_edge, (*base_mesh).vertex_is_fixed, replacing_vertex_bindings);
+						end = std::chrono::steady_clock::now();
+						std::cout << " Upsample: " << (end - start).count() << std::endl;
+					}
+					else {
+						sound_error_beep();
+						std::cerr << "Error: Could not upsample selected patch, as this would result in a patch with too many triangles (making the system unbearably slow). " << std::endl;
+						prev_tool_mode = UPSAMPLE;
+						return;
+					}
 					
 					if (igl::is_edge_manifold((*base_mesh).F)) {
+						start = std::chrono::steady_clock::now();
 						(*base_mesh).patches.clear();
 						(*base_mesh).face_patch_map.clear();
 						(*base_mesh).patches = Patch::init_patches(*base_mesh);
+						end = std::chrono::steady_clock::now();
+						std::cout << " Patches: " << (end - start).count() << std::endl;
 
+						start = std::chrono::steady_clock::now();
 						new_mapped_indices.setLinSpaced((*base_mesh).V.rows(), 0, (*base_mesh).V.rows() - 1);
 						for (int i = 0; i < stroke_collection.size(); i++) {
 							stroke_collection[i].update_vert_bindings(new_mapped_indices, replacing_vertex_bindings);
 						}
+						end = std::chrono::steady_clock::now();
+						std::cout << " update vert bind: " << (end - start).count() << std::endl;
+
+						start = std::chrono::steady_clock::now();
 						dirty_boundary = true;
-						std::cout << "Before smoooth" << std::endl;
+
 						for (int i = 0; i < 8; i++) {
 							SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
 						}
-						std::cout << "after smoooth" << std::endl;
+
+						end = std::chrono::steady_clock::now();
+						std::cout << " smooth: " << (end - start).count() << std::endl;
+
+						start = std::chrono::steady_clock::now();
 
 						for (int i = 0; i < stroke_collection.size(); i++) {
 							stroke_collection[i].update_Positions(V, true);
 						}
+
+						end = std::chrono::steady_clock::now();
+						std::cout << " update positions: " << (end - start).count() << std::endl;
 					}
 					else {						
+						//TODO: remove this bit
 						std::cout << "NOT EDGE MANIFOLD" << std::endl;
 
 						Eigen::MatrixXi EVtmp, FEtmp, EFtmp;

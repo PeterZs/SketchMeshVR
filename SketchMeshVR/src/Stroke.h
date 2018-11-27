@@ -77,6 +77,10 @@ public:
 	Eigen::VectorXd dep;
 	bool prev_point_was_on_mesh; //Used for cutting strokes only. Indicates whether this is the first point outside of the mesh after we've been drawing on the mesh
 
+
+	static const int MAX_NR_TRIANGLES = 10000; //For the entire mesh (front + backside)
+
+
 	std::vector<int> closest_vert_bindings;
 
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW

@@ -225,22 +225,6 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 	Eigen::MatrixXi newEV, newFE, newEF;
 	igl::edge_topology(base_V, base_F, newEV, newFE, newEF);
 
-	//Remove faces that are on adjacent patches, and are attached to edges that will be split in the current patch
-	//Eigen::MatrixXi has_missing_face = newEF.cwiseEqual(-1).cast<int>();
-	//Eigen::VectorXi has_missing = (has_missing_face.rowwise().sum().array() > 0).cast<int>();
-
-	/*int present_face;
-	for (int i = 0; i < newEF.rows(); i++) {
-		if (has_missing[i]) {
-			present_face = (newEF(i, 0) == -1 ? newEF(i, 1) : newEF(i, 0));
-			if (base_F(present_face, 0) < start_size_baseV && base_F(present_face, 1) < start_size_baseV && base_F(present_face, 2) < start_size_baseV) {
-				dirty_faces[present_face] = 1;
-			}
-		}
-	}*/
-
-
-
 
 	Eigen::VectorXi new_base_edge_boundary_markers(newEV.rows()), new_base_sharp_edge(newEV.rows());
 	new_base_edge_boundary_markers.setConstant(-1);
@@ -264,7 +248,6 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 			new_base_sharp_edge[i] = 0;
 		}
 		else if (start < start_size_baseV && end < start_size_baseV) { //Both vertices were existing already
-			std::cout << "Both existing already " << start << "  " << end << std::endl;
 			int old_edge = find_edge(start, end, startEV);
 			new_base_edge_boundary_markers[i] = base_edge_boundary_markers[old_edge];
 			new_base_sharp_edge[i] = base_sharp_edge[old_edge];
@@ -322,7 +305,6 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 								faces_to_add.conservativeResize(faces_to_add.rows() + 1, Eigen::NoChange);
 								faces_to_add.bottomRows(1) << mid_vertex, vert_to_connect, old_edge_end;
 								int face2_cur = (newEF(cur_edge, 0) == -1) ? newEF(cur_edge, 1) : newEF(cur_edge, 0);
-								std::cout << newEF.row(cur_edge) << "   " << base_F.row(face2_cur) << std::endl;
 								dirty_faces[face2_cur] = 1;
 							}
 						}
@@ -343,11 +325,8 @@ void Patch::upsample_patch(Eigen::MatrixXd& base_V, Eigen::MatrixXi& base_F, std
 					else {
 						std::cerr << "Something went wrong? " << std::endl;
 					}
-					std::cout << "Test: " << old_edge_start << "  " << mid_vertex << "   " << vert_to_connect << "   " << old_edge_end << std::endl;
 				}
 				
-			}else {
-				std::cout << "What's up: " << start << "  " << end << std::endl;
 			}
 		}
 	}
@@ -391,17 +370,21 @@ void Patch::update_edge_indicators(Eigen::MatrixXd& meshV, Eigen::MatrixXi& mesh
 	igl::edge_topology(meshV, meshF, EV, FE, EF);
 	Eigen::VectorXi new_sharp_edge(EV.rows());
 	Eigen::VectorXi new_edge_boundary_markers(EV.rows());
-	new_sharp_edge.setZero();
+	new_sharp_edge.setZero(); //Can set these to zeroes, because edges that have not previously been initialized, won't be part of a sharp edge or boundary
 	new_edge_boundary_markers.setZero();
 
 	int new_edge;
 	for (int i = 0; i < oldEV.rows(); i++) {
-		new_edge = find_edge(oldEV(i, 0), oldEV(i, 1), EV);
-		new_sharp_edge[new_edge] = sharp_edge[i];
-		new_edge_boundary_markers[new_edge] = edge_boundary_markers[i];
+		if (sharp_edge[i] || edge_boundary_markers[i]) { //Only need to find the new edge when there is a non-zero indicator
+			new_edge = find_edge(oldEV(i, 0), oldEV(i, 1), EV);
+			if (new_edge == -1) { //Edge not found anymore. Likely a edge on the (sharp) patch boundary, that was part of a face that is now split (and thus removed)
+				continue;
+			}
+			new_sharp_edge[new_edge] = sharp_edge[i];
+			new_edge_boundary_markers[new_edge] = edge_boundary_markers[i];
+		}
 	}
 
 	sharp_edge = new_sharp_edge;
 	edge_boundary_markers = new_edge_boundary_markers;
-
 }

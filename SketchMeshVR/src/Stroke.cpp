@@ -18,7 +18,6 @@ using namespace igl;
 using namespace std;
 
 double min_inter_point_distance = 0.0001125;
-int MAX_NR_TRIANGLES = 10000; //For the entire mesh (front + backside)
 Eigen::RowVector3d red_color(1, 0, 0);
 Eigen::RowVector3d blue_color(0, 0, 1);
 
