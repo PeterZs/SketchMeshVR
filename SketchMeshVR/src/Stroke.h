@@ -79,6 +79,7 @@ public:
 
 
 	static const int MAX_NR_TRIANGLES = 10000; //For the entire mesh (front + backside)
+	static constexpr double min_inter_point_distance = 0.0001125;
 
 
 	std::vector<int> closest_vert_bindings;

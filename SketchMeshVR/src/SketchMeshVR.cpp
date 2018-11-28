@@ -13,6 +13,7 @@
 #include <igl/edge_topology.h>
 #include <igl/cat.h>
 #include <igl/ray_mesh_intersect.h>
+#include <igl/internal_angles.h>
 #include <iostream>
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/per_corner_normals.h>
@@ -21,6 +22,7 @@
 #include <igl/opengl/glfw/imgui/ImGuiHelpers.h>
 #include <igl/material_colors.h>
 #include <igl/slice.h>
+#include <igl/avg_edge_length.h>
 #include <SketchMeshVR.h>
 #include <Stroke.h>
 #include "SurfaceSmoothing.h"
@@ -109,6 +111,8 @@ bool has_recentered = false;
 bool draw_should_block = false;
 bool extrude_base_should_block = false;
 bool upsample_activated = false;
+bool upsample_init = false;
+
 
 Eigen::RowVector3d red(1, 0, 0);
 Eigen::RowVector3d black(0, 0, 0);
@@ -120,6 +124,7 @@ bool prev_laser_show;
 Eigen::Vector3d prev_translation_point;
 double prev_scale_size;
 
+Eigen::VectorXd pull_path_starting_angles;
 
 void sound_error_beep() {
 #ifdef _WIN32
@@ -211,19 +216,24 @@ void select_dragging_handle(Eigen::Vector3f& pos) {
 	}
 }
 
-void set_laser_points(Eigen::Vector3f& pos) {
+void set_laser_points(Eigen::Vector3f& pos, bool use_right_direction) {
+	if (!use_right_direction) {
+		pos = viewer.oculusVR.get_left_hand_pos(); //Use the left hand position for the laser start point when requested
+	}
+
 	Eigen::MatrixX3d LP(2, 3);
 	Eigen::MatrixXd laser_color(2, 3);
 	vector<igl::Hit> hits;
+	Eigen::Vector3f dir = use_right_direction ? viewer.oculusVR.get_right_touch_direction() : viewer.oculusVR.get_left_touch_direction();
 
-	if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
+	if (igl::ray_mesh_intersect(pos, dir, V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 		laser_end_point = (V.row(F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + V.row(F(hits[0].id, 1))*hits[0].u + V.row(F(hits[0].id, 2))*hits[0].v);
 	}
 	else { //First check for intersections with the mesh, then with the floor and finally just set the end point at a far distance_to_vert
 		viewer.selected_data_index = 0;
 		bool hit_found = false;
 		for (int i = 0; i < 6; i++) {
-			if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), viewer.data().V, viewer.data().F, hits)) {
+			if (igl::ray_mesh_intersect(pos, dir, viewer.data().V, viewer.data().F, hits)) {
 				laser_end_point = (viewer.data().V.row(viewer.data().F(hits[0].id, 0))*(1.0 - hits[0].u - hits[0].v) + viewer.data().V.row(viewer.data().F(hits[0].id, 1))*hits[0].u + viewer.data().V.row(viewer.data().F(hits[0].id, 2))*hits[0].v);
 				hit_found = true;
 				break;
@@ -232,7 +242,7 @@ void set_laser_points(Eigen::Vector3f& pos) {
 		}
 
 		if(!hit_found){
-			laser_end_point = (pos + 10 * viewer.oculusVR.get_right_touch_direction()).cast<double>();
+			laser_end_point = (pos + 10 * dir).cast<double>();
 		}
 		viewer.selected_data_index = base_mesh_index;
 	}
@@ -262,7 +272,6 @@ void reset_before_draw() {
 }
 
 void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
-	set_laser_points(pos);
 	if (pressed == OculusVR::ButtonCombo::TRIG && (selected_tool_mode == ADD || selected_tool_mode == CUT || selected_tool_mode == EXTRUDE)) {
 		if (stroke_collection.size() == 0) { //Don't go into these modes when there is no mesh yet
 			prev_tool_mode = FAIL;
@@ -314,16 +323,17 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		}
 	}
 	else if (pressed == OculusVR::ButtonCombo::X) {
-		set_laser_points(viewer.oculusVR.get_left_hand_pos());
+		set_laser_points(viewer.oculusVR.get_left_hand_pos(), false);
 		tool_mode = SMOOTH;
 	}
 	else if (pressed == OculusVR::ButtonCombo::Y) {
 		pos = viewer.oculusVR.get_left_hand_pos();
-		set_laser_points(pos);
+		set_laser_points(pos, false);
 		if (!upsample_activated) {
 			viewer.selected_data_index = pointer_mesh_index;
 			prev_laser_show = viewer.data().show_laser;
 			viewer.data().show_laser = true;
+			viewer.oculusVR.right_hand_visible = false;
 			viewer.selected_data_index = base_mesh_index;
 		}
 		if (tool_mode != UPSAMPLE) {
@@ -333,6 +343,9 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 	else if (pressed == OculusVR::ButtonCombo::GRIPTRIGBOTH) {
 		tool_mode = TRANSLATE;
 	}
+	//Set laser points after button handling in case we have for example changed the position var
+	set_laser_points(pos, !upsample_init); //When we're in UPSAMPLE mode (between first and second click), we want to show the laser of the left hand
+
 
 	if (tool_mode == DRAW) {
 		if (draw_should_block) { //User has been too close to first sample point (closing the stroke too much), so we're in blocked state till the buttons are released again
@@ -451,6 +464,14 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			}
 			CurveDeformation::startPullCurve(handleID, (*base_mesh).V, (*base_mesh).F, (*base_mesh).edge_boundary_markers);
 			prev_tool_mode = PULL;
+
+			//Record the mean of the minimum angle per triangle for each patch (value at start of pull)
+			pull_path_starting_angles.resize((*base_mesh).patches.size());
+			for (int i = 0; i < (*base_mesh).patches.size(); i++) {
+				Eigen::MatrixXd angles;
+				igl::internal_angles((*base_mesh).patches[i]->mesh.V, (*base_mesh).patches[i]->mesh.F, angles);
+				pull_path_starting_angles[i] = angles.rowwise().minCoeff().mean();
+			}
 		}
 		else if (prev_tool_mode == PULL) {
 			CurveDeformation::pullCurve(pos.transpose().cast<double>(), (*base_mesh).V, (*base_mesh).edge_boundary_markers);
@@ -556,18 +577,15 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			if (upsample_activated) {
 				vector<igl::Hit> hits;
 				if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_left_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
-					Patch* hit_patch = ((*base_mesh).face_patch_map[hits[0].id]);
+					Patch* hit_patch = ((*base_mesh).face_patch_map[hits[0].id]); //Find the patch that was hit
 
 					for (int i = 0; i < (*base_mesh).patches.size(); i++) {
 						(*base_mesh).patches[i]->update_patch_vertex_positions((*base_mesh).V);
 					}
 
-					auto start = std::chrono::steady_clock::now();
-					auto end = std::chrono::steady_clock::now();
-					if ((*hit_patch).mesh.F.rows()*4 < Stroke::MAX_NR_TRIANGLES) { //Make sure that upsampling doesn't result in too many faces
+					double cur_avg_edge_length = igl::avg_edge_length((*hit_patch).mesh.V, (*hit_patch).mesh.F);
+					if ((*hit_patch).mesh.F.rows() * 8 < Stroke::MAX_NR_TRIANGLES ) { //Make sure that upsampling doesn't result in too many faces
 						(*hit_patch).upsample_patch((*base_mesh).V, (*base_mesh).F, (*base_mesh).face_patch_map, (*base_mesh).edge_boundary_markers, (*base_mesh).sharp_edge, (*base_mesh).vertex_is_fixed, replacing_vertex_bindings);
-						end = std::chrono::steady_clock::now();
-						std::cout << " Upsample: " << (end - start).count() << std::endl;
 					}
 					else {
 						sound_error_beep();
@@ -577,49 +595,28 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 					}
 					
 					if (igl::is_edge_manifold((*base_mesh).F)) {
-						start = std::chrono::steady_clock::now();
 						(*base_mesh).patches.clear();
 						(*base_mesh).face_patch_map.clear();
 						(*base_mesh).patches = Patch::init_patches(*base_mesh);
-						end = std::chrono::steady_clock::now();
-						std::cout << " Patches: " << (end - start).count() << std::endl;
 
-						start = std::chrono::steady_clock::now();
 						new_mapped_indices.setLinSpaced((*base_mesh).V.rows(), 0, (*base_mesh).V.rows() - 1);
 						for (int i = 0; i < stroke_collection.size(); i++) {
 							stroke_collection[i].update_vert_bindings(new_mapped_indices, replacing_vertex_bindings);
 						}
-						end = std::chrono::steady_clock::now();
-						std::cout << " update vert bind: " << (end - start).count() << std::endl;
 
-						start = std::chrono::steady_clock::now();
 						dirty_boundary = true;
 
 						for (int i = 0; i < 8; i++) {
 							SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
 						}
 
-						end = std::chrono::steady_clock::now();
-						std::cout << " smooth: " << (end - start).count() << std::endl;
-
-						start = std::chrono::steady_clock::now();
-
 						for (int i = 0; i < stroke_collection.size(); i++) {
 							stroke_collection[i].update_Positions(V, true);
 						}
-
-						end = std::chrono::steady_clock::now();
-						std::cout << " update positions: " << (end - start).count() << std::endl;
 					}
 					else {						
-						//TODO: remove this bit
-						std::cout << "NOT EDGE MANIFOLD" << std::endl;
-
-						Eigen::MatrixXi EVtmp, FEtmp, EFtmp;
-						igl::edge_topology((*base_mesh).V, (*base_mesh).F, EVtmp, FEtmp, EFtmp);
-						std::cout << EVtmp.topRows(200) << std::endl;
+						std::cerr << "Error: This shouldn't happen. Resampled mesh is no longer manifold" << std::endl;
 					}
-					
 					
 					viewer.data().clear();
 					viewer.data().set_mesh(V, F);
@@ -629,6 +626,9 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 					draw_all_strokes();
 				}
+			}
+			else {
+				upsample_init = true;
 			}
 			prev_tool_mode = UPSAMPLE;
 		}
@@ -804,10 +804,10 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				added_stroke->prepend_first_point(viewer);
 				added_stroke->append_final_point(viewer);
 				added_stroke->toLoop();
-
 				success = LaplacianRemesh::remesh_cutting_path(*base_mesh, *added_stroke, replacing_vertex_bindings, viewer);
 			}
 			else {
+				sound_error_beep();
 				std::cerr << "An added stroke either needs both the end- & startpoint to be outside of the mesh, or all points to be on the mesh. Please try again. " << std::endl;
 				success = false;
 			}
@@ -874,14 +874,38 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			draw_all_strokes();
 		}
 		else if (prev_tool_mode == PULL && handleID != -1) {
+			Eigen::MatrixXd angles;
+			double mean_min_angle;
+			bool stroke_structure_changed = false;
+			for (int i = 0; i < (*base_mesh).patches.size(); i++) {
+				igl::internal_angles((*base_mesh).patches[i]->mesh.V, (*base_mesh).patches[i]->mesh.F, angles);
+				mean_min_angle = angles.rowwise().minCoeff().mean();
+
+				if (((pull_path_starting_angles[i] - mean_min_angle) > 0.1) && mean_min_angle < (30.0 * (igl::PI/180.0)) && (*base_mesh).patches[i]->mesh.F.rows() * 4 < Stroke::MAX_NR_TRIANGLES) { //Only upsample a patch if its mean minimum triangle angle has significantly changed since the pull started, the new mean min angle is too big and upsampling won't lead to too many triangles 
+					(*((*base_mesh).patches[i])).upsample_patch((*base_mesh).V, (*base_mesh).F, (*base_mesh).face_patch_map, (*base_mesh).edge_boundary_markers, (*base_mesh).sharp_edge, (*base_mesh).vertex_is_fixed, replacing_vertex_bindings);
+				
+					(*base_mesh).patches.clear();
+					(*base_mesh).face_patch_map.clear();
+					(*base_mesh).patches = Patch::init_patches(*base_mesh);
+					
+					new_mapped_indices.setLinSpaced((*base_mesh).V.rows(), 0, (*base_mesh).V.rows() - 1);
+					for (int i = 0; i < stroke_collection.size(); i++) {
+						stroke_collection[i].update_vert_bindings(new_mapped_indices, replacing_vertex_bindings);
+					}
+					stroke_structure_changed = true;
+					dirty_boundary = true;
+				}
+			}
+
 			for (int i = 0; i < initial_smooth_iter / 3; i++) {
 				SurfaceSmoothing::smooth(*base_mesh, dirty_boundary, false);
 			}
 
 			for (int i = 0; i < stroke_collection.size(); i++) {
-				stroke_collection[i].update_Positions(V, false);
+				stroke_collection[i].update_Positions(V, stroke_structure_changed);
 			}
 
+			viewer.data().clear();
 			viewer.data().set_mesh(V, F);
 			Eigen::MatrixXd N_corners;
 			igl::per_corner_normals(V, F, 50, N_corners);
@@ -1118,14 +1142,16 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				viewer.oculusVR.right_hand_visible = true;
 		}
 		else if (prev_tool_mode == UPSAMPLE) {
-			if (!upsample_activated) {
-				upsample_activated = true;
-			}
-			else { //Done, button release after 2nd click
+			if (upsample_activated)  { //Done, button release after 2nd click
 				upsample_activated = false; 
+				upsample_init = false;
 				viewer.selected_data_index = pointer_mesh_index;
 				viewer.data().show_laser = prev_laser_show;
+				viewer.oculusVR.right_hand_visible = true;
 				viewer.selected_data_index = base_mesh_index;
+			}
+			else {
+				upsample_activated = true;
 			}
 		}
 		else if (prev_tool_mode == CHANGE) {
