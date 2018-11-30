@@ -1,8 +1,7 @@
 #include "Stroke.h"
 #include "CleanStroke3D.h"
 #include <igl/unproject_in_mesh.h>
-
-#include <igl/unproject.h>
+//#include <igl/unproject.h>
 #include <igl/project.h>
 #include <igl/triangle/triangulate.h>
 #include <igl/adjacency_list.h>
@@ -13,7 +12,7 @@
 #include <igl/per_vertex_normals.h>
 #include <igl/slice.h>
 #include "Plane.h"
-#include <ctime>
+//#include <ctime>
 using namespace igl;
 using namespace std;
 
@@ -365,18 +364,24 @@ void Stroke::prepend_first_point(igl::opengl::glfw::Viewer &viewer) {
 	Eigen::Vector3d hit_pos2D = igl::project(first_point_tmp, modelview, viewer.core.get_proj(), viewer.core.viewport).cast<double>();
 
 	stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
-	Eigen::MatrixXd old = stroke2DPoints.block(0, 0, stroke2DPoints.rows() - 1, 2);
-	stroke2DPoints.block(1, 0, stroke2DPoints.rows() - 1, 2) = old;
+	Eigen::MatrixXd old = stroke2DPoints.topRows(stroke2DPoints.rows() - 1);
+//	Eigen::MatrixXd old = stroke2DPoints.block(0, 0, stroke2DPoints.rows() - 1, 2);
+	stroke2DPoints.bottomRows(stroke2DPoints.rows() - 1) = old;
+	//stroke2DPoints.block(1, 0, stroke2DPoints.rows() - 1, 2) = old;
 	stroke2DPoints.row(0) << hit_pos2D[0], hit_pos2D[1];
 
 	stroke3DPoints.conservativeResize(stroke3DPoints.rows() + 1, Eigen::NoChange);
-	old = stroke3DPoints.block(0, 0, stroke3DPoints.rows() - 1, 3);
-	stroke3DPoints.block(1, 0, stroke3DPoints.rows() - 1, 3) = old;
+	//old = stroke3DPoints.block(0, 0, stroke3DPoints.rows() - 1, 3);
+	old = stroke3DPoints.topRows(stroke3DPoints.rows() - 1);
+	//stroke3DPoints.block(1, 0, stroke3DPoints.rows() - 1, 3) = old;
+	stroke3DPoints.bottomRows(stroke3DPoints.rows() - 1) = old;
 	stroke3DPoints.row(0) = first_point;
 
 	faces_hit.conservativeResize(faces_hit.rows() + 1, Eigen::NoChange);
-	Eigen::MatrixXi old_faces_hit = faces_hit.block(0, 0, faces_hit.rows() - 1, 2);
-	faces_hit.block(1, 0, faces_hit.rows() - 1, 2) = old_faces_hit;
+//	Eigen::MatrixXi old_faces_hit = faces_hit.block(0, 0, faces_hit.rows() - 1, 2);
+	Eigen::MatrixXi old_faces_hit = faces_hit.topRows(faces_hit.rows() - 1);
+	//faces_hit.block(1, 0, faces_hit.rows() - 1, 2) = old_faces_hit;
+	faces_hit.bottomRows(faces_hit.rows() - 1) = old_faces_hit;
 	faces_hit.row(0) << -1, -1;
 }
 
@@ -423,6 +428,7 @@ bool Stroke::toLoop() {
 	return false;
 }
 
+//TODO: comment
 void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Eigen::VectorXi& vertex_is_fixed, Eigen::MatrixXd& mesh_V, Eigen::MatrixXi& mesh_F, igl::opengl::glfw::Viewer &viewer) {
 	double mean_sample_dist = 0.0;
 	for (int i = 0; i < stroke3DPoints.rows() - 1; i++) {
@@ -582,6 +588,7 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 	return;
 }
 
+//TODO: comment
 void Stroke::project_with_PCA_given_target(Eigen::Vector3d target_vec) {
 	Eigen::MatrixX3d projected_points;
 	Eigen::RowVector3d center = stroke3DPoints.colwise().mean();
@@ -623,7 +630,7 @@ void Stroke::project_with_PCA_given_target(Eigen::Vector3d target_vec) {
 	}
 }
 
-/** Makes the stroke counter clockwise. **/
+/** Makes *this* stroke counter clockwise. Takes care of 2DPoints and 3DPoints and also of hand_pos_at_draw and faces_hit if they are present. Will set the has_been_reversed flag. **/
 void Stroke::counter_clockwise() {
 	double total_area = 0;
 	Eigen::Vector2d prev, next;
@@ -655,6 +662,7 @@ void Stroke::TaubinFairing2D(Eigen::MatrixXd& original_stroke2DPoints, int n) {
 	}
 }
 
+/** Subroutine for Taubin fairing. **/
 void Stroke::smooth_sub2D(Eigen::MatrixXd& points, double direction) {
 	int n = points.rows();
 	Eigen::MatrixXd new_positions(n, 2);
@@ -671,6 +679,7 @@ void Stroke::smooth_sub2D(Eigen::MatrixXd& points, double direction) {
 	}
 }
 
+/** Subroutine for smooth_sub2D. Will compute a new position for vertex vert, based on the positions of its neighbors prev and next. **/
 Eigen::RowVector2d Stroke::to_sum_of_vectors2D(Eigen::RowVector2d vert, Eigen::RowVector2d prev, Eigen::RowVector2d next, double direction) {
 	Eigen::RowVector2d total_vec(0, 0);
 	double total_w = 0.0;
@@ -691,6 +700,7 @@ Eigen::RowVector2d Stroke::to_sum_of_vectors2D(Eigen::RowVector2d vert, Eigen::R
 	return (vert + total_vec*direction);
 }
 
+//TODO: comment
 void Stroke::resample_and_smooth_3DPoints(Eigen::Matrix4f& model, Eigen::Matrix4f& view, Eigen::Matrix4f& proj, Eigen::Vector4f& viewport) {
 	//Stroke2DPoints are not looped
 	double length = get_2D_length();
@@ -773,7 +783,7 @@ int Stroke::selectClosestVertex(Eigen::Vector3f pos, double& closest_distance) {
 
 double Stroke::compute_stroke_diag() {
 	Eigen::MatrixXd stroke_points;
-	Eigen::VectorXi row_slice = Map<Eigen::VectorXi >(closest_vert_bindings.data(), closest_vert_bindings.size());
+	Eigen::VectorXi row_slice = Map<Eigen::VectorXi>(closest_vert_bindings.data(), closest_vert_bindings.size());
 	Eigen::VectorXi col_slice(3);
 	col_slice.col(0) << 0, 1, 2;
 	igl::slice((*V), row_slice, col_slice, stroke_points);
@@ -783,6 +793,7 @@ double Stroke::compute_stroke_diag() {
 	return (maxBB - minBB).norm();
 }
 
+/** Will update the positions of the stroke3DPoints after the position of their parent vertex in V has changed. If the structure of the stroke has changed, it will also update the stroke_edges (used for drawing the strokes) with the newest closest_vertex_bindings. **/
 void Stroke::update_Positions(Eigen::MatrixXd V, bool structure_changed) {
 	stroke3DPoints.resize(closest_vert_bindings.size(), Eigen::NoChange);
 	for (int i = 0; i < closest_vert_bindings.size(); i++) { //Iterate over the (updated) closest_vert_bindings instead of over stroke3DPoints
@@ -817,36 +828,45 @@ void Stroke::update_Positions(Eigen::MatrixXd V, bool structure_changed) {
 
 /** Remaps the stroke's vertex bindings after the mesh topology has changed.
 	Note that this method does not update the stroke3DPoints, use update_Positions() for that. 
-	Assumes that replacing_vertex_bindings contains entries that are in the right order, e.g. the new vertex is inserted before the second mentioned vertex. **/
+	Assumes that replacing_vertex_bindings contains entries that are in the right order, e.g. the new vertex is inserted before the second mentioned vertex.
+	replacing_vertex_bindings contains 4-tuples of a stroke ID, the vertex index to insert after, the vertex index to insert before and the new vertex index to insert. **/
 bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::MatrixXi& replacing_vertex_bindings) {
 	vector<int> new_bindings;
 	int first_included_after_remove = -1;
 	bool points_were_removed = false, no_tracked_point_yet = true, stays_continuous = false, originally_is_loop = is_loop;
 
 	for (int i = 0; i < replacing_vertex_bindings.rows(); i++) {
-		if (replacing_vertex_bindings(i, 0) == stroke_ID) {
-			auto loc = std::find(closest_vert_bindings.begin(), closest_vert_bindings.end(), replacing_vertex_bindings(i, 1));
+		if (replacing_vertex_bindings(i, 0) == stroke_ID) { //Check if the insertion is meant for *this* Stroke
+			auto loc = std::find(closest_vert_bindings.begin(), closest_vert_bindings.end(), replacing_vertex_bindings(i, 1)); // Find will return the position of the first found one.
 			int idx = distance(closest_vert_bindings.begin(), loc);
 			loc = std::find(closest_vert_bindings.begin(), closest_vert_bindings.end(), replacing_vertex_bindings(i, 2));
+			if (loc == closest_vert_bindings.end()) {
+				std::cerr << "Couldn't find second idx. Needs debugging. " << std::endl;
+			}
 			int idx2 = distance(closest_vert_bindings.begin(), loc);
-			if (abs(idx2 - idx) != 1) { //Take absolute in case vertices are found in reversed order (e.g. first 2 vertex bindings of the original stroke which has been cut, so the first stroke vertex and the intersection vertex to the cut surface). Find will return the position of the first found one 
-				std::cerr << std::endl << replacing_vertex_bindings(i, 1) << "   " << replacing_vertex_bindings(i, 2) << " Something went wrong. Multiple vertices inserted on 1 edge?" << std::endl;
+
+			if (abs(idx2 - idx) == 1) { //Take absolute in case vertices are found in reversed order (e.g. first 2 vertex bindings of the original stroke which has been cut, so the first stroke vertex and the intersection vertex to the cut surface).
+				closest_vert_bindings.insert(loc, replacing_vertex_bindings(i, 3)); //Insert the new middle vertex between the 2 adjacent (existing) edge vertices
+			}
+			else if ((idx2 - idx) % (closest_vert_bindings.size() - 2) == 0 && ((idx == 0) || (idx2 == 0))) { //For the case when vertices are inserted between the first and last point of the Stroke.
+				++loc; //Want to insert AFTER the highest loc, so we're inserting between the final and first point.
+				closest_vert_bindings.insert(loc, replacing_vertex_bindings(i, 3));
 			}
 			else {
-				closest_vert_bindings.insert(loc, replacing_vertex_bindings(i, 3)); //Insert the new middle vertex between the 2 existing edge vertices
+				std::cerr << std::endl << replacing_vertex_bindings(i, 1) << "   " << replacing_vertex_bindings(i, 2) << " Something went wrong. Multiple vertices inserted on 1 edge?" << std::endl;
 			}
 		}
 	}
 	
 
 	for (int i = 0; i < closest_vert_bindings.size() - 1; i++) {	//Closest_vert_bindings is always a loop
-		if (new_mapped_indices[closest_vert_bindings[i]] == -1) { //Removed vertex
+		if (new_mapped_indices[closest_vert_bindings[i]] == -1) { //The parent vertex that the stroke3DPoint pointed to, has been removed. Stroke is no longer looped.
 			is_loop = false;
 			points_were_removed = true;
 			continue;
 		}
-		new_bindings.push_back(new_mapped_indices[closest_vert_bindings[i]]);
-		if (points_were_removed && no_tracked_point_yet) {
+		new_bindings.push_back(new_mapped_indices[closest_vert_bindings[i]]); //Update vertex indexing
+		if (points_were_removed && no_tracked_point_yet) { //Keep track of the first stroke point that we encounter after a stroke gets split due to a removed vertex
 			first_included_after_remove = new_bindings.size() - 1;
 			no_tracked_point_yet = false;
 		}
@@ -866,6 +886,7 @@ bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::M
 	return true;
 }
 
+//TODO: comment
 void Stroke::undo_stroke_add(Eigen::VectorXi& edge_boundary_markers, Eigen::VectorXi& sharp_edge, Eigen::VectorXi& vertex_is_fixed) {
 	Eigen::MatrixXi EV, FE, EF;
 	igl::edge_topology(*V, *F, EV, FE, EF);
@@ -903,6 +924,7 @@ void Stroke::undo_stroke_add(Eigen::VectorXi& edge_boundary_markers, Eigen::Vect
 	}
 }
 
+/** Will switch the sharp_edge markers for *this* stroke from sharp to smooth and vice versa. **/
 void Stroke::switch_stroke_edges_type(Eigen::VectorXi& sharp_edge) {
 	Eigen::MatrixXi EV, FE, EF;
 	igl::edge_topology(*V, *F, EV, FE, EF);
@@ -922,7 +944,7 @@ void Stroke::switch_stroke_edges_type(Eigen::VectorXi& sharp_edge) {
 	}
 }
 
-//Only works for strokes that have valid stroke2DPoints (e.g. cut, extrusion base and extrusion silhouette strokes). Naive implementation in O(n^2)
+/** Checks if a stroke intersects itself. Only works for strokes that have valid stroke2DPoints (e.g. cut, extrusion base and extrusion silhouette strokes). Naive implementation in O(n^2) **/
 bool Stroke::has_self_intersection(bool make_looped) {
 	if (make_looped) {
 		stroke2DPoints.conservativeResize(stroke2DPoints.rows() + 1, Eigen::NoChange);
@@ -947,6 +969,7 @@ bool Stroke::has_self_intersection(bool make_looped) {
 	return false;
 }
 
+/** Checks if 2 2D line segments intersect eachother. **/
 bool Stroke::line_segments_intersect(Eigen::RowVector2d& p1, Eigen::RowVector2d& p2, Eigen::RowVector2d& p3, Eigen::RowVector2d& p4) {
 	double a0, b0, c0, a1, b1, c1;
 	a0 = p1[1] - p2[1];
@@ -965,6 +988,7 @@ bool Stroke::line_segments_intersect(Eigen::RowVector2d& p1, Eigen::RowVector2d&
 	}
 }
 
+/** Gets the total length of the 2D stroke of *this* Stroke. **/
 double Stroke::get_2D_length() {
 	double length = 0.0;
 	for (int i = 0; i < stroke2DPoints.rows() - 1; i++) {
@@ -973,6 +997,7 @@ double Stroke::get_2D_length() {
 	return length;
 }
 
+/** Resamples the stroke2DPoints, based on unit_length as distance between the points. **/
 Eigen::MatrixXd Stroke::resample_stroke2D(Eigen::MatrixXd& original_2D, double unit_length, double length) {
 	int n = 1 + (int)(length / unit_length);
 
@@ -1023,6 +1048,7 @@ Eigen::MatrixXd Stroke::resample_stroke2D(Eigen::MatrixXd& original_2D, double u
 	return resampled_points;
 }
 
+/** Performs move-to-middle smoothing on the stroke2DPoints. All points will repeatedly be moved to the average of their neighbors. This will heavily smooth the stroke, and remove any high-frequency details. **/
 Eigen::MatrixXd Stroke::move_to_middle_smoothing(Eigen::MatrixXd& stroke2DPoints) {
 	Eigen::MatrixXd new_stroke2DPoints = Eigen::MatrixXd::Zero(stroke2DPoints.rows(), 2);
 	int nr_iterations = max(2.0, stroke2DPoints.rows() / 8.0);
@@ -1034,6 +1060,7 @@ Eigen::MatrixXd Stroke::move_to_middle_smoothing(Eigen::MatrixXd& stroke2DPoints
 	return new_stroke2DPoints;
 }
 
+/** Subroutine for move_to_middle_smoothing. **/
 void Stroke::move_to_middle(Eigen::MatrixXd &positions, Eigen::MatrixXd &new_positions) {
 	int n = positions.rows();
 	Eigen::Vector2d prev, cur, next;
