@@ -428,8 +428,14 @@ bool Stroke::toLoop() {
 	return false;
 }
 
-//TODO: comment
+/** Generates a 3D triangle mesh from *this* stroke. 
+    First it will resample the opening between the first and last point (with a sample distance that equals the mean sampling distance of the input points). 
+	Then it will resample the stroke3DPoints in its entirety, using a set sampling distance (the sampling distance may be increased if it results in a mesh with too many triangles).
+	PCA is used to calculate the eigenvectors of the stroke. The 2 largest eigenvectors define the projective plane. The 3D points are projected on to 2D and then smoothed with Taubin Fairing.
+	These smoothed 2D points are then triangulated. If the resulting mesh has too many triangles, the stroke will be resampled with a larger sampling distance and the process is repeated. 
+	The 2D mesh points are unprojected back to 3D. Backside faces are created and finally all tracking markers are set. **/
 void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Eigen::VectorXi& vertex_is_fixed, Eigen::MatrixXd& mesh_V, Eigen::MatrixXi& mesh_F, igl::opengl::glfw::Viewer &viewer) {
+	//Resample the opening between the last and first point
 	double mean_sample_dist = 0.0;
 	for (int i = 0; i < stroke3DPoints.rows() - 1; i++) {
 		mean_sample_dist += (stroke3DPoints.row(i) - stroke3DPoints.row((i + 1) % stroke3DPoints.rows())).norm();
@@ -456,13 +462,14 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 			resampling_distance *= pow(1.15, 2*double(abs((MAX_NR_TRIANGLES/2.0)-F2.rows()) / (MAX_NR_TRIANGLES / 2.0))); //Multiply the exponent by a factor 2 to ensure faster convergence
 		}
 		Eigen::MatrixXd resampled_new_3DPoints = CleanStroke3D::resample_by_length_sub(new_3DPoints, 0, new_3DPoints.rows() - 1, resampling_distance);
+		
 		closest_vert_bindings.clear();
-
 		for (int i = 0; i < resampled_new_3DPoints.rows(); i++) {
 			closest_vert_bindings.push_back(i);
 		}
 		set3DPoints(resampled_new_3DPoints);
 
+		//Zero-mean the stroke3DPoints and compute its eigenvalues/vectors to determine the optimal projection plane
 		center = stroke3DPoints.colwise().mean();
 		stroke3DPoints = stroke3DPoints.rowwise() - center; //Zero mean
 		Eigen::MatrixXd cov = (1.0 / (stroke3DPoints.rows() - 1)) * (stroke3DPoints.transpose()*stroke3DPoints);
@@ -479,14 +486,14 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 		yvec = es.eigenvectors().real().col(idx[1]);
 		Eigen::Vector3d zvec = es.eigenvectors().real().col(idx[2]);
 		Eigen::MatrixXd new_axes(3, 3);
-		new_axes << xvec, yvec, zvec;
+		new_axes << xvec, yvec, zvec; //Use the three main eigenvectors as the axes of the projective plane
 
+		//Project the stroke3DPoints so they can be triangulated
 		Eigen::MatrixX3d projected_points = stroke3DPoints * new_axes;
 		dep = projected_points.col(2);
 
 		stroke2DPoints = projected_points.leftCols(2);
-		TaubinFairing2D(stroke2DPoints, 5);
-
+		TaubinFairing2D(stroke2DPoints, 5); //Perform Taubin fairing to smoothen the curve without shrinking it
 		counter_clockwise();  //Ensure the stroke is counter-clockwise, handy later
 
 		Eigen::MatrixXi edge_markers, stroke_edges(stroke2DPoints.rows(), 2);
@@ -500,11 +507,10 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 
 		//Set a inter-sample distance dependent maximum triangle area. Setting this too small will result in inflation in the wrong direction.
 		igl::triangle::triangulate((Eigen::MatrixXd) stroke2DPoints, stroke_edges, Eigen::MatrixXd(0, 0), Eigen::MatrixXi::Constant(stroke2DPoints.rows(), 1, 1), Eigen::MatrixXi::Constant(stroke_edges.rows(), 1, 1), "QYq25a" + to_string(0.5*(mean_squared_sample_dist)), V2_tmp, F2, vertex_markers, edge_markers);
-
 	} while (F2.rows() > (MAX_NR_TRIANGLES/2));
 
+	//Unproject back to 3D space
 	V2 = center.replicate(V2_tmp.rows(), 1);
-
 	for (int i = 0; i < V2_tmp.rows(); i++) {
 		V2.row(i) += xvec.transpose()*V2_tmp(i, 0);
 		V2.row(i) += yvec.transpose()*V2_tmp(i, 1);
@@ -513,7 +519,7 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 	generate_backfaces(F2, F2_back);
 	int nr_boundary_vertices = (vertex_markers.array() == 1).count();
 	int original_size = V2.rows();
-	V2.conservativeResize(2 * original_size - nr_boundary_vertices, Eigen::NoChange); //Increase size, such that boundary vertices only get included one
+	V2.conservativeResize(2 * original_size - nr_boundary_vertices, Eigen::NoChange); //Increase size, such that boundary vertices only get included once
 	unordered_map<int, int> backside_vertex_map;
 	int count2 = 0;
 	for (int i = 0; i < original_size; i++) {
@@ -588,8 +594,10 @@ void Stroke::generate3DMeshFromStroke(Eigen::VectorXi &edge_boundary_markers, Ei
 	return;
 }
 
-//TODO: comment
+/** Used for making the extrusion silhouette strokes planar. Target_vec is the normal of the extrusion base plane and is a guideline for which eigenvector we MUST choose (because we want to keep the eigenvector that is closest to the base normal, even if it has the smallest eigenvalue. 
+	Will project the silhouette's 3D points onto a plane that is spanned by the eigenvector that's most similar to the target_vec and the eigenvector with the (next) highest eigenvalue. **/
 void Stroke::project_with_PCA_given_target(Eigen::Vector3d target_vec) {
+	//Zero-mean center the points and compute the einvalues.
 	Eigen::MatrixX3d projected_points;
 	Eigen::RowVector3d center = stroke3DPoints.colwise().mean();
 	stroke3DPoints = stroke3DPoints.rowwise() - center; //Zero mean
@@ -604,6 +612,7 @@ void Stroke::project_with_PCA_given_target(Eigen::Vector3d target_vec) {
 	std::sort(std::begin(idx), std::end(idx), [&](int i1, int i2) {return eigenvals[i1] > eigenvals[i2]; }); //Sort the vector of indices based on the descending values of eigenvalues
 	
 
+	//Determine which eigenvector has the largest projection onto the target_vector (base normal)
 	double proj, max_proj = 0.0;
 	int max_idx;
 	for (int i = 0; i < 3; i++) {
@@ -614,13 +623,14 @@ void Stroke::project_with_PCA_given_target(Eigen::Vector3d target_vec) {
 		}
 	}
 
+	//Select the eigenvector that is most similar to the target vector and then the one with the highest eigenvalue (that is not the same as the first picked vector)
 	Eigen::Vector3d xvec = es.eigenvectors().real().col(idx[max_idx]);
 	Eigen::Vector3d yvec = (max_idx == 0) ? es.eigenvectors().real().col(idx[1]) : es.eigenvectors().real().col(idx[0]);
 	Eigen::Vector3d zvec = (max_idx == 0) ? es.eigenvectors().real().col(idx[2]) : es.eigenvectors().real().col(!(max_idx - 1) + 1);
 
+	//Project the points onto the new plane
 	Eigen::MatrixXd new_axes(3, 3);
 	new_axes << xvec, yvec, zvec;
-
 	projected_points = stroke3DPoints * new_axes;
 
 	for (int i = 0; i < stroke3DPoints.rows(); i++) {
@@ -700,7 +710,9 @@ Eigen::RowVector2d Stroke::to_sum_of_vectors2D(Eigen::RowVector2d vert, Eigen::R
 	return (vert + total_vec*direction);
 }
 
-//TODO: comment
+/** Used for smoothing the extrusion base. Needs to ensure that the smoothed stroke is placed on the mesh surface. 
+	This method will resample the stroke2DPoints and use move_to_middle smoothing on it. The 2D Points are then projected onto the mesh to get corresponding 3D points and the hit faces (which are needed to form the SurfacePath)
+	As a substitute for the hand_pos, we use the mid hit-point (average of front and back hitpoint, should result in the same plane)**/
 void Stroke::resample_and_smooth_3DPoints(Eigen::Matrix4f& model, Eigen::Matrix4f& view, Eigen::Matrix4f& proj, Eigen::Vector4f& viewport) {
 	//Stroke2DPoints are not looped
 	double length = get_2D_length();
@@ -741,7 +753,6 @@ void Stroke::resample_and_smooth_3DPoints(Eigen::Matrix4f& model, Eigen::Matrix4
 		new_3DPoints.row(i) = hit_front.transpose();
 		faces_hit.row(i) << hits[0].id, hits[1].id;
 		hand_pos_at_draw.row(i) = inside_point.transpose().cast<double>();
-
 	}
 
 	//Make all these variables looped again
@@ -886,7 +897,8 @@ bool Stroke::update_vert_bindings(Eigen::VectorXi & new_mapped_indices, Eigen::M
 	return true;
 }
 
-//TODO: comment
+/** Called when a user manually deletes an entire Stroke. Will unset boundary markers and sharp_edge for all its edges.
+	For the vertex_is_fixed marker it will also check if the stroke vertex is still part of another stroke before unsetting it. **/
 void Stroke::undo_stroke_add(Eigen::VectorXi& edge_boundary_markers, Eigen::VectorXi& sharp_edge, Eigen::VectorXi& vertex_is_fixed) {
 	Eigen::MatrixXi EV, FE, EF;
 	igl::edge_topology(*V, *F, EV, FE, EF);
@@ -894,6 +906,7 @@ void Stroke::undo_stroke_add(Eigen::VectorXi& edge_boundary_markers, Eigen::Vect
 	int start, end, equal_pos;
 	Eigen::VectorXi col1Equals, col2Equals;
 
+	//Loop over all stroke edges and unset their boundary markers and sharp_edge indicators
 	for (int i = 0; i < stroke_edges.rows() - !is_loop; i++) {
 		start = stroke_edges(i, 0);
 		end = stroke_edges(i, 1);
@@ -906,6 +919,7 @@ void Stroke::undo_stroke_add(Eigen::VectorXi& edge_boundary_markers, Eigen::Vect
 		}
 	}
 
+	//Loop over all vertices that are part of the stroke and check if they are part of another stroke as well. If so, keep them fixed, else unset the fixed flag.
 	vector<vector<int>> neighbors;
 	adjacency_list(*F, neighbors);
 	for (int i = 0; i < closest_vert_bindings.size(); i++) {
