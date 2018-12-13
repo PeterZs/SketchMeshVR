@@ -216,6 +216,7 @@ void select_dragging_handle(Eigen::Vector3f& pos) {
 	}
 }
 
+//TODO: just send right pos into here right away and remove use_right flag
 void set_laser_points(Eigen::Vector3f& pos, bool use_right_direction) {
 	if (!use_right_direction) {
 		pos = viewer.oculusVR.get_left_hand_pos(); //Use the left hand position for the laser start point when requested
@@ -271,8 +272,8 @@ void reset_before_draw() {
 	next_added_stroke_ID = 2;
 }
 
-void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
-	if (pressed == OculusVR::ButtonCombo::TRIG && (selected_tool_mode == ADD || selected_tool_mode == CUT || selected_tool_mode == EXTRUDE)) {
+void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos_left, Eigen::Vector3f& pos_right) {
+	if (pressed == OculusVR::ButtonCombo::TRIG_RIGHT && (selected_tool_mode == ADD || selected_tool_mode == CUT || selected_tool_mode == EXTRUDE)) {
 		if (stroke_collection.size() == 0) { //Don't go into these modes when there is no mesh yet
 			prev_tool_mode = FAIL;
 			return;
@@ -308,7 +309,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		return;
 	}
 
-	if (pressed == OculusVR::ButtonCombo::TRIG) {
+	if (pressed == OculusVR::ButtonCombo::TRIG_RIGHT) {
 		tool_mode = selected_tool_mode;
 	}
 	else if (pressed == OculusVR::ButtonCombo::NONE) {
@@ -323,12 +324,12 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		}
 	}
 	else if (pressed == OculusVR::ButtonCombo::X) {
-		set_laser_points(viewer.oculusVR.get_left_hand_pos(), false);
+		set_laser_points(pos_left, false);
 		tool_mode = SMOOTH;
 	}
 	else if (pressed == OculusVR::ButtonCombo::Y) {
-		pos = viewer.oculusVR.get_left_hand_pos();
-		set_laser_points(pos, false);
+		//pos_left = viewer.oculusVR.get_left_hand_pos();
+		set_laser_points(pos_left, false);
 		if (!upsample_activated) {
 			viewer.selected_data_index = pointer_mesh_index;
 			prev_laser_show = viewer.data().show_laser;
@@ -344,7 +345,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		tool_mode = TRANSLATE;
 	}
 	//Set laser points after button handling in case we have for example changed the position var
-	set_laser_points(pos, !upsample_init); //When we're in UPSAMPLE mode (between first and second click), we want to show the laser of the left hand
+	set_laser_points(pos_right, !upsample_init); //When we're in UPSAMPLE mode (between first and second click), we want to show the laser of the left hand
 
 
 	if (tool_mode == DRAW) {
@@ -356,7 +357,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				viewer.oculusVR.set_start_action_view(viewer.core.get_view());
 				added_stroke = new Stroke(&V, &F, 1);
 				added_stroke->stroke_color = blue;
-				added_stroke->addSegment(pos, viewer);
+				added_stroke->addSegment(pos_right, viewer);
 				prev_tool_mode = DRAW;
 			}
 			else {
@@ -366,7 +367,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			}
 		}
 		else if (prev_tool_mode == DRAW) {
-			draw_should_block = added_stroke->addSegment(pos, viewer);
+			draw_should_block = added_stroke->addSegment(pos_right, viewer);
 			return;
 		}
 	}
@@ -375,11 +376,11 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			added_stroke = new Stroke(&V, &F, next_added_stroke_ID);
 			added_stroke->stroke_color = blue;
 			added_stroke->is_loop = false;
-			added_stroke->addSegmentAdd(pos, viewer);
+			added_stroke->addSegmentAdd(pos_right, viewer);
 			prev_tool_mode = ADD;
 		}
 		else if (prev_tool_mode == ADD) {
-			added_stroke->addSegmentAdd(pos, viewer);
+			added_stroke->addSegmentAdd(pos_right, viewer);
 		}
 	}
 	else if (tool_mode == REMOVE) {
@@ -400,7 +401,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			int tmp_handleID, closest_stroke_idx;
 			handleID = -1;
 			for (int i = 1; i < stroke_collection.size(); i++) { //Skip stroke 0
-				tmp_handleID = stroke_collection[i].selectClosestVertex(pos, closest_dist);
+				tmp_handleID = stroke_collection[i].selectClosestVertex(pos_right, closest_dist);
 
 				//tmp_handleID = stroke_collection[i].selectClosestVertex(hit_pos, closest_dist);
 				if ((closest_dist < current_closest) && (tmp_handleID != -1)) {
@@ -456,7 +457,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		//FAIL below is needed when initialy hand position is too far away from the curves. Switch to FAIL instead of NONE to ensure proper button-release handling
 		if (prev_tool_mode == NONE || prev_tool_mode == FAIL) {
 			draw_all_strokes();
-			select_dragging_handle(pos);
+			select_dragging_handle(pos_right);
 
 			if (handleID == -1) { //User clicked too far from any of the stroke vertices
 				prev_tool_mode = FAIL;
@@ -474,7 +475,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			}
 		}
 		else if (prev_tool_mode == PULL) {
-			CurveDeformation::pullCurve(pos.transpose().cast<double>(), (*base_mesh).V, (*base_mesh).edge_boundary_markers);
+			CurveDeformation::pullCurve(pos_right.transpose().cast<double>(), (*base_mesh).V, (*base_mesh).edge_boundary_markers);
 
 			for (int i = 0; i < (*base_mesh).patches.size(); i++) {
 				(*base_mesh).patches[i]->update_patch_vertex_positions((*base_mesh).V);
@@ -505,11 +506,11 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			added_stroke = new Stroke(&V, &F, next_added_stroke_ID); //For CUT, only increase the next added stroke ID upon button release (when we know it succeeded)
 			added_stroke->stroke_color = red;
 			viewer.oculusVR.set_start_action_view(viewer.core.get_view());
-			added_stroke->addSegmentCut(pos, viewer);
+			added_stroke->addSegmentCut(pos_right, viewer);
 		}
 		else if (prev_tool_mode == CUT) {
 			if (!cut_stroke_already_drawn) {
-				added_stroke->addSegmentCut(pos, viewer);
+				added_stroke->addSegmentCut(pos_right, viewer);
 			}
 		}
 	}
@@ -523,21 +524,21 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				added_stroke = new Stroke(&V, &F, next_added_stroke_ID);
 				added_stroke->stroke_color = blue;
 				next_added_stroke_ID++;
-				added_stroke->addSegmentExtrusionSilhouette(pos, viewer);
+				added_stroke->addSegmentExtrusionSilhouette(pos_right, viewer);
 			}
 			else {
 				extrusion_base = new Stroke(&V, &F, next_added_stroke_ID);
 				extrusion_base->stroke_color = red;
 				next_added_stroke_ID++;
-				extrude_base_should_block = extrusion_base->addSegmentExtrusionBase(pos, viewer);
+				extrude_base_should_block = extrusion_base->addSegmentExtrusionBase(pos_right, viewer);
 			}
 		}
 		else if (prev_tool_mode == EXTRUDE) {
 			if (extrusion_base_already_drawn) {
-				added_stroke->addSegmentExtrusionSilhouette(pos, viewer);
+				added_stroke->addSegmentExtrusionSilhouette(pos_right, viewer);
 			}
 			else {
-				extrude_base_should_block = extrusion_base->addSegmentExtrusionBase(pos, viewer);
+				extrude_base_should_block = extrusion_base->addSegmentExtrusionBase(pos_right, viewer);
 			}
 		}
 	}
@@ -552,7 +553,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			viewer.oculusVR.right_hand_visible = false;
 			viewer.selected_data_index = base_mesh_index;
 
-			select_dragging_handle(viewer.oculusVR.get_left_hand_pos());
+			select_dragging_handle(pos_left);
 			if (handleID == -1) { //Perform general mesh smooth
 				return;
 			}
@@ -563,7 +564,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			if (handleID == -1) {
 				return;
 			}
-			Eigen::Vector3d double_pos = viewer.oculusVR.get_left_hand_pos().cast<double>();
+			Eigen::Vector3d double_pos = pos_left.cast<double>();
 			Eigen::MatrixXd prevV = V;
 			CurveRub::rubbing(double_pos, rub_seamID, V);
 			for (int i = 0; i < stroke_collection.size(); i++) {
@@ -576,7 +577,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 		if (prev_tool_mode == NONE) {
 			if (upsample_activated) {
 				vector<igl::Hit> hits;
-				if (igl::ray_mesh_intersect(pos, viewer.oculusVR.get_left_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
+				if (igl::ray_mesh_intersect(pos_right, viewer.oculusVR.get_left_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 					Patch* hit_patch = ((*base_mesh).face_patch_map[hits[0].id]); //Find the patch that was hit
 
 					for (int i = 0; i < (*base_mesh).patches.size(); i++) {
@@ -643,7 +644,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			int tmp_handleID, closest_stroke_idx;
 			handleID = -1;
 			for (int i = 0; i < stroke_collection.size(); i++) {
-				tmp_handleID = stroke_collection[i].selectClosestVertex(pos, closest_dist);
+				tmp_handleID = stroke_collection[i].selectClosestVertex(pos_right, closest_dist);
 
 				if ((closest_dist < current_closest) && (tmp_handleID != -1)) {
 					current_closest = closest_dist;
@@ -678,15 +679,15 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			viewer.data().show_laser = false;
 			viewer.selected_data_index = base_mesh_index;
 
-			prev_translation_point = ((pos + viewer.oculusVR.get_left_hand_pos()) / 2.0).cast<double>();
-			prev_scale_size = (pos - viewer.oculusVR.get_left_hand_pos()).norm();
+			prev_translation_point = ((pos_right + pos_left) / 2.0).cast<double>();
+			prev_scale_size = (pos_right - pos_left).norm();
 			prev_tool_mode = TRANSLATE;
 		}
 		else if(prev_tool_mode == TRANSLATE) {
-			Eigen::Vector3d cur_translation_point = ((pos + viewer.oculusVR.get_left_hand_pos()) / 2.0).cast<double>();
+			Eigen::Vector3d cur_translation_point = ((pos_right + pos_left) / 2.0).cast<double>();
 			Eigen::RowVector3d translation_vec = (cur_translation_point - prev_translation_point).transpose();
 			
-			double cur_scale_size = (pos - viewer.oculusVR.get_left_hand_pos()).norm();
+			double cur_scale_size = (pos_right - pos_left).norm();
 			double scale_factor = cur_scale_size / prev_scale_size;
 
 			Eigen::Vector3f mesh_translation = -V.colwise().mean().eval().cast<float>();
@@ -872,6 +873,11 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 
 			stroke_was_removed = false;
 			draw_all_strokes();
+
+			//Turn left on
+			viewer.selected_data_index = pointer_mesh_index;
+			viewer.oculusVR.left_hand_visible = true;
+			viewer.selected_data_index = base_mesh_index;
 		}
 		else if (prev_tool_mode == PULL && handleID != -1) {
 			Eigen::MatrixXd angles;
@@ -921,7 +927,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 			if (cut_stroke_already_drawn) { //User had already drawn the cut stroke and has now clicked/drawn the final stroke for removing the part. User should click on the part that should be removed
 				dirty_boundary = true;
 				vector<igl::Hit> hits;
-				if (!igl::ray_mesh_intersect(pos, viewer.oculusVR.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
+				if (!igl::ray_mesh_intersect(pos_right, viewer.oculusVR.get_right_touch_direction(), V, F, hits)) { //Intersect the ray from the Touch controller with the mesh to get the 3D point
 					viewer.update_screen_while_computing = false;
 					prev_tool_mode = NONE;
 					return;
@@ -1061,6 +1067,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				draw_all_strokes();
 				viewer.selected_data_index = pointer_mesh_index;
 				viewer.data().show_laser = true;
+				viewer.oculusVR.left_hand_visible = false; 			//Turn left off again
 				viewer.selected_data_index = base_mesh_index;
 				extrusion_base_already_drawn = false;
 			}
@@ -1109,6 +1116,7 @@ void button_down(OculusVR::ButtonCombo pressed, Eigen::Vector3f& pos) {
 				draw_extrusion_base(); //Need to draw the extrusion base separately, since it isn't added to the stroke_collection yet.
 				viewer.selected_data_index = pointer_mesh_index;
 				viewer.data().show_laser = false;
+				viewer.oculusVR.left_hand_visible = true; 			//Turn left on
 				viewer.selected_data_index = base_mesh_index;
 			}
 		}
@@ -1677,6 +1685,7 @@ int main(int argc, char *argv[]) {
 			im_texID_cur = im_texID_draw;
 			viewer.selected_data_index = pointer_mesh_index;
 			viewer.data().show_laser = false;
+			viewer.oculusVR.left_hand_visible = true; 			//Turn left on
 			prev_laser_show = viewer.data().show_laser;
 			viewer.selected_data_index = base_mesh_index;
 			menu_closed();
@@ -1690,6 +1699,7 @@ int main(int argc, char *argv[]) {
 			im_texID_cur = im_texID_pull;
 			viewer.selected_data_index = pointer_mesh_index;
 			viewer.data().show_laser = false;
+			viewer.oculusVR.left_hand_visible = true; 			//Turn left on
 			prev_laser_show = viewer.data().show_laser;
 			viewer.selected_data_index = base_mesh_index;
 			menu_closed();
@@ -1702,7 +1712,8 @@ int main(int argc, char *argv[]) {
 			selected_tool_mode = ADD;
 			im_texID_cur = im_texID_add;
 			viewer.selected_data_index = pointer_mesh_index;
-			viewer.data().show_laser = true;
+			viewer.data().show_laser = false;
+			viewer.oculusVR.left_hand_visible = true; 			//Turn left on
 			prev_laser_show = viewer.data().show_laser;
 			viewer.selected_data_index = base_mesh_index;
 			menu_closed();
@@ -1716,6 +1727,7 @@ int main(int argc, char *argv[]) {
 			im_texID_cur = im_texID_cut;
 			viewer.selected_data_index = pointer_mesh_index;
 			viewer.data().show_laser = true;
+			viewer.oculusVR.left_hand_visible = false; 			//Turn left off
 			prev_laser_show = viewer.data().show_laser;
 			viewer.selected_data_index = base_mesh_index;
 			menu_closed();
@@ -1729,6 +1741,7 @@ int main(int argc, char *argv[]) {
 			im_texID_cur = im_texID_extrude;
 			viewer.selected_data_index = pointer_mesh_index;
 			viewer.data().show_laser = true;
+			viewer.oculusVR.left_hand_visible = false; 			//Turn left off
 			prev_laser_show = viewer.data().show_laser;
 			viewer.selected_data_index = base_mesh_index;
 			menu_closed();
@@ -1742,6 +1755,7 @@ int main(int argc, char *argv[]) {
 			im_texID_cur = im_texID_remove;
 			viewer.selected_data_index = pointer_mesh_index;
 			viewer.data().show_laser = false;
+			viewer.oculusVR.left_hand_visible = false; 			//Turn left off
 			prev_laser_show = viewer.data().show_laser;
 			viewer.selected_data_index = base_mesh_index;
 			menu_closed();
@@ -1788,6 +1802,7 @@ int main(int argc, char *argv[]) {
 			im_texID_cur = im_texID_change;
 			viewer.selected_data_index = pointer_mesh_index;
 			viewer.data().show_laser = false;
+			viewer.oculusVR.left_hand_visible = false; 			//Turn left off
 			prev_laser_show = viewer.data().show_laser;
 			viewer.selected_data_index = base_mesh_index;
 			menu_closed();
